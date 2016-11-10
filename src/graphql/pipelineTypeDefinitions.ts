@@ -6,6 +6,17 @@ interface ITableModel {
   deleted_at: String
 }
 
+type Worker implements ITableModel {
+  id: String!
+  name: String
+  description: String
+  machine_id: String
+  last_seen: String
+  created_at: String
+  updated_at: String
+  deleted_at: String
+}
+
 type Project implements ITableModel {
   id: String!
   name: String
@@ -55,6 +66,8 @@ type TaskStatistic implements ITableModel {
 }
 
 type Query {
+  worker(id: String!): Worker
+  workers: [Worker!]!
   project(id: String!): Project
   projects: [Project!]!
   pipelineStage(id: String!): PipelineStage

@@ -1,6 +1,14 @@
 exports.up = function (knex, Promise) {
     return knex.schema
-        .createTable("Project", (table) => {
+        .createTable("Worker", (table) => {
+            table.uuid("id").primary().unique();
+            table.string("name");
+            table.string("description");
+            table.uuid("machine_id");
+            table.timestamp("last_seen");
+            table.timestamp("deleted_at");
+            table.timestamps();
+        }).createTable("Project", (table) => {
             table.uuid("id").primary().unique();
             table.string("name");
             table.string("description");

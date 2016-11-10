@@ -2,8 +2,12 @@ import {ITaskDefinition, TaskDefinitions} from "../data-model/taskDefinition";
 import {Projects, IProject} from "../data-model/project";
 import {IPipelineStage, PipelineStages} from "../data-model/pipelineStage";
 import {ITaskStatistic, TaskStatistics} from "../data-model/taskStatistic";
+import {IWorker, Workers} from "../data-model/worker";
 
 export interface IPipelineServerContext {
+    getWorker(id: string): Promise<IWorker>;
+    getWorkers(): Promise<IWorker[]>;
+
     getProject(id: string): Promise<IProject>;
     getProjects(): Promise<IProject[]>;
 
@@ -22,6 +26,15 @@ export class PipelineServerContext implements IPipelineServerContext {
     private _projects = new Projects();
     private _pipelineStages = new PipelineStages();
     private _taskStatistics = new TaskStatistics();
+    private _workers = new Workers();
+
+    public getWorker(id: string): Promise<IWorker> {
+        return this._workers.get(id);
+    }
+
+    public getWorkers(): Promise<IWorker[]> {
+        return this._workers.getAll();
+    }
 
     public getProject(id: string): Promise<IProject> {
         return this._projects.get(id);
