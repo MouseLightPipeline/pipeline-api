@@ -1,11 +1,36 @@
 let typeDefinitions = `    
-interface ITimestamps {
+interface ITableModel {
+  id: String!
   created_at: String
   updated_at: String
   deleted_at: String
 }
 
-type TaskDefinition implements ITimestamps {
+type Project implements ITableModel {
+  id: String!
+  name: String
+  description: String
+  root_path: String
+  sample_number: Int
+  created_at: String
+  updated_at: String
+  deleted_at: String
+}
+
+type PipelineStage implements ITableModel {
+  id: String!
+  name: String
+  description: String
+  function_type: Int
+  execution_order: Int
+  src_path: String
+  dst_path: String
+  created_at: String
+  updated_at: String
+  deleted_at: String
+}
+
+type TaskDefinition implements ITableModel {
   id: String!
   name: String!
   description: String!
@@ -16,9 +41,28 @@ type TaskDefinition implements ITimestamps {
   deleted_at: String
 }
 
+type TaskStatistic implements ITableModel {
+  id: String!
+  num_execute: Int
+  num_complete: Int
+  num_error: Int
+  num_cancelled: Int
+  duration_avg: Float
+  duration_long: Float
+  created_at: String
+  updated_at: String
+  deleted_at: String
+}
+
 type Query {
-  taskDefinitions: [TaskDefinition!]!
+  project(id: String!): Project
+  projects: [Project!]!
+  pipelineStage(id: String!): PipelineStage
+  pipelineStages: [PipelineStage!]!
   taskDefinition(id: String!): TaskDefinition
+  taskDefinitions: [TaskDefinition!]!
+  taskStatistic(id: String!): TaskStatistic
+  taskStatistics: [TaskStatistic!]!
 }
 
 type Mutation {

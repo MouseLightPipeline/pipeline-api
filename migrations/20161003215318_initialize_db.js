@@ -12,6 +12,7 @@ exports.up = function (knex, Promise) {
             table.uuid("id").primary().unique();
             table.string("name");
             table.string("description");
+            table.integer("function_type");
             table.integer("execution_order");
             table.string("src_path");
             table.string("dst_path");
