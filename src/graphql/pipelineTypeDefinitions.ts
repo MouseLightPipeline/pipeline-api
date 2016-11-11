@@ -12,6 +12,7 @@ type Worker implements ITableModel {
   description: String
   machine_id: String
   last_seen: String
+  status: Int
   created_at: String
   updated_at: String
   deleted_at: String
@@ -36,6 +37,8 @@ type PipelineStage implements ITableModel {
   execution_order: Int
   src_path: String
   dst_path: String
+  project_id: String
+  task_id: String
   created_at: String
   updated_at: String
   deleted_at: String
