@@ -21,12 +21,12 @@ export abstract class TableModel<T extends ITableModelRow> {
         this._dataLoader = new DataLoader((keys: string[]) => this.fetch(keys));
     }
 
-    public async get(id: string) {
+    public async get(id: string): Promise<T> {
         return this._dataLoader.load(id);
     }
 
-    public async getAll() {
-        let ids = await this._getIdList();
+    public async getAll(includeSoftDelete: boolean = false) {
+        let ids = await this._getIdList(includeSoftDelete);
 
         return this._dataLoader.loadMany(ids);
     }
@@ -54,16 +54,40 @@ export abstract class TableModel<T extends ITableModelRow> {
             this._dataLoader.clear(row.id);
         }
 
-        // Reload for caller.
-        return this.get(row.id);
+        if (!row.deleted_at) {
+            // Reload for caller.
+            return this.get(row.id);
+        } else {
+            return null;
+        }
+    }
+
+    public async softDelete(id: string): Promise<boolean> {
+        let row: T = await this.get(id);
+
+        if (row && row.created_at && !row.deleted_at) {
+            row.deleted_at = new Date();
+
+            await this.save(row);
+
+            return true;
+        }
+
+        return false;
     }
 
     protected didFetchRow(row: T): T {
         return row;
     }
 
-    private async _getIdList() {
-        let objList = await knex(this._tableName).select(this._idKey);
+    private async _getIdList(includeSoftDelete: boolean = false) {
+        let objList;
+
+        if (includeSoftDelete) {
+            objList = await knex(this._tableName).select(this._idKey);
+        } else {
+            objList = await knex(this._tableName).select(this._idKey).whereNull("deleted_at");
+        }
 
         return <string[]>objList.map(obj => obj.id);
     }

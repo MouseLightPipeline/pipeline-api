@@ -12,33 +12,33 @@ export enum PipelineWorkerStatus {
     Processing
 }
 
-export interface IWorker extends ITableModelRow {
+export interface IPipelineWorker extends ITableModelRow {
     name: string;
     description: string;
     machine_id: string;
     last_seen: Date;
 }
 
-export class Workers extends TableModel<IWorker> {
+export class PipelineWorkers extends TableModel<IPipelineWorker> {
     private static _workerStatusMap = new Map<string, PipelineWorkerStatus>();
 
     public static getWorkerStatus(id: string): PipelineWorkerStatus {
-        let status = Workers._workerStatusMap[id];
+        let status = PipelineWorkers._workerStatusMap[id];
 
         if (!status) {
             status = PipelineWorkerStatus.Unavailable;
-            Workers._workerStatusMap[id] = status;
+            PipelineWorkers._workerStatusMap[id] = status;
         }
 
         return status;
     }
 
     public static setWorkerStatus(id: string, status: PipelineWorkerStatus) {
-        Workers._workerStatusMap[id] = status;
+        PipelineWorkers._workerStatusMap[id] = status;
     }
 
     public constructor() {
-        super("Worker");
+        super("PipelineWorker");
     }
 
     public async getForMachineId(machineId: string) {
@@ -55,9 +55,9 @@ export class Workers extends TableModel<IWorker> {
         return worker;
     }
 
-    protected didFetchRow(row: IWorker): IWorker {
+    protected didFetchRow(row: IPipelineWorker): IPipelineWorker {
 
-        row["status"] = Workers.getWorkerStatus(row.id);
+        row["status"] = PipelineWorkers.getWorkerStatus(row.id);
 
         return row;
     }

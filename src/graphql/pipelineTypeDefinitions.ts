@@ -6,7 +6,7 @@ interface ITableModel {
   deleted_at: String
 }
 
-type Worker implements ITableModel {
+type PipelineWorker implements ITableModel {
   id: String!
   name: String
   description: String
@@ -24,6 +24,7 @@ type Project implements ITableModel {
   description: String
   root_path: String
   sample_number: Int
+  is_active: Boolean
   created_at: String
   updated_at: String
   deleted_at: String
@@ -37,6 +38,7 @@ type PipelineStage implements ITableModel {
   execution_order: Int
   src_path: String
   dst_path: String
+  is_active: Boolean
   project_id: String
   task_id: String
   created_at: String
@@ -69,10 +71,10 @@ type TaskStatistic implements ITableModel {
 }
 
 type Query {
-  worker(id: String!): Worker
-  workers: [Worker!]!
+  pipelineWorker(id: String!): PipelineWorker
+  pipelineWorkers: [PipelineWorker!]!
   project(id: String!): Project
-  projects: [Project!]!
+  projects(includeDeleted: Boolean = false): [Project!]!
   pipelineStage(id: String!): PipelineStage
   pipelineStages: [PipelineStage!]!
   taskDefinition(id: String!): TaskDefinition
@@ -83,6 +85,9 @@ type Query {
 
 type Mutation {
   debugMessage(msg: String!): String!
+  createProject(name: String, description: String, rootPath: String, sampleNumber: Int): Project
+  setProjectStatus(id: String, shouldBeActive: Boolean): Project
+  deleteProject(id: String!): Boolean
 }
 
 schema {

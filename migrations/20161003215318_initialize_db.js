@@ -1,6 +1,6 @@
 exports.up = function (knex, Promise) {
     return knex.schema
-        .createTable("Worker", (table) => {
+        .createTable("PipelineWorker", (table) => {
             table.uuid("id").primary().unique();
             table.string("name");
             table.string("description");
@@ -14,6 +14,7 @@ exports.up = function (knex, Promise) {
             table.string("description");
             table.string("root_path");
             table.integer("sample_number");
+            table.boolean("is_active");
             table.timestamp("deleted_at");
             table.timestamps();
         }).createTable("PipelineStage", (table) => {
@@ -24,6 +25,7 @@ exports.up = function (knex, Promise) {
             table.integer("execution_order");
             table.string("src_path");
             table.string("dst_path");
+            table.boolean("is_active");
             table.uuid("project_id");
             table.foreign("project_id").references("Project.id");
             table.uuid("task_id");
@@ -55,6 +57,9 @@ exports.up = function (knex, Promise) {
 
 exports.down = function (knex, Promise) {
     return knex.schema
+        .dropTable("Worker")
+        .dropTable("Project")
+        .dropTable("PipelineStage")
         .dropTable("TaskDefinition")
         .dropTable("TaskStatistic");
 };

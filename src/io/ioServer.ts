@@ -3,7 +3,7 @@ import * as http from "http";
 
 const debug = require("debug")("mouselight:pipeline-api:socket.io");
 
-import {Workers, PipelineWorkerStatus} from "../data-model/worker";
+import {PipelineWorkers, PipelineWorkerStatus} from "../data-model/pipelineWorker";
 
 export class SocketIoServer {
     private static _ioServer = null;
@@ -40,7 +40,7 @@ export class SocketIoServer {
 
     private async onHeartbeat(client, heartbeatData) {
         // Update worker for last seen.
-        let workerManager = new Workers();
+        let workerManager = new PipelineWorkers();
 
         let worker = await workerManager.getForMachineId(heartbeatData.machineId);
 
@@ -62,6 +62,6 @@ export class SocketIoServer {
         }
 
         // Update non-persistent worker status
-        Workers.setWorkerStatus(worker.id, status);
+        PipelineWorkers.setWorkerStatus(worker.id, status);
     }
 }

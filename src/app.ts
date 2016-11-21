@@ -4,8 +4,10 @@ import * as bodyParser from "body-parser";
 const debug = require("debug")("mouselight:pipeline-api:server");
 
 import serverConfiguration from "../config/server.config";
+
 import {graphQLMiddleware, graphiQLMiddleware} from "./graphql/common/graphQLMiddleware";
 import {SocketIoServer} from "./io/ioServer";
+import {WorkerManager} from "./workers/workerManager";
 
 const config = serverConfiguration();
 
@@ -22,5 +24,7 @@ app.use(config.graphQlEndpoint, graphQLMiddleware());
 app.use(config.graphiQlEndpoint, graphiQLMiddleware(config));
 
 const server = SocketIoServer.use(app);
+
+WorkerManager.Instance.restartActive();
 
 server.listen(PORT, () => debug(`API Server is now running on http://localhost:${PORT}`));
