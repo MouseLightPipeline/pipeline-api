@@ -24,8 +24,7 @@
     "node-uuid": "^1.4.7",
     "serve-static": "^1.11.1",
     "socket.io": "^1.5.1",
-    "sqlite3": "^3.1.4",
-    "webworker-threads": "^0.7.9"
+    "sqlite3": "^3.1.4"
   },
   "devDependencies": {
     "@types/body-parser": "0.0.33",

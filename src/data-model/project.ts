@@ -1,19 +1,15 @@
-import Timer = NodeJS.Timer;
 import * as uuid from "node-uuid";
 
-const debug = require("debug")("mouselight:pipeline-api:projects");
+import {IRunnableTableModelRow, RunnableTableModel} from "./runnableTableModel";
 
-import {TableModel, ITableModelRow} from "./tableModel";
-
-export interface IProject extends ITableModelRow {
+export interface IProject extends IRunnableTableModelRow {
     name: string;
     description: string;
     root_path: string;
     sample_number: number;
-    is_active: boolean;
 }
 
-export class Projects extends TableModel<IProject> {
+export class Projects extends RunnableTableModel<IProject> {
     public constructor() {
         super("Project");
     }
@@ -31,21 +27,6 @@ export class Projects extends TableModel<IProject> {
             deleted_at: null
         };
 
-        await this.save(project);
-
-        // Retrieves back through data loader
-        project = await this.get(project.id);
-
-        return project;
-    }
-
-    public async setStatus(id: string, shouldBeActive: boolean): Promise<IProject> {
-        let project: IProject = await this.get(id);
-
-        project.is_active = shouldBeActive;
-
-        await this.save(project);
-
-        return project;
+        return await this.insertRow(project);
     }
 }

@@ -39,7 +39,22 @@ export abstract class TableModel<T extends ITableModelRow> {
         return this._tableName;
     }
 
+    protected get dataLoader() {
+        return this._dataLoader;
+    }
+
+    public async insertRow(row: T) {
+        await this.save(row);
+
+        // Retrieves back through data loader
+        row = await this.get(row.id);
+
+        return row;
+    }
+
     public async save(row: T) {
+        row = this.willSaveRow(row);
+
         if (row.created_at == null) {
             row.created_at = new Date();
 
@@ -68,6 +83,8 @@ export abstract class TableModel<T extends ITableModelRow> {
         if (row && row.created_at && !row.deleted_at) {
             row.deleted_at = new Date();
 
+            this.willSoftDelete(row);
+
             await this.save(row);
 
             return true;
@@ -76,7 +93,15 @@ export abstract class TableModel<T extends ITableModelRow> {
         return false;
     }
 
+    protected willSaveRow(row: T): T {
+        return row;
+    }
+
     protected didFetchRow(row: T): T {
+        return row;
+    }
+
+    protected willSoftDelete(row: T): T {
         return row;
     }
 

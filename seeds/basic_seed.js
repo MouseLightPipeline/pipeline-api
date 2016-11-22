@@ -7,7 +7,7 @@ exports.seed = (knex, Promise) => {
             return Promise.all([
                 // Inserts seed entries
                 knex('TaskDefinition').insert({
-                    id: '1EC76026-4ECC-4D25-9C6E-CDF992A05DA3',
+                    id: '1EC76026-4ECC-4D25-9C6E-CDF992A05DA3'.toLocaleLowerCase(),
                     name: 'Python Generations',
                     description: 'Simple python script to test worker execution.',
                     script: 'test/pytest.py',
@@ -15,7 +15,7 @@ exports.seed = (knex, Promise) => {
                     created_at: createDate(3, 0)
                 }),
                 knex('TaskDefinition').insert({
-                    id: '04B8313E-0E96-4194-9C06-22771ACD3986',
+                    id: '04B8313E-0E96-4194-9C06-22771ACD3986'.toLocaleLowerCase(),
                     name: 'Echo',
                     description: 'Simple command to test shell worker execution.  Will echo the passed arguments.',
                     script: 'test/echo.sh',
@@ -24,7 +24,7 @@ exports.seed = (knex, Promise) => {
                     updated_at: createDate(1, 3.5)
                 }),
                 knex('TaskDefinition').insert({
-                    id: '17610E93-5F57-43A1-8281-73E75CA47E56',
+                    id: '17610E93-5F57-43A1-8281-73E75CA47E56'.toLocaleLowerCase(),
                     name: 'MATLAB sum',
                     description: 'Simple MATLAB executable to test worker execution.',
                     script: 'mltest',
@@ -38,7 +38,7 @@ exports.seed = (knex, Promise) => {
 };
 
 function createDate(daysBefore, hoursBefore) {
-    var date = new Date();
+    let date = new Date();
 
     date.setDate(date.getDate() - daysBefore);
 

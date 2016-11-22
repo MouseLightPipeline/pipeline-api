@@ -1,49 +1,46 @@
 import Timer = NodeJS.Timer;
+const path = require("path");
+const child_process = require("child_process");
 
-import {TileStatusFileWorker} from "./tileStatusFileWorker";
-import {IProject, Projects} from "../data-model/project";
+const debug = require("debug")("mouselight:pipeline-api:worker-manager");
+
+import {TileStatusFileWorker} from "./tileStatusWorker";
 
 export class WorkerManager {
     private static _instance: WorkerManager = null;
 
-    public static get Instance(): WorkerManager {
+    public static Run(useChildProcessWorkers: boolean = false): WorkerManager {
         if (!this._instance) {
-            this._instance = new WorkerManager();
+            this._instance = new WorkerManager(useChildProcessWorkers);
         }
 
         return this._instance;
     }
 
-    private _tileStatusFileWorker: TileStatusFileWorker = TileStatusFileWorker.Instance;
+    private _useChildProcessWorkers: boolean;
 
-    private constructor() {
-    }
+    private constructor(useChildProcessWorkers: boolean = false) {
+        this._useChildProcessWorkers = useChildProcessWorkers;
 
-    public async restartActive() {
-        let projects = await new Projects().getAll();
-
-        projects.filter(project => project.is_active).map(project => this.activate(project));
-    }
-
-    public async setProjectStatus(id: string, shouldBeActive: boolean): Promise<IProject> {
-        let projects = new Projects();
-
-        let project: IProject = await projects.get(id);
-
-        if (project) {
-            projects.setStatus(id, shouldBeActive);
-
-            shouldBeActive ? this.activate(project) : this.deactivate(project);
+        if (this._useChildProcessWorkers) {
+            debug("starting workers using child processes");
+            this.startWorkerChildProcess("/tileStatusWorkerChildProcess.js");
+        } else {
+            debug("starting workers within parent process");
+            TileStatusFileWorker.Run();
         }
-
-        return project;
     }
 
-    private activate(project) {
-        this._tileStatusFileWorker.activateProject(project);
-    }
+    private startWorkerChildProcess(moduleName: string) {
+        // Options
+        //   silent - pumps stdio back through this parent process
+        //   execArv - remove possible $DEBUG flag on parent process causing address in use conflict
+        let worker_process = child_process.fork(path.join(__dirname, moduleName), [], {silent: true, execArgv: []});
 
-    private deactivate(project) {
-        this._tileStatusFileWorker.deactivateProject(project);
+        worker_process.stdout.on("data", data => console.log(`${data.toString().slice(0, -1)}`));
+
+        worker_process.stderr.on("data", data => console.log(`${data.toString().slice(0, -1)}`));
+
+        worker_process.on("close", code => console.log(`child process exited with code ${code}`));
     }
 }

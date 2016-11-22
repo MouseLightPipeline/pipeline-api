@@ -13,6 +13,8 @@ const config = serverConfiguration();
 
 const PORT = process.env.PORT || config.port;
 
+const useChildProcessWorkers = process.env.USE_CHILD_PROCESS_WORKERS || false;
+
 const app = express();
 
 app.use(bodyParser.urlencoded({extended: true}));
@@ -25,6 +27,8 @@ app.use(config.graphiQlEndpoint, graphiQLMiddleware(config));
 
 const server = SocketIoServer.use(app);
 
-WorkerManager.Instance.restartActive();
+server.listen(PORT, () => {
+    debug(`running on http://localhost:${PORT}`);
 
-server.listen(PORT, () => debug(`API Server is now running on http://localhost:${PORT}`));
+    WorkerManager.Run(useChildProcessWorkers);
+});

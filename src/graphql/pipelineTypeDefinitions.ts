@@ -41,6 +41,7 @@ type PipelineStage implements ITableModel {
   is_active: Boolean
   project_id: String
   task_id: String
+  previous_stage_id: String
   created_at: String
   updated_at: String
   deleted_at: String
@@ -77,6 +78,7 @@ type Query {
   projects(includeDeleted: Boolean = false): [Project!]!
   pipelineStage(id: String!): PipelineStage
   pipelineStages: [PipelineStage!]!
+  pipelineStagesForProject(id: String!): [PipelineStage!]!
   taskDefinition(id: String!): TaskDefinition
   taskDefinitions: [TaskDefinition!]!
   taskStatistic(id: String!): TaskStatistic
@@ -88,6 +90,9 @@ type Mutation {
   createProject(name: String, description: String, rootPath: String, sampleNumber: Int): Project
   setProjectStatus(id: String, shouldBeActive: Boolean): Project
   deleteProject(id: String!): Boolean
+  createPipelineStage(project_id: String, task_id: String, previous_stage_id: String, src_path: String, dst_path: String): PipelineStage
+  setPipelineStageStatus(id: String, shouldBeActive: Boolean): PipelineStage
+  deletePipelineStage(id: String!): Boolean
 }
 
 schema {

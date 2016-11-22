@@ -20,6 +20,14 @@ interface IDebugMessageArguments {
     msg: string;
 }
 
+interface ICreatePipelineStageArguments {
+    project_id: string;
+    task_id: string;
+    previous_stage_id: string;
+    src_path: string;
+    dst_path: string
+}
+
 interface ICreateProjectArguments {
     name: string;
     description: string;
@@ -27,7 +35,7 @@ interface ICreateProjectArguments {
     sampleNumber: number
 }
 
-interface ISetProjectStatusArguments {
+interface ISetActiveStatusArguments {
     id: string;
     shouldBeActive: boolean;
 }
@@ -58,6 +66,10 @@ let resolvers = {
             debug("get all pipeline stages");
             return context.getPipelineStages();
         },
+        pipelineStagesForProject(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IPipelineStage[]> {
+            debug(`get pipeline stages for project ${args.id}`);
+            return context.getPipelineStagesForProject(args.id);
+        },
         taskDefinition(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<ITaskDefinition> {
             debug("get task definition for id");
             return context.getTaskDefinition(args.id);
@@ -83,12 +95,20 @@ let resolvers = {
         createProject(_, args: ICreateProjectArguments, context: IPipelineServerContext): Promise<IProject> {
             return context.createProject(args.name, args.description, args.rootPath, args.sampleNumber);
         },
-        setProjectStatus(_, args: ISetProjectStatusArguments, context: IPipelineServerContext) {
+        setProjectStatus(_, args: ISetActiveStatusArguments, context: IPipelineServerContext) {
             return context.setProjectStatus(args.id, args.shouldBeActive);
         },
         deleteProject(_, args: IIdOnlyArgument, context: IPipelineServerContext) {
-            debug(`delete project id ${args.id}`);
             return context.deleteProject(args.id);
+        },
+        createPipelineStage(_, args: ICreatePipelineStageArguments, context: IPipelineServerContext): Promise<IProject> {
+            return context.createPipelineStage(args.project_id, args.task_id, args.previous_stage_id, args.src_path, args.dst_path);
+        },
+        setPipelineStageStatus(_, args: ISetActiveStatusArguments, context: IPipelineServerContext) {
+            return context.setPipelineStageStatus(args.id, args.shouldBeActive);
+        },
+        deletePipelineStage(_, args: IIdOnlyArgument, context: IPipelineServerContext) {
+            return context.deletePipelineStage(args.id);
         }
     }
 };

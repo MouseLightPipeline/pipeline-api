@@ -2,7 +2,7 @@ import Timer = NodeJS.Timer;
 const fs = require("fs-extra");
 const path = require("path");
 
-const debug = require("debug")("mouselight:pipeline-api:map-dashboard-data");
+const debug = require("debug")("mouselight:pipeline-api:tile-status-worker");
 
 import {IProject, Projects} from "../data-model/project";
 
@@ -17,7 +17,7 @@ const perfConf = performanceConfiguration();
 export class TileStatusFileWorker {
     private static _instance: TileStatusFileWorker = null;
 
-    public static get Instance(): TileStatusFileWorker {
+    public static Run(): TileStatusFileWorker {
         if (!this._instance) {
             this._instance = new TileStatusFileWorker();
         }
@@ -25,38 +25,26 @@ export class TileStatusFileWorker {
         return this._instance;
     }
 
-    private _intervalMap: Map<string, Timer> = new Map<string, Timer>();
+    private _timer: Timer = null;
 
     private constructor() {
+        this.updateActiveProjects();
+
+        this._timer = setInterval(() => this.updateActiveProjects(), perfConf.regenTileStatusJsonFileSeconds * 1000);
     }
 
-    public activateProject(project: IProject) {
-        if (!this._intervalMap.has(project.id)) {
-            let timeoutHandle = setInterval(() => this.refreshProject(project.id), perfConf.regenTileStatusJsonFileSeconds * 1000);
-            this.refreshProject(project.id);
-            this._intervalMap.set(project.id, timeoutHandle);
-            debug(`activated project ${project.id}`)
-        }
-    }
+    private async updateActiveProjects() {
+        debug(`refresh active projects`);
 
-    public deactivateProject(project: IProject) {
-        if (this._intervalMap.has(project.id)) {
-            clearInterval(this._intervalMap.get(project.id));
-            this._intervalMap.delete(project.id);
-            debug(`deactivated project ${project.id}`);
-        }
-    }
+        let projectManager = new Projects();
 
-    private async refreshProject(id) {
-        debug(`refresh project ${id}`);
+        let projects = await projectManager.getAll();
 
-        let projects = new Projects();
+        projects = projects.filter(project => project.is_active);
 
-        let project: IProject = await projects.get(id);
-
-        if (project) {
+        projects.forEach(project => {
             this.updateTileStatusFile(project);
-        }
+        });
     }
 
     private updateTileStatusFile(project: IProject) {

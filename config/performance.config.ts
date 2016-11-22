@@ -6,10 +6,10 @@ interface IPerformanceConfig {
 
 const configurations: IConfiguration<IPerformanceConfig> = {
     development: {
-        regenTileStatusJsonFileSeconds: 10
+        regenTileStatusJsonFileSeconds: 20
     },
     test: {
-        regenTileStatusJsonFileSeconds: 10
+        regenTileStatusJsonFileSeconds: 20
     },
     production: {
         regenTileStatusJsonFileSeconds: 300

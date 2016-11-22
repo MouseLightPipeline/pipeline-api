@@ -31,6 +31,8 @@ exports.up = function (knex, Promise) {
             table.uuid("task_id");
             table.foreign("task_id").references("TaskDefinition.id");
             table.timestamp("deleted_at");
+            table.uuid("previous_stage_id");
+            table.foreign("previous_stage_id").references("PipelineStage.id");
             table.timestamps();
         }).createTable("TaskDefinition", (table) => {
             table.uuid("id").primary().unique();

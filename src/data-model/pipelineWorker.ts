@@ -55,6 +55,14 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
         return worker;
     }
 
+    protected willSaveRow(row: IPipelineWorker): IPipelineWorker {
+        if (row.hasOwnProperty("status")) {
+            delete row["status"];
+        }
+
+        return row;
+    }
+
     protected didFetchRow(row: IPipelineWorker): IPipelineWorker {
 
         row["status"] = PipelineWorkers.getWorkerStatus(row.id);
@@ -74,11 +82,6 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
             deleted_at: null
         };
 
-        await this.save(worker);
-
-        // Retrieves back through data loader
-        worker = await this.get(worker.id);
-
-        return worker;
+        return await this.insertRow(worker);
     }
 }

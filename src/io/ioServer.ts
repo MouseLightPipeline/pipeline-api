@@ -21,9 +21,9 @@ export class SocketIoServer {
 
         let io = socket_io(this._httpServer);
 
-        debug("interface available");
-
         io.on("connection", client => this.onConnect(client));
+
+        debug("interface listening for clients");
     }
 
     private onConnect(client) {
