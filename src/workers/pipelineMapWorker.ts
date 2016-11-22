@@ -1,4 +1,4 @@
-import {connectorForFile} from "../data-access/knexPiplineStageConnection";
+import {connectorForFile, PipelineStageDatabaseFile} from "../data-access/knexPiplineStageConnection";
 const fs = require("fs-extra");
 const path = require("path");
 
@@ -26,7 +26,7 @@ export class PipelineMapWorker {
             fs.mkdirSync(this._rootDataFolder);
         }
 
-        this._databaseFile = path.join(this._rootDataFolder, "pipeline_stage_" + this._pipelineStage.id.toLocaleLowerCase().replace("-", ""));
+        this._databaseFile = path.join(this._rootDataFolder, PipelineStageDatabaseFile);
 
         this._knexConnector = connectorForFile(this._databaseFile);
 

@@ -20,7 +20,7 @@ const configurations: IConfiguration<IDatabaseConfig> = {
     development: {
         client: "sqlite3",
         connection: {
-            filename: path.join(internalDataPath, "system_data_dev.sqlite3")
+            filename: path.join(internalDataPath, "system-data-dev.sqlite3")
         },
         useNullAsDefault: true,
         migrations: {
@@ -30,7 +30,7 @@ const configurations: IConfiguration<IDatabaseConfig> = {
     test: {
         client: "sqlite3",
         connection: {
-            filename: path.join(internalDataPath, "system_data_test.sqlite3")
+            filename: path.join(internalDataPath, "system-data-test.sqlite3")
         },
         useNullAsDefault: true,
         migrations: {
@@ -40,7 +40,7 @@ const configurations: IConfiguration<IDatabaseConfig> = {
     production: {
         client: "sqlite3",
         connection: {
-            filename: path.join(internalDataPath, "system_data.sqlite3")
+            filename: path.join(internalDataPath, "system-data.sqlite3")
         },
         useNullAsDefault: true,
         migrations: {
