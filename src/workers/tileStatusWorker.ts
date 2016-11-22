@@ -15,6 +15,8 @@ import {connectorForFile, PipelineStageDatabaseFile} from "../data-access/knexPi
 
 const perfConf = performanceConfiguration();
 
+const tableName = "PipelineStage_TileStatus";
+
 export class TileStatusFileWorker {
     private static _instance: TileStatusFileWorker = null;
 
@@ -30,8 +32,6 @@ export class TileStatusFileWorker {
 
     private constructor() {
         this.updateActiveProjects();
-
-        this._timer = setInterval(() => this.updateActiveProjects(), perfConf.regenTileStatusJsonFileSeconds * 1000);
     }
 
     private async updateActiveProjects() {
@@ -41,14 +41,22 @@ export class TileStatusFileWorker {
 
         projects = projects.filter(project => project.is_active);
 
-        projects.forEach(async(project) => {
-            await this.updateTileStatusFile(project);
+        let requests = projects.reduce((promiseChain, project) => {
+            return promiseChain.then(() => new Promise(async(resolve) => {
+                debug(`updating ${project.root_path}`);
+                await this.updateTileStatusFile(project);
+                debug(`update complete`);
+                resolve();
+            }));
+        }, Promise.resolve());
+
+        requests.then(() => {
+            debug(`resetting timer`);
+            setTimeout(() => this.updateActiveProjects(), perfConf.regenTileStatusJsonFileSeconds * 1000);
         });
     }
 
     private async updateTileStatusFile(project: IProject) {
-        debug(`updating ${project.root_path}`);
-
         let dataFile = path.join(project.root_path, dashboardJsonFile);
 
         if (!fs.existsSync(dataFile)) {
@@ -86,7 +94,6 @@ export class TileStatusFileWorker {
         }
 
         fs.outputJSONSync(outputFile, tiles);
-        debug(`update json complete`);
 
         let databaseFile = path.join(project.root_path, PipelineStageDatabaseFile);
 
@@ -94,30 +101,66 @@ export class TileStatusFileWorker {
 
         let knexConnector = await connectorForFile(databaseFile);
 
-        tiles.forEach(async(tile) => {
-            let tileRow = await knexConnector("DashboardTiles").where("relative_path", tile.relativePath);
+        let toInsert = [];
+        let toUpdate = [];
 
-            if (tileRow.length > 0) {
-                if (tile.isComplete !== tileRow.is_complete) {
-                    await knexConnector("DashboardTiles").where("relative_path", tile.relativePath).update({
-                        previous_stage_is_complete: tile.isComplete,
-                        current_stage_is_complete: tile.isComplete,
-                        updated_at: new Date()
-                    });
-                }
-            } else {
-                let now = new Date();
+        await tiles.reduce((promiseChain, tile) => {
+            return promiseChain.then(() => new Promise((resolve) => {
+                this.sortTile(knexConnector, tile, toInsert, toUpdate, resolve)
+            }));
+        }, Promise.resolve());
 
-                await knexConnector("DashboardTiles").insert({
-                    relative_path: tile.relativePath,
-                    previous_stage_is_complete: tile.isComplete,
-                    current_stage_is_complete: tile.isComplete,
-                    created_at: now,
-                    updated_at: now
+        if (toInsert.length > 0) {
+            debug(`batch insert ${toInsert.length} tiles`);
+
+            while (toInsert.length > 0) {
+                await knexConnector.batchInsert(tableName, toInsert.splice(0, perfConf.regenTileStatusSqliteChunkSize));
+            }
+        }
+
+        if (toUpdate.length > 0) {
+            debug(`batch update ${toUpdate.length} tiles`);
+
+            while (toUpdate.length > 0) {
+                let chunk = toUpdate.splice(0, perfConf.regenTileStatusSqliteChunkSize);
+                await knexConnector.transaction((trx) => {
+                    return chunk.reduce((promiseChain, tile) => {
+                        let func = knexConnector(tableName).where("relative_path", tile.relativePath).update({
+                            previous_stage_is_complete: tile.isComplete,
+                            current_stage_is_complete: tile.isComplete,
+                            updated_at: new Date()
+                        }).transacting(trx);
+
+                        return promiseChain ? promiseChain.then(() => {
+                            return func;
+                        }) : func;
+                    }, null);
                 });
             }
-        });
+        }
 
-        debug(`update sqlite complete`);
+        return Promise.resolve();
+    }
+
+    private async sortTile(knexConnector, tile, toInsert, toUpdate, resolve) {
+        // debug(`sort tile`);
+        let tileRow = await knexConnector(tableName).where("relative_path", tile.relativePath);
+
+        if (tileRow.length === 0) {
+            let now = new Date();
+            toInsert.push({
+                relative_path: tile.relativePath,
+                previous_stage_is_complete: tile.isComplete,
+                current_stage_is_complete: tile.isComplete,
+                created_at: now,
+                updated_at: now
+            });
+        } else {
+            //if ((tile.isComplete | 0) !== tileRow[0].previous_stage_is_complete) {
+                toUpdate.push(tile);
+            //}
+        }
+
+        resolve();
     }
 }
