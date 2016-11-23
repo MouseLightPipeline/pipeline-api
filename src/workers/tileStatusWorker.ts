@@ -156,9 +156,9 @@ export class TileStatusFileWorker {
                 updated_at: now
             });
         } else {
-            //if ((tile.isComplete | 0) !== tileRow[0].previous_stage_is_complete) {
+            if ((tile.isComplete | 0) !== tileRow[0].previous_stage_is_complete) {
                 toUpdate.push(tile);
-            //}
+            }
         }
 
         resolve();
