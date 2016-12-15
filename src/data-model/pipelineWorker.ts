@@ -13,14 +13,28 @@ export enum PipelineWorkerStatus {
 }
 
 export interface IPipelineWorker extends ITableModelRow {
-    name: string;
-    description: string;
     machine_id: string;
+    name: string;
+    os_type: string;
+    platform: string;
+    arch: string;
+    release: string;
+    cpu_count: number;
+    total_memory: number;
+    free_memory: number;
+    load_average: number;
     last_seen: Date;
+    status?: PipelineWorkerStatus,
+    taskCount?: number;
 }
 
 export class PipelineWorkers extends TableModel<IPipelineWorker> {
     private static _workerStatusMap = new Map<string, PipelineWorkerStatus>();
+    private static _workerTaskCountMap = new Map<string, number>();
+
+    public constructor() {
+        super("PipelineWorker");
+    }
 
     public static getWorkerStatus(id: string): PipelineWorkerStatus {
         let status = PipelineWorkers._workerStatusMap[id];
@@ -33,12 +47,23 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
         return status;
     }
 
+    public static getWorkerTaskCount(id: string): number {
+        let count = PipelineWorkers._workerTaskCountMap[id];
+
+        if (count == null) {
+            count = -1;
+            PipelineWorkers._workerTaskCountMap[id] = count;
+        }
+
+        return count;
+    }
+
     public static setWorkerStatus(id: string, status: PipelineWorkerStatus) {
         PipelineWorkers._workerStatusMap[id] = status;
     }
 
-    public constructor() {
-        super("PipelineWorker");
+    public static setWorkerTaskCount(id: string, count: number) {
+        PipelineWorkers._workerTaskCountMap[id] = count;
     }
 
     public async getForMachineId(machineId: string) {
@@ -60,6 +85,10 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
             delete row["status"];
         }
 
+        if (row.hasOwnProperty("taskCount")) {
+            delete row["taskCount"];
+        }
+
         return row;
     }
 
@@ -67,15 +96,24 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
 
         row["status"] = PipelineWorkers.getWorkerStatus(row.id);
 
+        row["taskCount"] = PipelineWorkers.getWorkerTaskCount(row.id);
+
         return row;
     }
 
     private async create(machineId: string) {
         let worker = {
             id: uuid.v4(),
-            name: "",
-            description: "",
             machine_id: machineId,
+            name: "",
+            os_type: "",
+            platform: "",
+            arch: "",
+            release: "",
+            cpu_count: 0,
+            total_memory: 0,
+            free_memory: 0,
+            load_average: 0,
             last_seen: null,
             created_at: null,
             updated_at: null,

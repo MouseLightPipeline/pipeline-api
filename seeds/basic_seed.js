@@ -11,15 +11,25 @@ if (env === "production") {
 function productionSeed() {
     return (knex, Promise) => {
         // Deletes ALL existing entries
-        let promise1 = knex("TaskDefinition").del()
+        let promise1 = knex('TaskDefinition').del()
             .then(() => {
                 return Promise.all([
-                    knex("TaskDefinition").insert({
-                        id: "04B8313E-0E96-4194-9C06-22771ACD3986".toLocaleLowerCase(),
-                        name: "Echo",
-                        description: "Simple command to test shell worker execution.  Will echo the passed arguments.",
-                        script: "test/echo.sh",
-                        interpreter: "none",
+                    // Inserts seed entries
+                    knex('TaskDefinition').insert({
+                        id: '1EC76026-4ECC-4D25-9C6E-CDF992A05DA3'.toLocaleLowerCase(),
+                        name: 'ilastik Pixel Classifier Test',
+                        description: 'Calls ilastik with test project.',
+                        script: 'test/pixel_classifier_test/pixel_shell.sh',
+                        interpreter: 'none',
+                        args: '/Users/pedson/Developer/Leap/Janelia/acq-dashboard-worker-api/test/pixel_classifier_test',
+                        created_at: createDate(3, 0)
+                    }),
+                    knex('TaskDefinition').insert({
+                        id: '04B8313E-0E96-4194-9C06-22771ACD3986'.toLocaleLowerCase(),
+                        name: 'Echo',
+                        description: 'Simple command to test shell worker execution.  Will echo the passed arguments.',
+                        script: 'test/echo.sh',
+                        interpreter: 'none',
                         created_at: createDate(2, 0),
                         updated_at: createDate(1, 3.5)
                     })
@@ -37,30 +47,23 @@ function developmentSeed() {
             .then(() => {
                 return Promise.all([
                     // Inserts seed entries
-                    knex("TaskDefinition").insert({
-                        id: "1EC76026-4ECC-4D25-9C6E-CDF992A05DA3".toLocaleLowerCase(),
-                        name: "Python Generations",
-                        description: "Simple python script to test worker execution.",
-                        script: "test/pytest.py",
-                        interpreter: "python",
+                    knex('TaskDefinition').insert({
+                        id: '1EC76026-4ECC-4D25-9C6E-CDF992A05DA3'.toLocaleLowerCase(),
+                        name: 'ilastik Pixel Classifier Test',
+                        description: 'Calls ilastik with test project.',
+                        script: 'test/pixel_classifier_test/pixel_shell.sh',
+                        interpreter: 'none',
+                        args: '/Users/pedson/Developer/Leap/Janelia/acq-dashboard-worker-api/test/pixel_classifier_test',
                         created_at: createDate(3, 0)
                     }),
-                    knex("TaskDefinition").insert({
-                        id: "04B8313E-0E96-4194-9C06-22771ACD3986".toLocaleLowerCase(),
-                        name: "Echo",
-                        description: "Simple command to test shell worker execution.  Will echo the passed arguments.",
-                        script: "test/echo.sh",
-                        interpreter: "none",
+                    knex('TaskDefinition').insert({
+                        id: '04B8313E-0E96-4194-9C06-22771ACD3986'.toLocaleLowerCase(),
+                        name: 'Echo',
+                        description: 'Simple command to test shell worker execution.  Will echo the passed arguments.',
+                        script: 'test/echo.sh',
+                        interpreter: 'none',
                         created_at: createDate(2, 0),
                         updated_at: createDate(1, 3.5)
-                    }),
-                    knex("TaskDefinition").insert({
-                        id: "17610E93-5F57-43A1-8281-73E75CA47E56".toLocaleLowerCase(),
-                        name: "MATLAB sum",
-                        description: "Simple MATLAB executable to test worker execution.",
-                        script: "mltest",
-                        interpreter: "none",
-                        created_at: createDate(1, 0)
                     }),
                     knex("Project").insert({
                         id: "AF8CB0D4-56C0-4DB8-8A1B-7B39540B2D04".toLocaleLowerCase(),

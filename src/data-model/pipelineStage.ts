@@ -9,10 +9,8 @@ export interface IPipelineStage extends IRunnableTableModelRow {
     project_id: string;
     task_id: string;
     previous_stage_id: string;
-    src_path: string;
     dst_path: string;
     function_type: number;
-    execution_order: number;
 }
 
 export class PipelineStages extends RunnableTableModel<IPipelineStage> {
@@ -20,7 +18,7 @@ export class PipelineStages extends RunnableTableModel<IPipelineStage> {
         super("PipelineStage");
     }
 
-    public async create(project_id: string, task_id: string, previous_stage_id: string, src_path: string, dst_path: string): Promise<IPipelineStage> {
+    public async create(project_id: string, task_id: string, previous_stage_id: string, dst_path: string): Promise<IPipelineStage> {
         let pipelineStage = {
             id: uuid.v4(),
             name: "",
@@ -28,11 +26,9 @@ export class PipelineStages extends RunnableTableModel<IPipelineStage> {
             project_id: project_id,
             task_id: task_id,
             previous_stage_id: previous_stage_id,
-            src_path: src_path,
             dst_path: dst_path,
             is_active: false,
             function_type: 0,
-            execution_order: 0,
             created_at: null,
             updated_at: null,
             deleted_at: null

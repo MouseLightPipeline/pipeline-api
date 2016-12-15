@@ -17,7 +17,7 @@ export interface IPipelineServerContext {
     getPipelineStage(id: string): Promise<IPipelineStage>;
     getPipelineStages(): Promise<IPipelineStage[]>;
     getPipelineStagesForProject(id: string): Promise<IPipelineStage>;
-    createPipelineStage(project_id: string, task_id: string, previous_stage_id: string, src_path: string, dst_path: string): Promise<IPipelineStage>;
+    createPipelineStage(project_id: string, task_id: string, previous_stage_id: string, dst_path: string): Promise<IPipelineStage>;
     setPipelineStageStatus(id: string, shouldBeActive: boolean): Promise<IPipelineStage>;
     deletePipelineStage(id: string): Promise<boolean>;
 
@@ -75,8 +75,8 @@ export class PipelineServerContext implements IPipelineServerContext {
         return this._pipelineStages.getForProject(id);
     }
 
-    public async createPipelineStage(project_id: string, task_id: string, previous_stage_id: string, src_path: string, dst_path: string): Promise<IPipelineStage> {
-        return this._pipelineStages.create(project_id, task_id, previous_stage_id, src_path, dst_path);
+    public async createPipelineStage(project_id: string, task_id: string, previous_stage_id: string, dst_path: string): Promise<IPipelineStage> {
+        return this._pipelineStages.create(project_id, task_id, previous_stage_id, dst_path);
     }
 
     public async setPipelineStageStatus(id: string, shouldBeActive: boolean): Promise<IPipelineStage> {

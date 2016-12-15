@@ -5,6 +5,7 @@ export interface ITaskDefinition extends ITableModelRow {
     description: string;
     script: string;
     interpreter: string;
+    args: string;
 }
 
 export class TaskDefinitions extends TableModel<ITaskDefinition> {

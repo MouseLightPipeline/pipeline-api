@@ -7,7 +7,7 @@ import serverConfiguration from "../config/server.config";
 
 import {graphQLMiddleware, graphiQLMiddleware} from "./graphql/common/graphQLMiddleware";
 import {SocketIoServer} from "./io/ioServer";
-import {WorkerManager} from "./workers/workerManager";
+import {SchedulerHub} from "./schedulers/schedulerHub";
 
 const config = serverConfiguration();
 
@@ -30,5 +30,5 @@ const server = SocketIoServer.use(app);
 server.listen(PORT, () => {
     debug(`running on http://localhost:${PORT}`);
 
-    WorkerManager.Run(useChildProcessWorkers);
+    SchedulerHub.Run(useChildProcessWorkers);
 });

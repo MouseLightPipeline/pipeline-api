@@ -24,7 +24,6 @@ interface ICreatePipelineStageArguments {
     project_id: string;
     task_id: string;
     previous_stage_id: string;
-    src_path: string;
     dst_path: string
 }
 
@@ -47,7 +46,7 @@ let resolvers = {
             return context.getPipelineWorker(args.id);
         },
         pipelineWorkers(_, __, context: IPipelineServerContext): Promise<IPipelineWorker[]> {
-            debug("get all workers");
+            debug("get all schedulers");
             return context.getPipelineWorkers();
         },
         project(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IProject> {
@@ -102,7 +101,7 @@ let resolvers = {
             return context.deleteProject(args.id);
         },
         createPipelineStage(_, args: ICreatePipelineStageArguments, context: IPipelineServerContext): Promise<IProject> {
-            return context.createPipelineStage(args.project_id, args.task_id, args.previous_stage_id, args.src_path, args.dst_path);
+            return context.createPipelineStage(args.project_id, args.task_id, args.previous_stage_id, args.dst_path);
         },
         setPipelineStageStatus(_, args: ISetActiveStatusArguments, context: IPipelineServerContext) {
             return context.setPipelineStageStatus(args.id, args.shouldBeActive);

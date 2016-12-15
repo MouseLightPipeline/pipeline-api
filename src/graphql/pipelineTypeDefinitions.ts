@@ -8,10 +8,18 @@ interface ITableModel {
 
 type PipelineWorker implements ITableModel {
   id: String!
-  name: String
-  description: String
   machine_id: String
+  name: String
+  os_type: String
+  platform: String
+  arch: String
+  release: String
+  cpu_count: Int
+  total_memory: Float
+  free_memory: Float
+  load_average: Float
   last_seen: String
+  taskCount: Int
   status: Int
   created_at: String
   updated_at: String
@@ -36,7 +44,6 @@ type PipelineStage implements ITableModel {
   description: String
   function_type: Int
   execution_order: Int
-  src_path: String
   dst_path: String
   is_active: Boolean
   project_id: String
@@ -53,6 +60,7 @@ type TaskDefinition implements ITableModel {
   description: String!
   script: String!
   interpreter: String!
+  args: String!
   created_at: String
   updated_at: String
   deleted_at: String
@@ -90,7 +98,7 @@ type Mutation {
   createProject(name: String, description: String, rootPath: String, sampleNumber: Int): Project
   setProjectStatus(id: String, shouldBeActive: Boolean): Project
   deleteProject(id: String!): Boolean
-  createPipelineStage(project_id: String, task_id: String, previous_stage_id: String, src_path: String, dst_path: String): PipelineStage
+  createPipelineStage(project_id: String, task_id: String, previous_stage_id: String, dst_path: String): PipelineStage
   setPipelineStageStatus(id: String, shouldBeActive: Boolean): PipelineStage
   deletePipelineStage(id: String!): Boolean
 }

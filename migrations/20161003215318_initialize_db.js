@@ -2,9 +2,16 @@ exports.up = function (knex, Promise) {
     return knex.schema
         .createTable("PipelineWorker", (table) => {
             table.uuid("id").primary().unique();
-            table.string("name");
-            table.string("description");
             table.uuid("machine_id");
+            table.string("name");
+            table.string("os_type");
+            table.string("platform");
+            table.string("arch");
+            table.string("release");
+            table.integer("cpu_count");
+            table.float("total_memory");
+            table.float("free_memory");
+            table.float("load_average");
             table.timestamp("last_seen");
             table.timestamp("deleted_at");
             table.timestamps();
@@ -22,8 +29,6 @@ exports.up = function (knex, Promise) {
             table.string("name");
             table.string("description");
             table.integer("function_type");
-            table.integer("execution_order");
-            table.string("src_path");
             table.string("dst_path");
             table.boolean("is_active");
             table.uuid("project_id");
@@ -40,6 +45,7 @@ exports.up = function (knex, Promise) {
             table.string("description");
             table.string("script");
             table.string("interpreter");
+            table.string('args');
             table.timestamp("deleted_at");
             table.timestamps();
         }).createTable("TaskStatistic", (table) => {

@@ -29,6 +29,8 @@ export class SocketIoServer {
     private onConnect(client) {
         debug("accepted client connection");
 
+        client.on("hostInformation", hostInformation => this.onHostInformation(client, hostInformation));
+
         client.on("heartBeat", heartbeatData => this.onHeartbeat(client, heartbeatData));
 
         client.on("disconnect", () => this.onDisconnect(client));
@@ -36,6 +38,26 @@ export class SocketIoServer {
 
     private onDisconnect(client) {
         debug("client disconnected");
+    }
+
+    private async onHostInformation(client, hostInformation) {
+        // Update worker for last seen.
+        let workerManager = new PipelineWorkers();
+
+        let worker = await workerManager.getForMachineId(hostInformation.machineId);
+
+        worker.name = hostInformation.name;
+        worker.os_type = hostInformation.osType;
+        worker.platform = hostInformation.platform;
+        worker.arch = hostInformation.arch;
+        worker.release = hostInformation.release;
+        worker.cpu_count = hostInformation.cpuCount;
+        worker.total_memory = hostInformation.totalMemory;
+        worker.free_memory = hostInformation.freeMemory;
+        worker.load_average = hostInformation.loadAverage[0];
+        worker.last_seen = new Date();
+
+        await workerManager.save(worker);
     }
 
     private async onHeartbeat(client, heartbeatData) {
@@ -46,7 +68,10 @@ export class SocketIoServer {
 
         worker.last_seen = new Date();
 
-        await workerManager.save(worker);
+        worker = await workerManager.save(worker);
+
+        debug(`heartbeat task count ${heartbeatData.runningTaskCount}`);
+        PipelineWorkers.setWorkerTaskCount(worker.id, heartbeatData.runningTaskCount);
 
         let status = PipelineWorkerStatus.Unavailable;
 
