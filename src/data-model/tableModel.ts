@@ -109,9 +109,9 @@ export abstract class TableModel<T extends ITableModelRow> {
         let objList;
 
         if (includeSoftDelete) {
-            objList = await knex(this._tableName).select(this._idKey);
+            objList = await knex(this._tableName).select(this._idKey).orderBy("id");
         } else {
-            objList = await knex(this._tableName).select(this._idKey).whereNull("deleted_at");
+            objList = await knex(this._tableName).select(this._idKey).whereNull("deleted_at").orderBy("id");
         }
 
         return <string[]>objList.map(obj => obj.id);

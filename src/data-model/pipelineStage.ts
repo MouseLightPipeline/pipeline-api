@@ -38,7 +38,7 @@ export class PipelineStages extends RunnableTableModel<IPipelineStage> {
     }
 
     public async getForProject(id: string) {
-        let objList = await knex(this.tableName).select(this.idKey).where({project_id: id});
+        let objList = await knex(this.tableName).select(this.idKey).where({project_id: id}).whereNull("deleted_at").orderBy("id");
 
         let idList = <string[]>objList.map(obj => obj.id);
 

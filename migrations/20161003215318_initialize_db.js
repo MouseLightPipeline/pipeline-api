@@ -12,6 +12,7 @@ exports.up = function (knex, Promise) {
             table.float("total_memory");
             table.float("free_memory");
             table.float("load_average");
+            table.float("work_unit_capacity");
             table.timestamp("last_seen");
             table.timestamp("deleted_at");
             table.timestamps();
@@ -46,6 +47,7 @@ exports.up = function (knex, Promise) {
             table.string("script");
             table.string("interpreter");
             table.string('args');
+            table.float('work_units');
             table.timestamp("deleted_at");
             table.timestamps();
         }).createTable("TaskStatistic", (table) => {

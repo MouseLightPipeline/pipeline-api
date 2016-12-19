@@ -22,6 +22,7 @@ function productionSeed() {
                         script: 'test/pixel_classifier_test/pixel_shell.sh',
                         interpreter: 'none',
                         args: '/Users/pedson/Developer/Leap/Janelia/acq-dashboard-worker-api/test/pixel_classifier_test',
+                        work_units: 1,
                         created_at: createDate(3, 0)
                     }),
                     knex('TaskDefinition').insert({
@@ -30,6 +31,7 @@ function productionSeed() {
                         description: 'Simple command to test shell worker execution.  Will echo the passed arguments.',
                         script: 'test/echo.sh',
                         interpreter: 'none',
+                        work_units: 2,
                         created_at: createDate(2, 0),
                         updated_at: createDate(1, 3.5)
                     })
@@ -54,6 +56,7 @@ function developmentSeed() {
                         script: 'test/pixel_classifier_test/pixel_shell.sh',
                         interpreter: 'none',
                         args: '/Users/pedson/Developer/Leap/Janelia/acq-dashboard-worker-api/test/pixel_classifier_test',
+                        work_units: 1,
                         created_at: createDate(3, 0)
                     }),
                     knex('TaskDefinition').insert({
@@ -62,6 +65,7 @@ function developmentSeed() {
                         description: 'Simple command to test shell worker execution.  Will echo the passed arguments.',
                         script: 'test/echo.sh',
                         interpreter: 'none',
+                        work_units: 2,
                         created_at: createDate(2, 0),
                         updated_at: createDate(1, 3.5)
                     }),

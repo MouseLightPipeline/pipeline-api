@@ -3,7 +3,7 @@ const fs = require("fs-extra");
 
 import {IConfiguration} from "./configuration";
 
-export const internalDataPath = path.join(process.cwd(), "internalData");
+export const internalDataPath = path.join(process.cwd(), "internal-data");
 
 if (!fs.existsSync(internalDataPath)) {
     fs.mkdirSync(internalDataPath);

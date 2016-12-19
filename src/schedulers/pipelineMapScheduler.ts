@@ -247,7 +247,6 @@ export class PipelineMapScheduler extends PipelineScheduler {
         return await this._outputKnexConnector(this._inProcessTableName).select();
     }
 
-
     private async loadAvailableToProcess() {
         debug("loading available to-process");
 
