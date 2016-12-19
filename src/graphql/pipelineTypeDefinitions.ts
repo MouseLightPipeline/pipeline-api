@@ -18,8 +18,9 @@ type PipelineWorker implements ITableModel {
   total_memory: Float
   free_memory: Float
   load_average: Float
+  work_unit_capacity: Float
   last_seen: String
-  taskCount: Int
+  task_load: Float
   status: Int
   created_at: String
   updated_at: String

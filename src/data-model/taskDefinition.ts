@@ -6,6 +6,7 @@ export interface ITaskDefinition extends ITableModelRow {
     script: string;
     interpreter: string;
     args: string;
+    work_units: number;
 }
 
 export class TaskDefinitions extends TableModel<ITaskDefinition> {

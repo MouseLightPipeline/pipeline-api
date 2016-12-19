@@ -1,3 +1,4 @@
+import {TaskDefinitions} from "../data-model/taskDefinition";
 const path = require("path");
 const fs = require("fs-extra");
 
@@ -79,7 +80,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
             table.timestamps();
         });
 
-        this.performWork();
+        await this.performWork();
     }
 
     private async performWork() {
@@ -107,7 +108,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
         }
 
         // Check and update the status of anything in-process
-        this.updateInProcessStatus();
+        await this.updateInProcessStatus();
 
         // If there are no available schedulers, exit
 
@@ -121,7 +122,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
 
         // If there is any to-process, try to fill worker capacity
         if (available.length > 0) {
-            this.scheduleFromList(available);
+            await this.scheduleFromList(available);
         }
 
         debug("resetting timer");
@@ -188,24 +189,29 @@ export class PipelineMapScheduler extends PipelineScheduler {
             src_path = previousStage.dst_path;
         }
 
+        let tasks = new TaskDefinitions();
+
+        let task = await tasks.get(this._pipelineStage.task_id);
+
         // Will continue until capacity is exhausted.  Returning false for starting something in the list will short-circuit
         // the every loop.
         availableList.every(available => {
             // Will continue until a worker with capacity is found and a task is started.  Workers without capacity
             // return false continuing the iteration.
             return workers.some(async(worker) => {
-                let taskCount = PipelineWorkers.getWorkerTaskCount(worker.id);
+                let taskLoad = PipelineWorkers.getWorkerTaskLoad(worker.id);
 
-                if (taskCount < 0) {
+                if (taskLoad < 0) {
+                    // No information
                     return false;
                 }
 
-                let capacity = 3 - taskCount;
+                let capacity = worker.work_unit_capacity - taskLoad;
 
-                if (capacity > 0) {
-                    debug(`found worker ${worker.name} with capacity ${capacity}`);
+                if (capacity >= task.work_units) {
+                    debug(`found worker ${worker.name} with sufficient capacity ${capacity}`);
 
-                    PipelineWorkers.setWorkerTaskCount(worker.id, taskCount + 1);
+                    PipelineWorkers.setWorkerTaskLoad(worker.id, taskLoad + task.work_units);
 
                     let outputPath = path.join(this._pipelineStage.dst_path, available.relative_path);
 

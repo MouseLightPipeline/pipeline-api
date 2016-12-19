@@ -23,14 +23,15 @@ export interface IPipelineWorker extends ITableModelRow {
     total_memory: number;
     free_memory: number;
     load_average: number;
+    work_unit_capacity: number;
     last_seen: Date;
     status?: PipelineWorkerStatus,
-    taskCount?: number;
+    task_load?: number;
 }
 
 export class PipelineWorkers extends TableModel<IPipelineWorker> {
     private static _workerStatusMap = new Map<string, PipelineWorkerStatus>();
-    private static _workerTaskCountMap = new Map<string, number>();
+    private static _workerTaskLoadMap = new Map<string, number>();
 
     public constructor() {
         super("PipelineWorker");
@@ -47,12 +48,12 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
         return status;
     }
 
-    public static getWorkerTaskCount(id: string): number {
-        let count = PipelineWorkers._workerTaskCountMap[id];
+    public static getWorkerTaskLoad(id: string): number {
+        let count = PipelineWorkers._workerTaskLoadMap[id];
 
         if (count == null) {
             count = -1;
-            PipelineWorkers._workerTaskCountMap[id] = count;
+            PipelineWorkers._workerTaskLoadMap[id] = count;
         }
 
         return count;
@@ -62,8 +63,8 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
         PipelineWorkers._workerStatusMap[id] = status;
     }
 
-    public static setWorkerTaskCount(id: string, count: number) {
-        PipelineWorkers._workerTaskCountMap[id] = count;
+    public static setWorkerTaskLoad(id: string, count: number) {
+        PipelineWorkers._workerTaskLoadMap[id] = count;
     }
 
     public async getForMachineId(machineId: string) {
@@ -85,8 +86,8 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
             delete row["status"];
         }
 
-        if (row.hasOwnProperty("taskCount")) {
-            delete row["taskCount"];
+        if (row.hasOwnProperty("task_load")) {
+            delete row["task_load"];
         }
 
         return row;
@@ -96,7 +97,7 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
 
         row["status"] = PipelineWorkers.getWorkerStatus(row.id);
 
-        row["taskCount"] = PipelineWorkers.getWorkerTaskCount(row.id);
+        row["task_load"] = PipelineWorkers.getWorkerTaskLoad(row.id);
 
         return row;
     }
@@ -114,6 +115,7 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
             total_memory: 0,
             free_memory: 0,
             load_average: 0,
+            work_unit_capacity: 0,
             last_seen: null,
             created_at: null,
             updated_at: null,

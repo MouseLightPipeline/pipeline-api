@@ -55,6 +55,7 @@ export class SocketIoServer {
         worker.total_memory = hostInformation.totalMemory;
         worker.free_memory = hostInformation.freeMemory;
         worker.load_average = hostInformation.loadAverage[0];
+        worker.work_unit_capacity = hostInformation.workUnitCapacity;
         worker.last_seen = new Date();
 
         await workerManager.save(worker);
@@ -70,12 +71,12 @@ export class SocketIoServer {
 
         worker = await workerManager.save(worker);
 
-        debug(`heartbeat task count ${heartbeatData.runningTaskCount}`);
-        PipelineWorkers.setWorkerTaskCount(worker.id, heartbeatData.runningTaskCount);
+        debug(`heartbeat task load ${heartbeatData.taskLoad}`);
+        PipelineWorkers.setWorkerTaskLoad(worker.id, heartbeatData.taskLoad);
 
         let status = PipelineWorkerStatus.Unavailable;
 
-        switch (heartbeatData.runningTaskCount) {
+        switch (heartbeatData.taskLoad) {
             case -1:
                 status = PipelineWorkerStatus.Connected;
                 break;
