@@ -5,8 +5,8 @@ const debug = require("debug")("mouselight:pipeline-api:resolvers");
 import {ITaskDefinition} from "../data-model/taskDefinition";
 import {IPipelineStage} from "../data-model/pipelineStage";
 import {IProject} from "../data-model/project";
-import {ITaskStatistic} from "../data-model/taskStatistic";
 import {IPipelineWorker} from "../data-model/pipelineWorker";
+import {IPipelineStagePerformance} from "../data-model/pipelineStagePerformance";
 
 interface IIdOnlyArgument {
     id: string;
@@ -77,13 +77,13 @@ let resolvers = {
             debug("get all task definitions");
             return context.getTaskDefinitions();
         },
-        taskStatistic(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<ITaskStatistic> {
+        pipelineStagePerformance(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IPipelineStagePerformance> {
             debug("get task statistic for id");
-            return context.getTaskStatistic(args.id);
+            return context.getPipelineStagePerformance(args.id);
         },
-        taskStatistics(_, __, context: IPipelineServerContext): Promise<ITaskStatistic[]> {
+        pipelineStagePerformances(_, __, context: IPipelineServerContext): Promise<IPipelineStagePerformance[]> {
             debug("get all task statistics");
-            return context.getTaskStatistics();
+            return context.getPipelineStagePerformances();
         }
     },
     Mutation: {
@@ -108,6 +108,14 @@ let resolvers = {
         },
         deletePipelineStage(_, args: IIdOnlyArgument, context: IPipelineServerContext) {
             return context.deletePipelineStage(args.id);
+        }
+    },
+    PipelineStage: {
+        performance(stage, _, context: IPipelineServerContext): any {
+            return context.getForStage(stage.id);
+        },
+        task(stage, _, context: IPipelineServerContext): any {
+            return context.getTaskDefinition(stage.task_id);
         }
     }
 };

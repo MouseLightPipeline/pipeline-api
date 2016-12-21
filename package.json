@@ -13,6 +13,7 @@
   "dependencies": {
     "apollo-client": "^0.5.20",
     "apollo-server": "^0.3.2",
+    "async": "^2.1.4",
     "body-parser": "^1.15.2",
     "dataloader": "^1.2.0",
     "debug": "^2.2.0",

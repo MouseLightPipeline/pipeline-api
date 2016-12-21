@@ -50,16 +50,25 @@ exports.up = function (knex, Promise) {
             table.float('work_units');
             table.timestamp("deleted_at");
             table.timestamps();
-        }).createTable("TaskStatistic", (table) => {
+        }).createTable("PipelineStagePerformance", (table) => {
             table.uuid("id").primary().unique();
+            table.integer("num_in_process");
+            table.integer("num_ready_to_process");
             table.integer("num_execute");
             table.integer("num_complete");
             table.integer("num_error");
-            table.integer("num_cancelled");
-            table.float("duration_avg");
-            table.float("duration_long");
-            table.uuid("task_id");
-            table.foreign("task_id").references("TaskDefinition.id");
+            table.integer("num_cancel");
+            table.float("duration_average");
+            table.float("duration_high");
+            table.float("duration_low");
+            table.float("cpu_average");
+            table.float("cpu_high");
+            table.float("cpu_low");
+            table.float("memory_average");
+            table.float("memory_high");
+            table.float("memory_low");
+            table.uuid("pipeline_stage_id");
+            table.foreign("pipeline_stage_id").references("PipelineStage.id");
             table.timestamp("deleted_at");
             table.timestamps();
         });
@@ -71,5 +80,5 @@ exports.down = function (knex, Promise) {
         .dropTable("Project")
         .dropTable("PipelineStage")
         .dropTable("TaskDefinition")
-        .dropTable("TaskStatistic");
+        .dropTable("PipelineStagePerformance");
 };

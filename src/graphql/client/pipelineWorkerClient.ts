@@ -43,6 +43,9 @@ export class PipelineWorkerClient {
                         last_process_status_code
                         completion_status_code
                         execution_status_code
+                        max_cpu
+                        max_memory
+                        started_at
                         completed_at
                     }
                 }`,

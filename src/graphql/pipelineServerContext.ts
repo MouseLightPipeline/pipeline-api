@@ -1,8 +1,8 @@
 import {ITaskDefinition, TaskDefinitions} from "../data-model/taskDefinition";
 import {Projects, IProject} from "../data-model/project";
 import {IPipelineStage, PipelineStages} from "../data-model/pipelineStage";
-import {ITaskStatistic, TaskStatistics} from "../data-model/taskStatistic";
 import {IPipelineWorker, PipelineWorkers} from "../data-model/pipelineWorker";
+import {IPipelineStagePerformance, pipelineStagePerformanceInstance} from "../data-model/pipelineStagePerformance";
 
 export interface IPipelineServerContext {
     getPipelineWorker(id: string): Promise<IPipelineWorker>;
@@ -24,16 +24,17 @@ export interface IPipelineServerContext {
     getTaskDefinition(id: string): Promise<ITaskDefinition>;
     getTaskDefinitions(): Promise<ITaskDefinition[]>;
 
-    getTaskStatistic(id: string): Promise<ITaskStatistic>;
-    getTaskStatistics(): Promise<ITaskStatistic[]>;
+    getPipelineStagePerformance(id: string): Promise<IPipelineStagePerformance>;
+    getPipelineStagePerformances(): Promise<IPipelineStagePerformance[]>;
+    getForStage(pipeline_stage_id: string): Promise<IPipelineStagePerformance>
 }
 
 export class PipelineServerContext implements IPipelineServerContext {
     private _taskDefinitions = new TaskDefinitions();
     private _projects = new Projects();
     private _pipelineStages = new PipelineStages();
-    private _taskStatistics = new TaskStatistics();
     private _workers = new PipelineWorkers();
+    private _piplinePerformance = pipelineStagePerformanceInstance;
 
     public async getPipelineWorker(id: string): Promise<IPipelineWorker> {
         return this._workers.get(id);
@@ -95,11 +96,15 @@ export class PipelineServerContext implements IPipelineServerContext {
         return this._taskDefinitions.getAll();
     }
 
-    public async getTaskStatistic(id: string): Promise<ITaskStatistic> {
-        return this._taskStatistics.get(id);
+    public async getPipelineStagePerformance(id: string): Promise<IPipelineStagePerformance> {
+        return this._piplinePerformance.get(id);
     }
 
-    public async getTaskStatistics(): Promise<ITaskStatistic[]> {
-        return this._taskStatistics.getAll();
+    public async getPipelineStagePerformances(): Promise<IPipelineStagePerformance[]> {
+        return this._piplinePerformance.getAll();
+    }
+
+    public async getForStage(pipeline_stage_id: string): Promise<IPipelineStagePerformance> {
+        return this._piplinePerformance.getForStage(pipeline_stage_id);
     }
 }

@@ -2,12 +2,12 @@ import {TaskDefinitions} from "../data-model/taskDefinition";
 const path = require("path");
 const fs = require("fs-extra");
 
+const debug = require("debug")("mouselight:pipeline-api:pipeline-map-worker");
+
 import {
     PipelineScheduler, DefaultPipelineIdKey, TilePipelineStatus, ExecutionStatusCode,
     CompletionStatusCode
 } from "./pipelineScheduler";
-
-const debug = require("debug")("mouselight:pipeline-api:pipeline-map-worker");
 
 import {
     connectorForFile, generatePipelineStageTableName, generatePipelineStateDatabaseName, TileStatusPipelineStageId,
@@ -20,6 +20,7 @@ import {Projects, IProject} from "../data-model/project";
 import performanceConfiguration from "../../config/performance.config"
 import {PipelineWorkers} from "../data-model/pipelineWorker";
 import {PipelineWorkerClient} from "../graphql/client/pipelineWorkerClient";
+import {updatePipelineStagePerformance, updatePipelineStageCounts} from "../data-model/pipelineStagePerformance";
 
 const perfConf = performanceConfiguration();
 
@@ -29,6 +30,10 @@ export class PipelineMapScheduler extends PipelineScheduler {
     private _inProcessTableName: string;
 
     private _toProcessTableName: string;
+
+    private _inProcessCount: number;
+
+    private _waitingToProcessCount: number;
 
     public constructor(pipelineStage: IPipelineStage) {
         super();
@@ -108,7 +113,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
         }
 
         // Check and update the status of anything in-process
-        await this.updateInProcessStatus();
+        this._inProcessCount = await this.updateInProcessStatus();
 
         // If there are no available schedulers, exit
 
@@ -125,12 +130,16 @@ export class PipelineMapScheduler extends PipelineScheduler {
             await this.scheduleFromList(available);
         }
 
+        this._waitingToProcessCount = await this._outputKnexConnector(this._toProcessTableName).count("relative_path");
+
+        updatePipelineStageCounts(this._pipelineStage.id, this._inProcessCount[0][`count("relative_path")`], this._waitingToProcessCount[0][`count("relative_path")`]);
+
         debug("resetting timer");
 
         setTimeout(() => this.performWork(), perfConf.regenTileStatusJsonFileSeconds * 1000)
     }
 
-    private async updateInProcessStatus() {
+    private async updateInProcessStatus(): Promise<number> {
         let inProcess = await this.loadInProcess();
 
         // This should not thousands or even hundreds at a time, just a handful per machine at most per cycle, likely
@@ -138,30 +147,32 @@ export class PipelineMapScheduler extends PipelineScheduler {
         inProcess.forEach(async(task) => {
             let executionInfo = await PipelineWorkerClient.Instance().queryTaskExecution(task.worker_id, task.task_execution_id);
 
-            if (executionInfo != null) {
-                if (executionInfo.execution_status_code === ExecutionStatusCode.Completed) {
-                    let tileStatus = TilePipelineStatus.Queued;
+            if (executionInfo != null && executionInfo.execution_status_code === ExecutionStatusCode.Completed) {
+                let tileStatus = TilePipelineStatus.Queued;
 
-                    switch (executionInfo.completion_status_code) {
-                        case CompletionStatusCode.Success:
-                            tileStatus = TilePipelineStatus.Complete;
-                            break;
-                        case CompletionStatusCode.Error:
-                            tileStatus = TilePipelineStatus.Failed; // Do not queue again
-                            break;
-                        case CompletionStatusCode.Cancel:
-                            tileStatus = TilePipelineStatus.Incomplete; // Return to incomplete to be queued again
-                            break;
-                    }
-
-                    // Tile should be marked complete, not be present in any intermediate tables, and not change again.
-
-                    await this._outputKnexConnector(this._outputTableName).where("relative_path", task.relative_path).update({current_stage_status: TilePipelineStatus.Complete});
-
-                    await this._outputKnexConnector(this._inProcessTableName).where("relative_path", task.relative_path).del();
+                switch (executionInfo.completion_status_code) {
+                    case CompletionStatusCode.Success:
+                        tileStatus = TilePipelineStatus.Complete;
+                        break;
+                    case CompletionStatusCode.Error:
+                        tileStatus = TilePipelineStatus.Failed; // Do not queue again
+                        break;
+                    case CompletionStatusCode.Cancel:
+                        tileStatus = TilePipelineStatus.Incomplete; // Return to incomplete to be queued again
+                        break;
                 }
+
+                // Tile should be marked complete, not be present in any intermediate tables, and not change again.
+
+                await this._outputKnexConnector(this._outputTableName).where("relative_path", task.relative_path).update({current_stage_status: TilePipelineStatus.Complete});
+
+                await this._outputKnexConnector(this._inProcessTableName).where("relative_path", task.relative_path).del();
+
+                updatePipelineStagePerformance(this._pipelineStage.id, executionInfo);
             }
         });
+
+        return await this._outputKnexConnector(this._inProcessTableName).count("relative_path");
     }
 
     private async scheduleFromList(availableList) {

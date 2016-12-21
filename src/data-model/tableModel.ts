@@ -31,6 +31,18 @@ export abstract class TableModel<T extends ITableModelRow> {
         return this._dataLoader.loadMany(ids);
     }
 
+    public async getOneRelationship<F>(fk_name: string, fk_id: string): Promise<F> {
+        let objList = await knex(this.tableName).select(this.idKey).where(fk_name, fk_id).whereNull("deleted_at");
+
+        let idList = <string[]>objList.map(obj => obj.id);
+
+        if (idList.length > 0) {
+            return await this.dataLoader.load(idList[0]);
+        } else {
+            return null;
+        }
+    }
+
     public get idKey(): string {
         return this._idKey;
     }
