@@ -43,6 +43,8 @@ export class PipelineMapScheduler extends PipelineScheduler {
 
     public async run() {
         if (this._pipelineStage.previous_stage_id) {
+            debug(`Connecting to previous pipeline database for stage ${this._pipelineStage.id}`);
+
             let pipelineManager = new PipelineStages();
 
             let previousPipeline = await pipelineManager.get(this._pipelineStage.previous_stage_id);
@@ -51,6 +53,8 @@ export class PipelineMapScheduler extends PipelineScheduler {
 
             this._inputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(previousPipeline.dst_path), this._inputTableName);
         } else {
+            debug(`Connecting to project database for stage ${this._pipelineStage.id}`);
+
             let projectManager = new Projects();
 
             let project = await projectManager.get(this._pipelineStage.project_id);
@@ -62,11 +66,15 @@ export class PipelineMapScheduler extends PipelineScheduler {
 
         fs.ensureDirSync(this._pipelineStage.dst_path);
 
+        debug(`Connecting to output database for ${this._pipelineStage.id}`);
+
         this._outputTableName = generatePipelineStageTableName(this._pipelineStage.id);
 
         this._outputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(this._pipelineStage.dst_path), this._outputTableName);
 
         this._inProcessTableName = generatePipelineStageInProcessTableName(this._pipelineStage.id);
+
+        debug(`Connecting to in process database for ${this._pipelineStage.id}`);
 
         await verifyTable(this._outputKnexConnector, this._inProcessTableName, (table) => {
             table.string("relative_path").primary().unique();
@@ -78,6 +86,8 @@ export class PipelineMapScheduler extends PipelineScheduler {
         });
 
         this._toProcessTableName = generatePipelineStageToProcessTableName(this._pipelineStage.id);
+
+        debug(`Connecting to ready to process database for ${this._pipelineStage.id}`);
 
         await verifyTable(this._outputKnexConnector, this._toProcessTableName, (table) => {
             table.string("relative_path").primary().unique();
@@ -96,43 +106,48 @@ export class PipelineMapScheduler extends PipelineScheduler {
 
         debug(`performing update for ${this._pipelineStage.id}`);
 
-        // Update the database with the completion status of tiles from the previous stage.  This essentially converts
-        // current_stage_is_complete from the previous stage id table to previous_stage_is_complete for this stage.
-        let knownInput = await this.inputTable.select(DefaultPipelineIdKey, "current_stage_status", "tile_name");
+        try {
+            // Update the database with the completion status of tiles from the previous stage.  This essentially converts
+            // current_stage_is_complete from the previous stage id table to previous_stage_is_complete for this stage.
+            let knownInput = await this.inputTable.select(DefaultPipelineIdKey, "current_stage_status", "tile_name");
 
-        if (knownInput.length > 0) {
-            let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "previous_stage_status"]);
+            if (knownInput.length > 0) {
+                let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "previous_stage_status"]);
 
-            let sorted = this.muxInputOutputTiles(knownInput, knownOutput);
+                let sorted = this.muxInputOutputTiles(knownInput, knownOutput);
 
-            await this.batchInsert(this._outputKnexConnector, this._outputTableName, sorted.toInsert);
+                await this.batchInsert(this._outputKnexConnector, this._outputTableName, sorted.toInsert);
 
-            await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdatePrevious, DefaultPipelineIdKey);
-        } else {
-            debug("no input from previous stage yet");
+                await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdatePrevious, DefaultPipelineIdKey);
+            } else {
+                debug("no input from previous stage yet");
+            }
+
+            // Check and update the status of anything in-process
+            this._inProcessCount = await this.updateInProcessStatus();
+
+            // If there are no available schedulers, exit
+
+            // Look if anything is already in the to-process queue
+            let available = await this.loadAvailableToProcess();
+
+            //   If not, search database for to-process and put in to-process queue
+            if (available.length === 0) {
+                available = await this.updateToProcessQueue();
+            }
+
+            // If there is any to-process, try to fill worker capacity
+            if (available.length > 0) {
+                await this.scheduleFromList(available);
+            }
+
+            this._waitingToProcessCount = await this._outputKnexConnector(this._toProcessTableName).count("relative_path");
+
+            updatePipelineStageCounts(this._pipelineStage.id, this._inProcessCount[0][`count("relative_path")`], this._waitingToProcessCount[0][`count("relative_path")`]);
+
+        } catch (err) {
+            console.log(err);
         }
-
-        // Check and update the status of anything in-process
-        this._inProcessCount = await this.updateInProcessStatus();
-
-        // If there are no available schedulers, exit
-
-        // Look if anything is already in the to-process queue
-        let available = await this.loadAvailableToProcess();
-
-        //   If not, search database for to-process and put in to-process queue
-        if (available.length === 0) {
-            available = await this.updateToProcessQueue();
-        }
-
-        // If there is any to-process, try to fill worker capacity
-        if (available.length > 0) {
-            await this.scheduleFromList(available);
-        }
-
-        this._waitingToProcessCount = await this._outputKnexConnector(this._toProcessTableName).count("relative_path");
-
-        updatePipelineStageCounts(this._pipelineStage.id, this._inProcessCount[0][`count("relative_path")`], this._waitingToProcessCount[0][`count("relative_path")`]);
 
         debug("resetting timer");
 

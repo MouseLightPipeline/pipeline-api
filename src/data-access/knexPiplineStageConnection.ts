@@ -32,6 +32,7 @@ let creationInProcess = new Map<string, string>();
 
 export async function connectorForFile(name: string, requiredTable: string = null) {
     if (connectionMap.has(name)) {
+        debug(`Using existing connection.`);
         return connectionMap.get(name);
     }
 
@@ -40,6 +41,7 @@ export async function connectorForFile(name: string, requiredTable: string = nul
     // date will conflict.
     if (creationInProcess.has(name)) {
         return new Promise((resolve) => {
+            debug(`Delaying to try for connection again.`);
             setTimeout(async() => {
                 let connector = await connectorForFile(name, requiredTable);
                 resolve(connector);
@@ -77,26 +79,15 @@ async function create(name: string, requiredTable: string) {
         }
     };
 
+    debug(`Creating connection for ${name}`);
+
     let knex = Knex(configuration);
 
     try {
         await knex.migrate.latest(configuration);
 
         if (requiredTable) {
-            /*
-             let test = await knex.schema.hasTable(requiredTable);
-
-             if (!test) {
-             await knex.schema.createTableIfNotExists(requiredTable, (table) => {
-             table.string("relative_path").primary().unique();
-             table.string("tile_name");
-             table.boolean("previous_stage_is_complete");
-             table.boolean("current_stage_is_complete");
-             table.timestamp("deleted_at");
-             table.timestamps();
-             });
-             }
-             */
+            debug(`Creating requried table ${requiredTable}`);
             await verifyTable(knex, requiredTable, (table) => {
                 table.string("relative_path").primary().unique();
                 table.string("tile_name");
