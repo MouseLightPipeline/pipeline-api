@@ -62,6 +62,7 @@ export interface ITaskExecution {
     updated_at?: Date;
     deleted_at?: Date;
 }
+
 export class PipelineScheduler implements IWorkerInterface {
     protected _inputKnexConnector: any;
     protected _inputTableName: string;
@@ -115,6 +116,20 @@ export class PipelineScheduler implements IWorkerInterface {
         while (toUpdate.length > 0) {
             await this.batchUpdateInternal(connector, tableName, toUpdate.splice(0, perfConf.regenTileStatusSqliteChunkSize), idKey);
         }
+    }
+
+    protected async queue(list, queueFunction) {
+        return await list.reduce((promiseChain, item) => this.createQueueFunctionPromise(promiseChain, queueFunction, item), Promise.resolve(true));
+    }
+
+    private createQueueFunctionPromise(promiseChain, queueFunction, item) {
+        return promiseChain.then((result) => {
+            if (result) {
+                return queueFunction(item);
+            } else {
+                return Promise.resolve(false);
+            }
+        });
     }
 
     private async batchUpdateInternal(connector, tableName, items, idKey) {

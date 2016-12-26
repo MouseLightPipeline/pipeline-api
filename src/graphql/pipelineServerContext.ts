@@ -16,7 +16,7 @@ export interface IPipelineServerContext {
 
     getPipelineStage(id: string): Promise<IPipelineStage>;
     getPipelineStages(): Promise<IPipelineStage[]>;
-    getPipelineStagesForProject(id: string): Promise<IPipelineStage>;
+    getPipelineStagesForProject(id: string): Promise<IPipelineStage[]>;
     createPipelineStage(project_id: string, task_id: string, previous_stage_id: string, dst_path: string): Promise<IPipelineStage>;
     setPipelineStageStatus(id: string, shouldBeActive: boolean): Promise<IPipelineStage>;
     deletePipelineStage(id: string): Promise<boolean>;

@@ -29,7 +29,7 @@ export class SocketIoServer {
     private onConnect(client) {
         debug("accepted client connection");
 
-        client.on("hostInformation", hostInformation => this.onHostInformation(client, hostInformation));
+        client.on("workerApiService", workerInformation => this.onWorkerApiService(client, workerInformation));
 
         client.on("heartBeat", heartbeatData => this.onHeartbeat(client, heartbeatData));
 
@@ -40,22 +40,25 @@ export class SocketIoServer {
         debug("client disconnected");
     }
 
-    private async onHostInformation(client, hostInformation) {
+    private async onWorkerApiService(client, workerInformation) {
         // Update worker for last seen.
         let workerManager = new PipelineWorkers();
 
-        let worker = await workerManager.getForMachineId(hostInformation.machineId);
+        let worker = await workerManager.getForMachineId(workerInformation.machineId);
 
-        worker.name = hostInformation.name;
-        worker.os_type = hostInformation.osType;
-        worker.platform = hostInformation.platform;
-        worker.arch = hostInformation.arch;
-        worker.release = hostInformation.release;
-        worker.cpu_count = hostInformation.cpuCount;
-        worker.total_memory = hostInformation.totalMemory;
-        worker.free_memory = hostInformation.freeMemory;
-        worker.load_average = hostInformation.loadAverage[0];
-        worker.work_unit_capacity = hostInformation.workUnitCapacity;
+        worker.machine_id = workerInformation.machineId;
+        worker.name = workerInformation.name;
+        worker.address = workerInformation.networkAddress;
+        worker.port = parseInt(workerInformation.networkPort);
+        worker.work_unit_capacity = workerInformation.workUnitCapacity;
+        worker.os_type = workerInformation.machineProperties.osType;
+        worker.platform = workerInformation.machineProperties.platform;
+        worker.arch = workerInformation.machineProperties.arch;
+        worker.release = workerInformation.machineProperties.release;
+        worker.cpu_count = workerInformation.machineProperties.cpuCount;
+        worker.total_memory = workerInformation.machineProperties.totalMemory;
+        worker.free_memory = workerInformation.machineProperties.freeMemory;
+        worker.load_average = workerInformation.machineProperties.loadAverage[0];
         worker.last_seen = new Date();
 
         await workerManager.save(worker);
@@ -71,7 +74,6 @@ export class SocketIoServer {
 
         worker = await workerManager.save(worker);
 
-        debug(`heartbeat task load ${heartbeatData.taskLoad}`);
         PipelineWorkers.setWorkerTaskLoad(worker.id, heartbeatData.taskLoad);
 
         let status = PipelineWorkerStatus.Unavailable;

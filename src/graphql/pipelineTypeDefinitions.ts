@@ -107,7 +107,6 @@ type Query {
 }
 
 type Mutation {
-  debugMessage(msg: String!): String!
   createProject(name: String, description: String, rootPath: String, sampleNumber: Int): Project
   setProjectStatus(id: String, shouldBeActive: Boolean): Project
   deleteProject(id: String!): Boolean

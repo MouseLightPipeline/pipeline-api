@@ -4,7 +4,7 @@ import "isomorphic-fetch";
 
 const debug = require("debug")("mouselight:pipeline-api:pipeline-worker-client");
 
-import {IPipelineWorker} from "../../data-model/pipelineWorker";
+import {IPipelineWorker, PipelineWorkerStatus, PipelineWorkers} from "../../data-model/pipelineWorker";
 import {ITaskExecution} from "../../schedulers/pipelineScheduler";
 
 export class PipelineWorkerClient {
@@ -20,21 +20,25 @@ export class PipelineWorkerClient {
 
     private _idClientMap = new Map<string, ApolloClient>();
 
-    public async queryTaskExecution(workerId: string, executionId: string): Promise<ITaskExecution> {
-        let client = this._idClientMap[workerId];
+    public async queryTaskExecution(worker: IPipelineWorker, executionId: string): Promise<ITaskExecution> {
+        if (worker === null) {
+            return null;
+        }
+
+        let client = this._idClientMap[worker.id];
 
         if (client == null) {
-            const networkInterface = createNetworkInterface({uri: `http://localhost:3001/graphql`});
+            debug(`creating apollo client during query tasks with uri http://${worker.address}:3001/graphql`);
+            const networkInterface = createNetworkInterface({uri: `http://${worker.address}:3001/graphql`});
 
             client = new ApolloClient({
                 networkInterface
             });
 
-            this._idClientMap[workerId] = client;
+            this._idClientMap[worker.id] = client;
         }
 
         try {
-
             let response = await client.query({
                 query: gql`
                 query($id: String!) {
@@ -57,7 +61,8 @@ export class PipelineWorkerClient {
 
             return response.data.taskExecution;
         } catch (err) {
-            debug(err);
+            PipelineWorkers.setWorkerStatus(worker.id, PipelineWorkerStatus.Unavailable);
+            debug(`error querying task status for worker ${worker.name}`);
         }
 
         return null;
@@ -67,7 +72,8 @@ export class PipelineWorkerClient {
         let client = this._idClientMap[worker.id];
 
         if (client == null) {
-            const networkInterface = createNetworkInterface({uri: `http://localhost:3001/graphql`});
+            debug(`creating apollo client during start task with uri http://${worker.address}:3001/graphql`);
+            const networkInterface = createNetworkInterface({uri: `http://${worker.address}:3001/graphql`});
 
             client = new ApolloClient({
                 networkInterface
@@ -96,7 +102,8 @@ export class PipelineWorkerClient {
 
             return response.data.startTask;
         } catch (err) {
-            debug(err)
+            PipelineWorkers.setWorkerStatus(worker.id, PipelineWorkerStatus.Unavailable);
+            debug(`error submitting task to worker ${worker.name}`);
         }
 
         return null;

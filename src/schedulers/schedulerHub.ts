@@ -59,7 +59,7 @@ export class SchedulerHub {
     }
 
     private manageWorkers(items: IRunnableTableModelRow[], workerMap, inProcessFunction, childProcessModuleName) {
-        let activeItems = items.filter(item => (item.is_active || 0) === 1);
+        let activeItems = items.filter(item => item.is_active !== null && item.is_active);
 
         activeItems.map(async (item) => {
             let worker = workerMap.get(item.id);

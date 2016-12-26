@@ -58,7 +58,7 @@ export class PipelineStagePerformance extends TableModel<IPipelineStagePerforman
     }
 
     public async getForStage(pipeline_stage_id: string): Promise<IPipelineStagePerformance> {
-        let performance = await this.getOneRelationship<IPipelineStagePerformance>("pipeline_stage_id", pipeline_stage_id);
+        let performance = await this.getOneRelationship("pipeline_stage_id", pipeline_stage_id);
 
         return performance || this.create(pipeline_stage_id);
     }
@@ -106,8 +106,6 @@ export class PipelineStagePerformance extends TableModel<IPipelineStagePerforman
     public async reset(now: boolean = false) {
         if (now) {
             await knex(this.tableName).select().del();
-
-            this.dataLoader.clearAll();
         } else {
             queue.push({
                 action: PerformanceQueueActions.Reset,
@@ -212,7 +210,7 @@ export function updatePipelineStageCounts(pipelineStageId: string, inProcess: nu
 export function updatePipelineStagePerformance(pipelineStageId: string, taskExecution: ITaskExecution) {
     let duration_ms = null;
 
-    if (taskExecution.completed_at) {
+    if (taskExecution.completed_at && taskExecution.started_at) {
         duration_ms = taskExecution.completed_at.valueOf() - taskExecution.started_at.valueOf();
     }
 

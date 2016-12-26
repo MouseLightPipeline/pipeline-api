@@ -15,6 +15,8 @@ export enum PipelineWorkerStatus {
 export interface IPipelineWorker extends ITableModelRow {
     machine_id: string;
     name: string;
+    address: string;
+    port: number;
     os_type: string;
     platform: string;
     arch: string;
@@ -67,7 +69,7 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
         PipelineWorkers._workerTaskLoadMap[id] = count;
     }
 
-    public async getForMachineId(machineId: string) {
+    public async getForMachineId(machineId: string): Promise<IPipelineWorker> {
         let rows = await knex(this.tableName).where("machine_id", machineId);
 
         let worker = null;
@@ -107,6 +109,8 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
             id: uuid.v4(),
             machine_id: machineId,
             name: "",
+            address: "",
+            port: 0,
             os_type: "",
             platform: "",
             arch: "",

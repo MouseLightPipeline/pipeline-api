@@ -4,6 +4,8 @@ exports.up = function (knex, Promise) {
             table.uuid("id").primary().unique();
             table.uuid("machine_id");
             table.string("name");
+            table.string("address");
+            table.integer("port");
             table.string("os_type");
             table.string("platform");
             table.string("arch");

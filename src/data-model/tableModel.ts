@@ -1,5 +1,3 @@
-const DataLoader = require("dataloader");
-
 import {knex} from "../data-access/knexConnector"
 
 export interface ITableModelRow {
@@ -10,34 +8,37 @@ export interface ITableModelRow {
 }
 
 export abstract class TableModel<T extends ITableModelRow> {
-    private _dataLoader: any;
-
     private _tableName = "";
     private _idKey = "";
 
     public constructor(tableName: string, idKey: string = "id") {
         this._tableName = tableName;
         this._idKey = idKey;
-        this._dataLoader = new DataLoader((keys: string[]) => this.fetch(keys));
     }
 
     public async get(id: string): Promise<T> {
-        return this._dataLoader.load(id);
+        let results = await this.fetch([id]);
+
+        if (results.length > 0) {
+            return results[0];
+        } else {
+            return null;
+        }
     }
 
     public async getAll(includeSoftDelete: boolean = false) {
         let ids = await this._getIdList(includeSoftDelete);
 
-        return this._dataLoader.loadMany(ids);
+        return this.fetch(ids);
     }
 
-    public async getOneRelationship<F>(fk_name: string, fk_id: string): Promise<F> {
+    public async getOneRelationship(fk_name: string, fk_id: string): Promise<T> {
         let objList = await knex(this.tableName).select(this.idKey).where(fk_name, fk_id).whereNull("deleted_at");
 
         let idList = <string[]>objList.map(obj => obj.id);
 
         if (idList.length > 0) {
-            return await this.dataLoader.load(idList[0]);
+            return await this.get(idList[0]);
         } else {
             return null;
         }
@@ -49,10 +50,6 @@ export abstract class TableModel<T extends ITableModelRow> {
 
     public get tableName(): string {
         return this._tableName;
-    }
-
-    protected get dataLoader() {
-        return this._dataLoader;
     }
 
     public async insertRow(row: T) {
@@ -77,8 +74,6 @@ export abstract class TableModel<T extends ITableModelRow> {
             }
 
             await knex(this._tableName).where(this._idKey, row.id).update(row);
-
-            this._dataLoader.clear(row.id);
         }
 
         if (!row.deleted_at) {
@@ -129,7 +124,7 @@ export abstract class TableModel<T extends ITableModelRow> {
         return <string[]>objList.map(obj => obj.id);
     }
 
-    private fetch(keys: string[]): Promise<T[]> {
+    protected fetch(keys: string[]): Promise<T[]> {
         return new Promise<T[]>((resolve) => {
             knex(this.tableName).whereIn(this.idKey, keys).then((rows) => {
                 rows = rows.map(row => this.didFetchRow(row));
