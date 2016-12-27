@@ -46,30 +46,34 @@ export class TileStatusWorker extends PipelineScheduler {
 
         this._outputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(this._project.root_path), this._outputTableName);
 
-        this.performWork();
+        await this.performWork();
     }
 
     private async performWork() {
         if (this._isCancelRequested) {
-            debug("honoring cancel request with early return");
+            debug("cancel request - early return");
             return;
         }
 
-        let knownInput = this.performJsonUpdate();
+        try {
+            let knownInput = this.performJsonUpdate();
 
-        if (knownInput.length === 0) {
-            return;
+            if (knownInput.length === 0) {
+                return;
+            }
+
+            debug(`update sqlite`);
+
+            let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "previous_stage_status"]);
+
+            let sorted = this.muxInputOutputTiles(knownInput, knownOutput);
+
+            await this.batchInsert(this._outputKnexConnector, this._outputTableName, sorted.toInsert);
+
+            await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdate, DefaultPipelineIdKey);
+        } catch (err) {
+            console.log(err);
         }
-
-        debug(`update sqlite`);
-
-        let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "previous_stage_status"]);
-
-        let sorted = this.muxInputOutputTiles(knownInput, knownOutput);
-
-        await this.batchInsert(this._outputKnexConnector, this._outputTableName, sorted.toInsert);
-
-        await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdate, DefaultPipelineIdKey);
 
         debug("resetting timer");
 

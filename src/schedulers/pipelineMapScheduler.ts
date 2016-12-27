@@ -60,8 +60,6 @@ export class PipelineMapScheduler extends PipelineScheduler {
 
     public async run() {
         if (this._pipelineStage.previous_stage_id) {
-            debug(`Connecting to previous pipeline database for stage ${this._pipelineStage.id}`);
-
             let pipelineManager = new PipelineStages();
 
             let previousPipeline = await pipelineManager.get(this._pipelineStage.previous_stage_id);
@@ -70,8 +68,6 @@ export class PipelineMapScheduler extends PipelineScheduler {
 
             this._inputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(previousPipeline.dst_path), this._inputTableName);
         } else {
-            debug(`Connecting to project database for stage ${this._pipelineStage.id}`);
-
             let projectManager = new Projects();
 
             let project = await projectManager.get(this._pipelineStage.project_id);
@@ -83,15 +79,11 @@ export class PipelineMapScheduler extends PipelineScheduler {
 
         fs.ensureDirSync(this._pipelineStage.dst_path);
 
-        debug(`Connecting to output database for ${this._pipelineStage.id}`);
-
         this._outputTableName = generatePipelineStageTableName(this._pipelineStage.id);
 
         this._outputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(this._pipelineStage.dst_path), this._outputTableName);
 
         this._inProcessTableName = generatePipelineStageInProcessTableName(this._pipelineStage.id);
-
-        debug(`Connecting to in process database for ${this._pipelineStage.id}`);
 
         await verifyTable(this._outputKnexConnector, this._inProcessTableName, (table) => {
             table.string("relative_path").primary().unique();
@@ -104,8 +96,6 @@ export class PipelineMapScheduler extends PipelineScheduler {
 
         this._toProcessTableName = generatePipelineStageToProcessTableName(this._pipelineStage.id);
 
-        debug(`Connecting to ready to process database for ${this._pipelineStage.id}`);
-
         await verifyTable(this._outputKnexConnector, this._toProcessTableName, (table) => {
             table.string("relative_path").primary().unique();
             table.string("tile_name");
@@ -117,7 +107,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
 
     private async performWork() {
         if (this._isCancelRequested) {
-            debug("honoring cancel request with early return");
+            debug("cancel requested - early return");
             return;
         }
 

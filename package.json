@@ -4,18 +4,18 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "DEBUG=mouselight* node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
-    "start": "node src/pipelineApiApp.js"
+    "start": "node src/pipelineApiApp.js",
+    "deploy-dev": "nohup DEBUG=mouselight* node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
+    "deploy-run": "nohup node src/pipelineApiApp.js > /dev/null 2>&1"
   },
-  "author": "Patrick Edson <pedson@leapscientific.com>",
-  "license": "ISC",
+  "author": "Patrick Edson <pedson@leapscientific.com> (http://github.com/pedson)",
+  "license": "Janelia",
   "dependencies": {
     "apollo-client": "^0.5.20",
     "apollo-server": "^0.3.2",
     "async": "^2.1.4",
     "body-parser": "^1.15.2",
-    "dataloader": "^1.2.0",
     "debug": "^2.2.0",
     "express": "^4.14.0",
     "fs-extra": "^1.0.0",

@@ -1,8 +1,10 @@
 const path = require("path");
 
-const debug = require("debug")("mouselight:pipeline-api:knex-pipeline-connector");
-
 import * as Knex from "knex";
+
+const asyncUtils = require("async");
+
+const debug = require("debug")("mouselight:pipeline-api:knex-pipeline-connector");
 
 import {IDatabaseConfig} from "../../config/database.config";
 
@@ -26,47 +28,114 @@ export function generatePipelineStageToProcessTableName(pipelineStageId: string)
     return generatePipelineStageTableName(pipelineStageId) + "_ToProcess";
 }
 
-let connectionMap = new Map<string, any>();
+interface IConnectorQueueToken {
+    filename: string;
+    requiredTables: string[];
+    resolve: any;
+    reject: any;
+}
 
-let creationInProcess = new Map<string, string>();
+interface IAccessQueueToken {
+    filename: string;
+    resolve: any;
+    reject: any;
+}
+
+async function accessConnectorWorker(token: IConnectorQueueToken, completeCallback) {
+    try {
+        let requiredTable: string = token.requiredTables.length > 0 ? token.requiredTables[0] : null;
+
+        debug(`\tcalling original connector function for ${token.filename}`);
+
+        let connector = await findConnection(token.filename, requiredTable);
+
+        debug(`\tresolving connector for ${token.filename}`);
+
+        token.resolve(connector);
+    } catch (err) {
+        token.reject(err);
+    }
+
+    completeCallback();
+}
+
+let connectorQueues = new Map<string, AsyncQueue<IConnectorQueueToken>>();
+
+function accessQueueWorker(token: IAccessQueueToken, completeCallback) {
+
+    let queue = null;
+
+    if (connectorQueues.has(token.filename)) {
+        queue = connectorQueues.get(token.filename);
+    }
+
+    if (!queue) {
+        queue = asyncUtils.queue(accessConnectorWorker, 1);
+        connectorQueues.set(token.filename, queue);
+    }
+
+    debug(`\tresolving queue for ${token.filename}`);
+
+    token.resolve(queue);
+
+    completeCallback();
+}
+
+let connectorQueueAccess = asyncUtils.queue(accessQueueWorker, 1);
 
 export async function connectorForFile(name: string, requiredTable: string = null) {
+    debug(`requesting connector for ${name}`);
+
+    if (requiredTable) {
+        debug(`\twith required table ${requiredTable}`);
+    }
+
+    // Serialize access to queue for a particular connector so only one is created.
+
+    let queue = await new Promise<AsyncQueue<IConnectorQueueToken>>((resolve, reject) => {
+        connectorQueueAccess.push({
+            filename: name,
+            resolve: resolve,
+            reject: reject
+        });
+    });
+
+    // Serialize access to a connector so that only one is created and required tables are created once.
+
+    return new Promise<Knex>((resolve, reject) => {
+        queue.push({
+            filename: name,
+            requiredTables: [requiredTable],
+            resolve: resolve,
+            reject: reject,
+        });
+    });
+}
+
+let connectionMap = new Map<string, Knex>();
+
+async function findConnection(name: string, requiredTable: string = null): Promise<Knex> {
     if (connectionMap.has(name)) {
-        debug(`Using existing connection.`);
+        debug(`\treturning existing connection for ${name}`);
         return connectionMap.get(name);
     }
 
-    // If already creating connection, start a promise chain that should ultimately resolve when the creation process
-    // completes.  knex.migrate locks the migration table and multiple attempts to ensure the database file is up to
-    // date will conflict.
-    if (creationInProcess.has(name)) {
-        return new Promise((resolve) => {
-            debug(`Delaying to try for connection again.`);
-            setTimeout(async() => {
-                let connector = await connectorForFile(name, requiredTable);
-                resolve(connector);
-            }, 2000);
-        })
-    }
+    debug(`\tcreating connection for ${name}`);
 
-    creationInProcess.set(name, name);
-
-    let knex = await create(name, requiredTable);
-
-    creationInProcess.delete(name);
-
-    return knex;
+    return await createConnection(name, requiredTable);
 }
 
 export async function verifyTable(connection, tableName: string, createFunction) {
+    debug(`verifying required table ${tableName}`);
     let test = await connection.schema.hasTable(tableName);
 
     if (!test) {
+        debug(`\tcreating required table ${tableName}`);
         await connection.schema.createTableIfNotExists(tableName, createFunction);
     }
 }
 
-async function create(name: string, requiredTable: string) {
+async function createConnection(name: string, requiredTable: string): Promise<Knex> {
     const configuration: IDatabaseConfig = {
         client: "sqlite3",
         connection: {
@@ -79,15 +148,12 @@ async function create(name: string, requiredTable: string) {
         }
     };
 
-    debug(`Creating connection for ${name}`);
-
     let knex = Knex(configuration);
 
     try {
         await knex.migrate.latest(configuration);
 
         if (requiredTable) {
-            debug(`Creating requried table ${requiredTable}`);
             await verifyTable(knex, requiredTable, (table) => {
                 table.string("relative_path").primary().unique();
                 table.string("tile_name");
@@ -98,10 +164,10 @@ async function create(name: string, requiredTable: string) {
             });
         }
     } catch (err) {
-        debug("retrying connector acquisition in 2 seconds");
-        return new Promise((resolve) => {
+        debug("\t\tretrying connector acquisition in 2 seconds");
+        return new Promise<Knex>((resolve) => {
             setTimeout(async() => {
-                let connector = await create(name, requiredTable);
+                let connector = await createConnection(name, requiredTable);
                 resolve(connector);
             }, 2000);
         })
