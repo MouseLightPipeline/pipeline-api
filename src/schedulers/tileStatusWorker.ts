@@ -4,7 +4,7 @@ const path = require("path");
 
 const debug = require("debug")("mouselight:pipeline-api:tile-status-worker");
 
-import {IProject, Projects} from "../data-model/project";
+import {IProject} from "../data-model/project";
 
 const dashboardJsonFile = "dashboard.json";
 const tileStatusJsonFile = "pipeline-storage.json";
@@ -18,12 +18,24 @@ import performanceConfiguration from "../../config/performance.config"
 import {PipelineScheduler, DefaultPipelineIdKey, TilePipelineStatus} from "./pipelineScheduler";
 const perfConf = performanceConfiguration();
 
+interface IPosition {
+    x: number,
+    y: number,
+    z: number
+}
+
 interface IDashboardJsonTile {
     id: string;
-    relativePath: string;
-    tileName: string;
-    isComplete: boolean;
+    name: string;
+    relative_path: string;
+    status: number;
+    position: IPosition,
+    lattice_position: IPosition,
+    cut_offset: number,
+    z_offset: number,
+    delta_z: number
 }
+
 export class TileStatusWorker extends PipelineScheduler {
     private _project: IProject;
 
@@ -64,7 +76,7 @@ export class TileStatusWorker extends PipelineScheduler {
 
             debug(`update sqlite`);
 
-            let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "previous_stage_status"]);
+            let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "prev_stage_status"]);
 
             let sorted = this.muxInputOutputTiles(knownInput, knownOutput);
 
@@ -89,28 +101,44 @@ export class TileStatusWorker extends PipelineScheduler {
         let knownOutputLookup = knownOutput.map(obj => obj[DefaultPipelineIdKey]);
 
         knownInput.reduce((list, inputTile) => {
-
-            let idx = knownOutputLookup.indexOf(inputTile.relativePath);
+            let idx = knownOutputLookup.indexOf(inputTile.relative_path);
 
             let existingOutput = idx > -1 ? knownOutput[idx] : null;
 
             if (existingOutput) {
-                let complete = inputTile.isComplete ? TilePipelineStatus.Complete : TilePipelineStatus.Incomplete;
-                if (existingOutput.previous_stage_status !== complete) {
+                if (existingOutput.prev_stage_status !== inputTile.status) {
                     list.toUpdate.push({
-                        previous_stage_status: complete,
-                        current_stage_status: complete,
+                        relative_path: inputTile.relative_path,
+                        prev_stage_status: inputTile.status,
+                        this_stage_status: inputTile.status,
+                        x: inputTile.position.x,
+                        y: inputTile.position.y,
+                        z: inputTile.position.z,
+                        lat_x: inputTile.lattice_position.x,
+                        lat_y: inputTile.lattice_position.y,
+                        lat_z: inputTile.lattice_position.z,
+                        cut_offset: inputTile.cut_offset,
+                        z_offset: inputTile.z_offset,
+                        delta_z: inputTile.delta_z,
                         updated_at: new Date()
                     });
                 }
             } else {
                 let now = new Date();
-                let complete = inputTile.isComplete ? TilePipelineStatus.Complete : TilePipelineStatus.Incomplete;
                 list.toInsert.push({
-                    relative_path: inputTile.relativePath,
-                    tile_name: inputTile.tileName,
-                    previous_stage_status: complete,
-                    current_stage_status: complete,
+                    relative_path: inputTile.relative_path,
+                    tile_name: inputTile.name,
+                    prev_stage_status: inputTile.status,
+                    this_stage_status: inputTile.status,
+                    x: inputTile.position.x,
+                    y: inputTile.position.y,
+                    z: inputTile.position.z,
+                    lat_x: inputTile.lattice_position.x,
+                    lat_y: inputTile.lattice_position.y,
+                    lat_z: inputTile.lattice_position.z,
+                    cut_offset: inputTile.cut_offset,
+                    z_offset: inputTile.z_offset,
+                    delta_z: inputTile.delta_z,
                     created_at: now,
                     updated_at: now
                 });
@@ -155,9 +183,14 @@ export class TileStatusWorker extends PipelineScheduler {
                     let tileName = path.basename(normalizedPath);
                     tiles.push({
                         id: tile.id,
-                        relativePath: normalizedPath,
-                        tileName: tileName,
-                        isComplete: tile.isComplete
+                        name: tileName,
+                        relative_path: normalizedPath,
+                        status: tile.isComplete ? TilePipelineStatus.Complete : TilePipelineStatus.Incomplete,
+                        position: tile.contents.position,
+                        lattice_position: tile.contents.latticePosition,
+                        cut_offset: tile.contents.cutOffset,
+                        z_offset: tile.contents.zOffset,
+                        delta_z: tile.contents.deltaZ
                     });
                 });
             }

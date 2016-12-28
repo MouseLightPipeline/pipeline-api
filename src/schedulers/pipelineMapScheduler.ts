@@ -86,7 +86,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
         this._inProcessTableName = generatePipelineStageInProcessTableName(this._pipelineStage.id);
 
         await verifyTable(this._outputKnexConnector, this._inProcessTableName, (table) => {
-            table.string("relative_path").primary().unique();
+            table.string(DefaultPipelineIdKey).primary().unique();
             table.string("tile_name");
             table.uuid("worker_id");
             table.timestamp("worker_last_seen");
@@ -97,7 +97,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
         this._toProcessTableName = generatePipelineStageToProcessTableName(this._pipelineStage.id);
 
         await verifyTable(this._outputKnexConnector, this._toProcessTableName, (table) => {
-            table.string("relative_path").primary().unique();
+            table.string(DefaultPipelineIdKey).primary().unique();
             table.string("tile_name");
             table.timestamps();
         });
@@ -116,10 +116,10 @@ export class PipelineMapScheduler extends PipelineScheduler {
         try {
             // Update the database with the completion status of tiles from the previous stage.  This essentially converts
             // current_stage_is_complete from the previous stage id table to previous_stage_is_complete for this stage.
-            let knownInput = await this.inputTable.select(DefaultPipelineIdKey, "current_stage_status", "tile_name");
+            let knownInput = await this.inputTable.select(DefaultPipelineIdKey, "this_stage_status", "tile_name");
 
             if (knownInput.length > 0) {
-                let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "previous_stage_status"]);
+                let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "prev_stage_status"]);
 
                 let sorted = this.muxInputOutputTiles(knownInput, knownOutput);
 
@@ -148,9 +148,9 @@ export class PipelineMapScheduler extends PipelineScheduler {
                 await this.scheduleFromList(available);
             }
 
-            this._waitingToProcessCount = await this._outputKnexConnector(this._toProcessTableName).count("relative_path");
+            this._waitingToProcessCount = await this._outputKnexConnector(this._toProcessTableName).count(DefaultPipelineIdKey);
 
-            updatePipelineStageCounts(this._pipelineStage.id, this._inProcessCount[0][`count("relative_path")`], this._waitingToProcessCount[0][`count("relative_path")`]);
+            updatePipelineStageCounts(this._pipelineStage.id, this._inProcessCount[0][`count("${DefaultPipelineIdKey}")`], this._waitingToProcessCount[0][`count("${DefaultPipelineIdKey}")`]);
 
         } catch (err) {
             console.log(err);
@@ -190,15 +190,15 @@ export class PipelineMapScheduler extends PipelineScheduler {
 
                 // Tile should be marked complete, not be present in any intermediate tables, and not change again.
 
-                await this._outputKnexConnector(this._outputTableName).where("relative_path", task.relative_path).update({current_stage_status: TilePipelineStatus.Complete});
+                await this._outputKnexConnector(this._outputTableName).where(DefaultPipelineIdKey, task[DefaultPipelineIdKey]).update({this_stage_status: TilePipelineStatus.Complete});
 
-                await this._outputKnexConnector(this._inProcessTableName).where("relative_path", task.relative_path).del();
+                await this._outputKnexConnector(this._inProcessTableName).where(DefaultPipelineIdKey, task[DefaultPipelineIdKey]).del();
 
                 updatePipelineStagePerformance(this._pipelineStage.id, executionInfo);
             }
         });
 
-        return await this._outputKnexConnector(this._inProcessTableName).count("relative_path");
+        return await this._outputKnexConnector(this._inProcessTableName).count(DefaultPipelineIdKey);
     }
 
     private async scheduleFromList(availableList: IPendingTile[]) {
@@ -230,12 +230,12 @@ export class PipelineMapScheduler extends PipelineScheduler {
 
         let task = await tasks.get(this._pipelineStage.task_id);
 
-        await this.queue(availableList, async (available) => {
+        await this.queue(availableList, async(available) => {
             // Will continue until a worker with capacity is found and a task is started.  Workers without capacity
             // return false continuing the iteration.
-            debug(`looking for worker for tile ${available.relative_path}`);
+            debug(`looking for worker for tile ${available[DefaultPipelineIdKey]}`);
 
-            let stillLookingForWorker = await this.queue(workers, async (worker) => {
+            let stillLookingForWorker = await this.queue(workers, async(worker) => {
                 // Return true to continue searching for an available worker and false if the task is launched.
 
                 let taskLoad = PipelineWorkers.getWorkerTaskLoad(worker.id);
@@ -275,7 +275,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
                             updated_at: now
                         });
 
-                        await this._outputKnexConnector(this._toProcessTableName).where("relative_path", available.relative_path).del();
+                        await this._outputKnexConnector(this._toProcessTableName).where(DefaultPipelineIdKey, available[DefaultPipelineIdKey]).del();
                     }
 
                     debug(`started task on worker ${worker.name} with execution id ${taskExecution.id}`);
@@ -288,122 +288,13 @@ export class PipelineMapScheduler extends PipelineScheduler {
                 return true;
             });
 
-            debug(`worker search for tile ${available.relative_path} resolves with stillLookingForWorker: ${stillLookingForWorker}`);
+            debug(`worker search for tile ${available[DefaultPipelineIdKey]} resolves with stillLookingForWorker: ${stillLookingForWorker}`);
 
             // If result is true, a worker was never found for the last tile so short circuit be returning a promise
             // that resolves to false.  Otherwise, the tile task was launched, so try the next one.
 
             return Promise.resolve(!stillLookingForWorker);
-
-            /*
-            return workers.some(async(worker) => {
-                let taskLoad = PipelineWorkers.getWorkerTaskLoad(worker.id);
-
-                debug(`worker ${worker.name} has load ${taskLoad} of capacity ${worker.work_unit_capacity}`);
-
-                if (taskLoad < 0) {
-                    // No information
-                    return false;
-                }
-
-                let capacity = worker.work_unit_capacity - taskLoad;
-
-                if (capacity >= task.work_units) {
-                    debug(`found worker ${worker.name} with sufficient capacity ${capacity}`);
-
-                    PipelineWorkers.setWorkerTaskLoad(worker.id, taskLoad + task.work_units);
-
-                    let outputPath = path.join(this._pipelineStage.dst_path, available.relative_path);
-
-                    fs.ensureDirSync(outputPath);
-
-                    let args = [project.name, project.root_path, src_path, this._pipelineStage.dst_path, available.relative_path, available.tile_name, "0"];
-
-                    let taskExecution = await PipelineWorkerClient.Instance().startTaskExecution(worker, this._pipelineStage.task_id, args);
-
-                    if (taskExecution != null) {
-                        let now = new Date();
-                        await this._outputKnexConnector(this._inProcessTableName).insert({
-                            relative_path: available.relative_path,
-                            tile_name: available.tile_name,
-                            worker_id: worker.id,
-                            worker_last_seen: now,
-                            task_execution_id: taskExecution.id,
-                            created_at: now,
-                            updated_at: now
-                        });
-
-                        await this._outputKnexConnector(this._toProcessTableName).where("relative_path", available.relative_path).del();
-                    }
-
-                    debug(`started task on worker ${worker.name} with execution id ${taskExecution.id}`);
-
-                    return true;
-                }
-
-                return false;
-            });
-            */
         });
-
-        /*
-         // Will continue until capacity is exhausted.  Returning false for starting something in the list will short-circuit
-         // the every loop.
-         availableList.every(available => {
-         // Will continue until a worker with capacity is found and a task is started.  Workers without capacity
-         // return false continuing the iteration.
-         debug(`looking for worker for tile ${available.relative_path}`);
-
-         return workers.some(async(worker) => {
-         let taskLoad = PipelineWorkers.getWorkerTaskLoad(worker.id);
-
-         debug(`worker ${worker.name} has load ${taskLoad} of capacity ${worker.work_unit_capacity}`);
-
-         if (taskLoad < 0) {
-         // No information
-         return false;
-         }
-
-         let capacity = worker.work_unit_capacity - taskLoad;
-
-         if (capacity >= task.work_units) {
-         debug(`found worker ${worker.name} with sufficient capacity ${capacity}`);
-
-         PipelineWorkers.setWorkerTaskLoad(worker.id, taskLoad + task.work_units);
-
-         let outputPath = path.join(this._pipelineStage.dst_path, available.relative_path);
-
-         fs.ensureDirSync(outputPath);
-
-         let args = [project.name, project.root_path, src_path, this._pipelineStage.dst_path, available.relative_path, available.tile_name, "0"];
-
-         let taskExecution = await PipelineWorkerClient.Instance().startTaskExecution(worker, this._pipelineStage.task_id, args);
-
-         if (taskExecution != null) {
-         let now = new Date();
-         await this._outputKnexConnector(this._inProcessTableName).insert({
-         relative_path: available.relative_path,
-         tile_name: available.tile_name,
-         worker_id: worker.id,
-         worker_last_seen: now,
-         task_execution_id: taskExecution.id,
-         created_at: now,
-         updated_at: now
-         });
-
-         await this._outputKnexConnector(this._toProcessTableName).where("relative_path", available.relative_path).del();
-         }
-
-         debug(`started task on worker ${worker.name} with execution id ${taskExecution.id}`);
-
-         return true;
-         }
-
-         return false;
-         });
-
-         });
-         */
     }
 
     private async loadInProcess(): Promise<IInProcessTile[]> {
@@ -424,13 +315,13 @@ export class PipelineMapScheduler extends PipelineScheduler {
         let toProcessInsert: IPendingTile[] = [];
 
         let unscheduled = await this.outputTable.where({
-            previous_stage_status: TilePipelineStatus.Complete,
-            current_stage_status: TilePipelineStatus.Incomplete,
+            prev_stage_status: TilePipelineStatus.Complete,
+            this_stage_status: TilePipelineStatus.Incomplete,
         });
 
         if (unscheduled.length > 0) {
             unscheduled = unscheduled.map(obj => {
-                obj.current_stage_status = TilePipelineStatus.Queued;
+                obj.this_stage_status = TilePipelineStatus.Queued;
                 return obj;
             });
 
@@ -469,19 +360,38 @@ export class PipelineMapScheduler extends PipelineScheduler {
             let existingOutput = idx > -1 ? knownOutput[idx] : null;
 
             if (existingOutput) {
-                if (existingOutput.previous_stage_status !== inputTile.current_stage_status) {
+                if (existingOutput.previous_stage_status !== inputTile.this_stage_status) {
                     list.toUpdatePrevious.push({
-                        previous_stage_status: inputTile.current_stage_status,
+                        relative_path: inputTile.relative_path,
+                        prev_stage_status: inputTile.this_stage_status,
+                        x: inputTile.x,
+                        y: inputTile.y,
+                        z: inputTile.z,
+                        lat_x: inputTile.lat_x,
+                        lat_y: inputTile.lat_y,
+                        lat_z: inputTile.lat_z,
+                        cut_offset: inputTile.cut_offset,
+                        z_offset: inputTile.z_offset,
+                        delta_z: inputTile.delta_z,
                         updated_at: new Date()
                     });
                 }
             } else {
                 let now = new Date();
                 list.toInsert.push({
-                    relative_path: inputTile[DefaultPipelineIdKey],
+                    relative_path: inputTile.relative_path,
                     tile_name: inputTile.tile_name,
-                    previous_stage_status: inputTile.current_stage_status,
-                    current_stage_status: TilePipelineStatus.Incomplete,
+                    prev_stage_status: inputTile.this_stage_status,
+                    this_stage_status: TilePipelineStatus.Incomplete,
+                    x: inputTile.x,
+                    y: inputTile.y,
+                    z: inputTile.z,
+                    lat_x: inputTile.lat_x,
+                    lat_y: inputTile.lat_y,
+                    lat_z: inputTile.lat_z,
+                    cut_offset: inputTile.cut_offset,
+                    z_offset: inputTile.z_offset,
+                    delta_z: inputTile.delta_z,
                     created_at: now,
                     updated_at: now
                 });

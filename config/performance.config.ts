@@ -8,15 +8,15 @@ interface IPerformanceConfig {
 const configurations: IConfiguration<IPerformanceConfig> = {
     development: {
         regenTileStatusJsonFileSeconds: 10,
-        regenTileStatusSqliteChunkSize: 100
+        regenTileStatusSqliteChunkSize: 50
     },
     test: {
         regenTileStatusJsonFileSeconds: 90,
-        regenTileStatusSqliteChunkSize: 100
+        regenTileStatusSqliteChunkSize: 50
     },
     production: {
         regenTileStatusJsonFileSeconds: 300,
-        regenTileStatusSqliteChunkSize: 100
+        regenTileStatusSqliteChunkSize: 50
     }
 };
 

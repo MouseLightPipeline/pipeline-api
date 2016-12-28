@@ -157,8 +157,17 @@ async function createConnection(name: string, requiredTable: string): Promise<Kn
             await verifyTable(knex, requiredTable, (table) => {
                 table.string("relative_path").primary().unique();
                 table.string("tile_name");
-                table.int("previous_stage_status");
-                table.int("current_stage_status");
+                table.int("prev_stage_status");
+                table.int("this_stage_status");
+                table.float("x");
+                table.float("y");
+                table.float("z");
+                table.float("lat_x");
+                table.float("lat_y");
+                table.float("lat_z");
+                table.float("cut_offset");
+                table.float("z_offset");
+                table.float("delta_z");
                 table.timestamp("deleted_at");
                 table.timestamps();
             });
