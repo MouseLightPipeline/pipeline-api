@@ -4,7 +4,7 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "dev": "DEBUG=mouselight* node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
+    "dev": "DEBUG=mouselight*,knex:query,knex:client,knex:pool node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
     "start": "node src/pipelineApiApp.js",
     "deploy-dev": "nohup DEBUG=mouselight* node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
     "deploy-run": "nohup node src/pipelineApiApp.js > /dev/null 2>&1"

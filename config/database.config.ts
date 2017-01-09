@@ -13,6 +13,7 @@ export interface IDatabaseConfig {
     client: string;
     connection: any;
     migrations: any;
+    acquireConnectionTimeout: number
     useNullAsDefault: boolean;
 }
 
@@ -22,6 +23,7 @@ const configurations: IConfiguration<IDatabaseConfig> = {
         connection: {
             filename: path.join(internalDataPath, "system-data-dev.sqlite3")
         },
+        acquireConnectionTimeout: 180000,
         useNullAsDefault: true,
         migrations: {
             tableName: "knex_migrations"
@@ -32,6 +34,7 @@ const configurations: IConfiguration<IDatabaseConfig> = {
         connection: {
             filename: path.join(internalDataPath, "system-data-test.sqlite3")
         },
+        acquireConnectionTimeout: 180000,
         useNullAsDefault: true,
         migrations: {
             tableName: "knex_migrations"
@@ -42,6 +45,7 @@ const configurations: IConfiguration<IDatabaseConfig> = {
         connection: {
             filename: path.join(internalDataPath, "system-data.sqlite3")
         },
+        acquireConnectionTimeout: 180000,
         useNullAsDefault: true,
         migrations: {
             tableName: "knex_migrations"

@@ -19,7 +19,7 @@ export abstract class TableModel<T extends ITableModelRow> {
     public async get(id: string): Promise<T> {
         let results = await this.fetch([id]);
 
-        if (results.length > 0) {
+        if (results && results.length > 0) {
             return results[0];
         } else {
             return null;
@@ -37,7 +37,7 @@ export abstract class TableModel<T extends ITableModelRow> {
 
         let idList = <string[]>objList.map(obj => obj.id);
 
-        if (idList.length > 0) {
+        if (idList && idList.length > 0) {
             return await this.get(idList[0]);
         } else {
             return null;

@@ -172,6 +172,7 @@ async function createConnection(name: string, requiredTable: string): Promise<Kn
         connection: {
             filename: name
         },
+        acquireConnectionTimeout: 180000,
         useNullAsDefault: true,
         migrations: {
             directory: "src/data-access/migrations",
