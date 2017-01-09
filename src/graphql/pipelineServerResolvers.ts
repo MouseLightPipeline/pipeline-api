@@ -4,7 +4,7 @@ const debug = require("debug")("mouselight:pipeline-api:resolvers");
 
 import {ITaskDefinition} from "../data-model/taskDefinition";
 import {IPipelineStage} from "../data-model/pipelineStage";
-import {IProject} from "../data-model/project";
+import {IProject, IProjectGridRegion} from "../data-model/project";
 import {IPipelineWorker} from "../data-model/pipelineWorker";
 import {IPipelineStagePerformance} from "../data-model/pipelineStagePerformance";
 
@@ -20,7 +20,8 @@ interface ICreatePipelineStageArguments {
     project_id: string;
     task_id: string;
     previous_stage_id: string;
-    dst_path: string
+    dst_path: string;
+    function_type: number;
 }
 
 interface ICreateProjectArguments {
@@ -28,6 +29,7 @@ interface ICreateProjectArguments {
     description: string;
     rootPath: string;
     sampleNumber: number
+    region: IProjectGridRegion;
 }
 
 interface ISetActiveStatusArguments {
@@ -73,7 +75,8 @@ let resolvers = {
     },
     Mutation: {
         createProject(_, args: ICreateProjectArguments, context: IPipelineServerContext): Promise<IProject> {
-            return context.createProject(args.name, args.description, args.rootPath, args.sampleNumber);
+            debug(`resolve create project ${args.name}`);
+            return context.createProject(args.name, args.description, args.rootPath, args.sampleNumber, args.region);
         },
         setProjectStatus(_, args: ISetActiveStatusArguments, context: IPipelineServerContext) {
             return context.setProjectStatus(args.id, args.shouldBeActive);
@@ -82,7 +85,8 @@ let resolvers = {
             return context.deleteProject(args.id);
         },
         createPipelineStage(_, args: ICreatePipelineStageArguments, context: IPipelineServerContext): Promise<IPipelineStage> {
-            return context.createPipelineStage(args.project_id, args.task_id, args.previous_stage_id, args.dst_path);
+            debug(`resolve create pipeline stage for project ${args.project_id}`);
+            return context.createPipelineStage(args.project_id, args.task_id, args.previous_stage_id, args.dst_path, args.function_type);
         },
         setPipelineStageStatus(_, args: ISetActiveStatusArguments, context: IPipelineServerContext) {
             return context.setPipelineStageStatus(args.id, args.shouldBeActive);

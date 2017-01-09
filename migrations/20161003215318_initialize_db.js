@@ -24,6 +24,12 @@ exports.up = function (knex, Promise) {
             table.string("description");
             table.string("root_path");
             table.integer("sample_number");
+            table.integer("region_x_min");
+            table.integer("region_x_max");
+            table.integer("region_y_min");
+            table.integer("region_y_max");
+            table.integer("region_z_min");
+            table.integer("region_z_max");
             table.boolean("is_active");
             table.timestamp("deleted_at");
             table.timestamps();
@@ -73,6 +79,10 @@ exports.up = function (knex, Promise) {
             table.foreign("pipeline_stage_id").references("PipelineStage.id");
             table.timestamp("deleted_at");
             table.timestamps();
+        }).createTable("PipelineStageFunction", (table) => {
+            table.integer("id").primary().unique();
+            table.string("name");
+            table.timestamps();
         });
 };
 
@@ -82,5 +92,6 @@ exports.down = function (knex, Promise) {
         .dropTable("Project")
         .dropTable("PipelineStage")
         .dropTable("TaskDefinition")
-        .dropTable("PipelineStagePerformance");
+        .dropTable("PipelineStagePerformance")
+        .dropTable("PipelineStageFunction");
 };

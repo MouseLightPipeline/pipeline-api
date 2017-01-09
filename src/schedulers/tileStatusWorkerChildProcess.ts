@@ -6,16 +6,21 @@ const debug = require("debug")("mouselight:pipeline-api:tile-status-worker-proce
 let projectId = process.argv.length > 2 ? process.argv[2] : null;
 
 if (projectId) {
-    debug("started tile status child process");
-
-    startWorkerForProcess(projectId);
+    startWorkerForProcess(projectId).then(() => {
+        debug(`started tile status child process for project ${projectId}`);
+    }).catch(err => {
+        debug(`failed to start tile status process for ${projectId}: ${err}`);
+    });
 }
 
 async function startWorkerForProcess(projectId) {
     let worker = await startTileStatusFileWorker(projectId);
 
-    process.on("message", m => {
-        worker.send(m);
+    process.on("message", msg => {
+        if (msg && msg.isCancelRequest) {
+            worker.IsCancelRequested = true;
+        }
+
         process.disconnect();
     });
 

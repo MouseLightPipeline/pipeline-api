@@ -45,6 +45,12 @@ type Project implements ITableModel {
   description: String
   root_path: String
   sample_number: Int
+  region_x_min:Int
+  region_x_max: Int
+  region_y_min: Int
+  region_y_max: Int
+  region_z_min: Int
+  region_z_max: Int
   is_active: Boolean
   created_at: String
   updated_at: String
@@ -92,6 +98,15 @@ type PipelineStage implements ITableModel {
   performance: PipelineStagePerformance
 }
 
+input RegionInput {
+  x_min: Int
+  x_max: Int
+  y_min: Int
+  y_max: Int
+  z_min: Int
+  z_max: Int
+}
+
 type Query {
   pipelineWorker(id: String!): PipelineWorker
   pipelineWorkers: [PipelineWorker!]!
@@ -107,10 +122,10 @@ type Query {
 }
 
 type Mutation {
-  createProject(name: String, description: String, rootPath: String, sampleNumber: Int): Project
+  createProject(name: String, description: String, rootPath: String, sampleNumber: Int, region: RegionInput): Project
   setProjectStatus(id: String, shouldBeActive: Boolean): Project
   deleteProject(id: String!): Boolean
-  createPipelineStage(project_id: String, task_id: String, previous_stage_id: String, dst_path: String): PipelineStage
+  createPipelineStage(project_id: String, task_id: String, previous_stage_id: String, dst_path: String, function_type: Int): PipelineStage
   setPipelineStageStatus(id: String, shouldBeActive: Boolean): PipelineStage
   deletePipelineStage(id: String!): Boolean
 }

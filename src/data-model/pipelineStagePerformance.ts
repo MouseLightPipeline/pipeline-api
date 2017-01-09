@@ -6,7 +6,7 @@ const debug = require("debug")("mouselight:pipeline-api:pipeline-stage-performan
 import {knex} from "../data-access/knexConnector";
 
 import {TableModel, ITableModelRow} from "./tableModel";
-import {CompletionStatusCode, ITaskExecution} from "../schedulers/pipelineScheduler";
+import {CompletionStatusCode, ITaskExecution} from "./taskExecution";
 
 enum PerformanceQueueActions {
     Reset = 0,

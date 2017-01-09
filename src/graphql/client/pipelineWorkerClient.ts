@@ -5,7 +5,7 @@ import "isomorphic-fetch";
 const debug = require("debug")("mouselight:pipeline-api:pipeline-worker-client");
 
 import {IPipelineWorker, PipelineWorkerStatus, PipelineWorkers} from "../../data-model/pipelineWorker";
-import {ITaskExecution} from "../../schedulers/pipelineScheduler";
+import {ITaskExecution} from "../../data-model/taskExecution";
 
 export class PipelineWorkerClient {
     private static _instance: PipelineWorkerClient = null;

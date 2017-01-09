@@ -11,7 +11,6 @@ import {startTileStatusFileWorker} from "./tileStatusWorkerChildProcess";
 import {startPipelineStageWorker} from "./pipelineMapSchedulerChildProcess";
 
 export interface IWorkerInterface {
-    send(data: any);
 }
 
 export class SchedulerHub {
@@ -85,7 +84,7 @@ export class SchedulerHub {
 
                 workerMap.delete(item.id);
 
-                worker.send({isCancelRequest: true});
+                worker.IsCancelRequested = true;
             }
         });
     }

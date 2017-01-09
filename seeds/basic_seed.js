@@ -38,7 +38,29 @@ function productionSeed() {
                 ]);
             });
 
-        return Promise.all([promise1]);
+        let promise2 = knex('PipelineStageFunction').del()
+            .then(() => {
+                return Promise.all([
+                    // Inserts seed entries
+                    knex('PipelineStageFunction').insert({
+                        id: 1,
+                        name: 'Refresh Dashboard Project',
+                        created_at: createDate(0, 0)
+                    }),
+                    knex('PipelineStageFunction').insert({
+                        id: 2,
+                        name: 'Map Tile',
+                        created_at: createDate(0, 0)
+                    }),
+                    knex('PipelineStageFunction').insert({
+                        id: 3,
+                        name: 'Map With Z Index - 1 Tile',
+                        created_at: createDate(0, 0)
+                    })
+                ]);
+            });
+
+        return Promise.all([promise1, promise2]);
     };
 }
 
@@ -75,6 +97,28 @@ function developmentSeed() {
                         description: "Small dashboard.json test project",
                         root_path: "/Volumes/Spare/Projects/MouseLight/Dashboard Output/small",
                         sample_number: 99998,
+                        region_x_min: -1,
+                        region_x_max: -1,
+                        region_y_min: -1,
+                        region_y_max: -1,
+                        region_z_min: -1,
+                        region_z_max: -1,
+                        is_active: false,
+                        created_at: createDate(2, 0),
+                        updated_at: createDate(1, 3.5)
+                    }),
+                    knex("Project").insert({
+                        id: "F106E72C-A43E-4BAF-A6F0-2395A22A65C6".toLocaleLowerCase(),
+                        name: "Small SubGrid",
+                        description: "Small dashboard.json test project",
+                        root_path: "/Volumes/Spare/Projects/MouseLight/Dashboard Output/small",
+                        sample_number: 99998,
+                        region_x_min: 1,
+                        region_x_max: 2,
+                        region_y_min: 0,
+                        region_y_max: 3,
+                        region_z_min: 2,
+                        region_z_max: -1,
                         is_active: false,
                         created_at: createDate(2, 0),
                         updated_at: createDate(1, 3.5)
@@ -85,6 +129,12 @@ function developmentSeed() {
                         description: "Large dashboard.json test project",
                         root_path: "/Volumes/Spare/Projects/MouseLight/Dashboard Output/large",
                         sample_number: 99999,
+                        region_x_min: -1,
+                        region_x_max: -1,
+                        region_y_min: -1,
+                        region_y_max: -1,
+                        region_z_min: -1,
+                        region_z_max: -1,
                         is_active: false,
                         created_at: createDate(2, 0),
                         updated_at: createDate(1, 3.5)
@@ -92,7 +142,29 @@ function developmentSeed() {
                 ]);
             });
 
-        return Promise.all([promise1]);
+        let promise2 = knex('PipelineStageFunction').del()
+            .then(() => {
+                return Promise.all([
+                    // Inserts seed entries
+                    knex('PipelineStageFunction').insert({
+                        id: 1,
+                        name: 'Refresh Dashboard Project',
+                        created_at: createDate(0, 0)
+                    }),
+                    knex('PipelineStageFunction').insert({
+                        id: 2,
+                        name: 'Map Tile',
+                        created_at: createDate(0, 0)
+                    }),
+                    knex('PipelineStageFunction').insert({
+                        id: 3,
+                        name: 'Map With Z Index - 1 Tile',
+                        created_at: createDate(0, 0)
+                    })
+                ]);
+            });
+
+        return Promise.all([promise1, promise2]);
     };
 }
 

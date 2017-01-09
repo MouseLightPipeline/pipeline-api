@@ -14,8 +14,11 @@ if (stageId) {
 async function startWorkerForProcess(stageId) {
     let worker = await startPipelineStageWorker(stageId);
 
-    process.on("message", m => {
-        worker.send(m);
+    process.on("message", msg => {
+        if (msg && msg.isCancelRequest) {
+            worker.IsCancelRequested = true;
+        }
+
         process.disconnect();
     });
 

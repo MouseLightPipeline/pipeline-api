@@ -1,6 +1,6 @@
 import {ITaskDefinition, TaskDefinitions} from "../data-model/taskDefinition";
-import {Projects, IProject} from "../data-model/project";
-import {IPipelineStage, PipelineStages} from "../data-model/pipelineStage";
+import {Projects, IProject, IProjectGridRegion} from "../data-model/project";
+import {IPipelineStage, PipelineStages, PipelineStageMethod} from "../data-model/pipelineStage";
 import {IPipelineWorker, PipelineWorkers} from "../data-model/pipelineWorker";
 import {IPipelineStagePerformance, pipelineStagePerformanceInstance} from "../data-model/pipelineStagePerformance";
 
@@ -10,14 +10,14 @@ export interface IPipelineServerContext {
 
     getProject(id: string): Promise<IProject>;
     getProjects(includeSoftDelete: boolean): Promise<IProject[]>;
-    createProject(name: string, description: string, rootPath: string, sampleNumber: number): Promise<IProject>;
+    createProject(name: string, description: string, rootPath: string, sampleNumber: number, region: IProjectGridRegion): Promise<IProject>;
     setProjectStatus(id: string, shouldBeActive: boolean): Promise<IProject>;
     deleteProject(id: string): Promise<boolean>;
 
     getPipelineStage(id: string): Promise<IPipelineStage>;
     getPipelineStages(): Promise<IPipelineStage[]>;
     getPipelineStagesForProject(id: string): Promise<IPipelineStage[]>;
-    createPipelineStage(project_id: string, task_id: string, previous_stage_id: string, dst_path: string): Promise<IPipelineStage>;
+    createPipelineStage(project_id: string, task_id: string, previous_stage_id: string, dst_path: string, function_type: number): Promise<IPipelineStage>;
     setPipelineStageStatus(id: string, shouldBeActive: boolean): Promise<IPipelineStage>;
     deletePipelineStage(id: string): Promise<boolean>;
 
@@ -52,8 +52,8 @@ export class PipelineServerContext implements IPipelineServerContext {
         return this._projects.getAll(includeSoftDelete);
     }
 
-    public async createProject(name: string, description: string, rootPath: string, sampleNumber: number): Promise<IProject> {
-        return this._projects.create(name, description, rootPath, sampleNumber);
+    public async createProject(name: string, description: string, rootPath: string, sampleNumber: number, region: IProjectGridRegion): Promise<IProject> {
+        return this._projects.create(name, description, rootPath, sampleNumber, region);
     }
 
     public async setProjectStatus(id: string, shouldBeActive: boolean): Promise<IProject> {
@@ -76,8 +76,8 @@ export class PipelineServerContext implements IPipelineServerContext {
         return this._pipelineStages.getForProject(id);
     }
 
-    public async createPipelineStage(project_id: string, task_id: string, previous_stage_id: string, dst_path: string): Promise<IPipelineStage> {
-        return this._pipelineStages.create(project_id, task_id, previous_stage_id, dst_path);
+    public async createPipelineStage(project_id: string, task_id: string, previous_stage_id: string, dst_path: string, function_type: PipelineStageMethod): Promise<IPipelineStage> {
+        return this._pipelineStages.create(project_id, task_id, previous_stage_id, dst_path, function_type);
     }
 
     public async setPipelineStageStatus(id: string, shouldBeActive: boolean): Promise<IPipelineStage> {

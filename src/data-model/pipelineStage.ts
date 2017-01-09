@@ -3,6 +3,12 @@ import * as uuid from "node-uuid";
 import {IRunnableTableModelRow, RunnableTableModel} from "./runnableTableModel";
 import {knex} from "../data-access/knexConnector";
 
+export enum PipelineStageMethod {
+    DashboardProjectRefresh = 1,
+    MapTile = 2,
+    ZIndexTileComparison = 3
+}
+
 export interface IPipelineStage extends IRunnableTableModelRow {
     name: string;
     description: string;
@@ -18,7 +24,7 @@ export class PipelineStages extends RunnableTableModel<IPipelineStage> {
         super("PipelineStage");
     }
 
-    public async create(project_id: string, task_id: string, previous_stage_id: string, dst_path: string): Promise<IPipelineStage> {
+    public async create(project_id: string, task_id: string, previous_stage_id: string, dst_path: string, function_type: PipelineStageMethod): Promise<IPipelineStage> {
         let pipelineStage = {
             id: uuid.v4(),
             name: "",
@@ -28,7 +34,7 @@ export class PipelineStages extends RunnableTableModel<IPipelineStage> {
             previous_stage_id: previous_stage_id,
             dst_path: dst_path,
             is_active: false,
-            function_type: 0,
+            function_type: function_type,
             created_at: null,
             updated_at: null,
             deleted_at: null

@@ -10,22 +10,28 @@ import {IDatabaseConfig} from "../../config/database.config";
 
 const PipelineStageDatabaseFile = "pipeline-storage.sqlite3";
 
-export const TileStatusPipelineStageId = "TileStatus";
+export function generatePipelineStageTableName(pipelineStageId: string) {
+    return `PipelineStage_${pipelineStageId.replace("-", "")}`;
+}
 
 export function generatePipelineStateDatabaseName(pipelineOutputPath) {
     return path.join(pipelineOutputPath, PipelineStageDatabaseFile);
 }
 
-export function generatePipelineStageTableName(pipelineStageId: string) {
-    return `PipelineStage_${pipelineStageId.replace("-", "")}`;
+export function generateProjectRootTableName(projectId: string) {
+    return `PipelineProject_${projectId.replace("-", "")}_TileStatus`;
+}
+
+export function generatePipelineCustomTableName(pipelineStageId: string, tableName) {
+    return generatePipelineStageTableName(pipelineStageId) + "_" + tableName;
 }
 
 export function generatePipelineStageInProcessTableName(pipelineStageId: string) {
-    return generatePipelineStageTableName(pipelineStageId) + "_InProcess";
+    return generatePipelineCustomTableName(pipelineStageId, "InProcess");
 }
 
 export function generatePipelineStageToProcessTableName(pipelineStageId: string) {
-    return generatePipelineStageTableName(pipelineStageId) + "_ToProcess";
+    return generatePipelineCustomTableName(pipelineStageId, "ToProcess");
 }
 
 interface IConnectorQueueToken {
@@ -115,18 +121,43 @@ export async function connectorForFile(name: string, requiredTable: string = nul
 let connectionMap = new Map<string, Knex>();
 
 async function findConnection(name: string, requiredTable: string = null): Promise<Knex> {
+    let connection: Knex = null;
+
     if (connectionMap.has(name)) {
         debug(`\treturning existing connection for ${name}`);
-        return connectionMap.get(name);
+        connection = connectionMap.get(name);
+    } else {
+        debug(`\tcreating connection for ${name}`);
+
+        connection = await createConnection(name, requiredTable);
     }
 
-    debug(`\tcreating connection for ${name}`);
+    if (requiredTable) {
+        await verifyTable(connection, requiredTable, (table) => {
+            table.string("relative_path").primary().unique();
+            table.string("tile_name");
+            table.int("prev_stage_status");
+            table.int("this_stage_status");
+            table.float("x");
+            table.float("y");
+            table.float("z");
+            table.float("lat_x");
+            table.float("lat_y");
+            table.float("lat_z");
+            table.float("cut_offset");
+            table.float("z_offset");
+            table.float("delta_z");
+            table.timestamp("deleted_at");
+            table.timestamps();
+        });
+    }
 
-    return await createConnection(name, requiredTable);
+    return connection;
 }
 
 export async function verifyTable(connection, tableName: string, createFunction) {
     debug(`verifying required table ${tableName}`);
+
     let test = await connection.schema.hasTable(tableName);
 
     if (!test) {
@@ -152,26 +183,6 @@ async function createConnection(name: string, requiredTable: string): Promise<Kn
 
     try {
         await knex.migrate.latest(configuration);
-
-        if (requiredTable) {
-            await verifyTable(knex, requiredTable, (table) => {
-                table.string("relative_path").primary().unique();
-                table.string("tile_name");
-                table.int("prev_stage_status");
-                table.int("this_stage_status");
-                table.float("x");
-                table.float("y");
-                table.float("z");
-                table.float("lat_x");
-                table.float("lat_y");
-                table.float("lat_z");
-                table.float("cut_offset");
-                table.float("z_offset");
-                table.float("delta_z");
-                table.timestamp("deleted_at");
-                table.timestamps();
-            });
-        }
     } catch (err) {
         debug("\t\tretrying connector acquisition in 2 seconds");
         return new Promise<Knex>((resolve) => {

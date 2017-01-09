@@ -11,7 +11,7 @@ const tileStatusJsonFile = "pipeline-storage.json";
 const tileStatusLastJsonFile = tileStatusJsonFile + ".last";
 
 import {
-    connectorForFile, TileStatusPipelineStageId, generatePipelineStateDatabaseName, generatePipelineStageTableName
+    connectorForFile, generatePipelineStateDatabaseName, generateProjectRootTableName
 } from "../data-access/knexPiplineStageConnection";
 
 import performanceConfiguration from "../../config/performance.config"
@@ -40,7 +40,7 @@ export class TileStatusWorker extends PipelineScheduler {
     private _project: IProject;
 
     public constructor(project: IProject) {
-        super();
+        super(null);
 
         this._project = project;
     }
@@ -54,15 +54,15 @@ export class TileStatusWorker extends PipelineScheduler {
             fs.mkdirSync(this._project.root_path);
         }
 
-        this._outputTableName = generatePipelineStageTableName(TileStatusPipelineStageId);
+        this._outputTableName = generateProjectRootTableName(this._project.id);
 
         this._outputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(this._project.root_path), this._outputTableName);
 
         await this.performWork();
     }
 
-    private async performWork() {
-        if (this._isCancelRequested) {
+    protected async performWork() {
+        if (this.IsCancelRequested) {
             debug("cancel request - early return");
             return;
         }
@@ -78,11 +78,11 @@ export class TileStatusWorker extends PipelineScheduler {
 
             let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "prev_stage_status"]);
 
-            let sorted = this.muxInputOutputTiles(knownInput, knownOutput);
+            let sorted = await this.muxInputOutputTiles(knownInput, knownOutput);
 
             await this.batchInsert(this._outputKnexConnector, this._outputTableName, sorted.toInsert);
 
-            await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdate, DefaultPipelineIdKey);
+            await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdatePrevious, DefaultPipelineIdKey);
         } catch (err) {
             console.log(err);
         }
@@ -92,22 +92,46 @@ export class TileStatusWorker extends PipelineScheduler {
         setTimeout(() => this.performWork(), perfConf.regenTileStatusJsonFileSeconds * 1000)
     }
 
-    private muxInputOutputTiles(knownInput: IDashboardJsonTile[], knownOutput) {
+    protected async muxInputOutputTiles(knownInput: IDashboardJsonTile[], knownOutput) {
         let sorted = {
             toInsert: [],
-            toUpdate: []
+            toUpdatePrevious: []
         };
 
         let knownOutputLookup = knownOutput.map(obj => obj[DefaultPipelineIdKey]);
 
         knownInput.reduce((list, inputTile) => {
+            if (this._project.region_x_min > -1 && inputTile.lattice_position.x < this._project.region_x_min) {
+                return list;
+            }
+
+            if (this._project.region_x_max > -1 && inputTile.lattice_position.x > this._project.region_x_max) {
+                return list;
+            }
+
+            if (this._project.region_y_min > -1 && inputTile.lattice_position.y < this._project.region_y_min) {
+                return list;
+            }
+
+            if (this._project.region_y_max > -1 && inputTile.lattice_position.y > this._project.region_y_max) {
+                return list;
+            }
+
+            if (this._project.region_z_min > -1 && inputTile.lattice_position.z < this._project.region_z_min) {
+                return list;
+            }
+
+            if (this._project.region_z_max > -1 && inputTile.lattice_position.z > this._project.region_z_max) {
+                return list;
+            }
+
             let idx = knownOutputLookup.indexOf(inputTile.relative_path);
 
             let existingOutput = idx > -1 ? knownOutput[idx] : null;
 
             if (existingOutput) {
                 if (existingOutput.prev_stage_status !== inputTile.status) {
-                    list.toUpdate.push({
+                    list.toUpdatePrevious.push({
                         relative_path: inputTile.relative_path,
                         prev_stage_status: inputTile.status,
                         this_stage_status: inputTile.status,
