@@ -3,6 +3,7 @@ import {Projects, IProject, IProjectGridRegion} from "../data-model/project";
 import {IPipelineStage, PipelineStages, PipelineStageMethod} from "../data-model/pipelineStage";
 import {IPipelineWorker, PipelineWorkers} from "../data-model/pipelineWorker";
 import {IPipelineStagePerformance, pipelineStagePerformanceInstance} from "../data-model/pipelineStagePerformance";
+import {SchedulerHub} from "../schedulers/schedulerHub";
 
 export interface IPipelineServerContext {
     getPipelineWorker(id: string): Promise<IPipelineWorker>;
@@ -27,6 +28,8 @@ export interface IPipelineServerContext {
     getPipelineStagePerformance(id: string): Promise<IPipelineStagePerformance>;
     getPipelineStagePerformances(): Promise<IPipelineStagePerformance[]>;
     getForStage(pipeline_stage_id: string): Promise<IPipelineStagePerformance>
+
+    getProjectPlaneTileStatus(project_id: string, plane: number): Promise<any>;
 }
 
 export class PipelineServerContext implements IPipelineServerContext {
@@ -34,7 +37,7 @@ export class PipelineServerContext implements IPipelineServerContext {
     private _projects = new Projects();
     private _pipelineStages = new PipelineStages();
     private _workers = new PipelineWorkers();
-    private _piplinePerformance = pipelineStagePerformanceInstance;
+    private _pipelinePerformance = pipelineStagePerformanceInstance;
 
     public async getPipelineWorker(id: string): Promise<IPipelineWorker> {
         return this._workers.get(id);
@@ -57,7 +60,7 @@ export class PipelineServerContext implements IPipelineServerContext {
     }
 
     public async setProjectStatus(id: string, shouldBeActive: boolean): Promise<IProject> {
-        return this._projects.setStatus(id, shouldBeActive);
+        return this._projects.setProcessingStatus(id, shouldBeActive);
     }
 
     public async deleteProject(id: string): Promise<boolean> {
@@ -81,7 +84,7 @@ export class PipelineServerContext implements IPipelineServerContext {
     }
 
     public async setPipelineStageStatus(id: string, shouldBeActive: boolean): Promise<IPipelineStage> {
-        return this._pipelineStages.setStatus(id, shouldBeActive);
+        return this._pipelineStages.setProcessingStatus(id, shouldBeActive);
     }
 
     public async deletePipelineStage(id: string): Promise<boolean> {
@@ -97,14 +100,18 @@ export class PipelineServerContext implements IPipelineServerContext {
     }
 
     public async getPipelineStagePerformance(id: string): Promise<IPipelineStagePerformance> {
-        return this._piplinePerformance.get(id);
+        return this._pipelinePerformance.get(id);
     }
 
     public async getPipelineStagePerformances(): Promise<IPipelineStagePerformance[]> {
-        return this._piplinePerformance.getAll();
+        return this._pipelinePerformance.getAll();
     }
 
     public async getForStage(pipeline_stage_id: string): Promise<IPipelineStagePerformance> {
-        return this._piplinePerformance.getForStage(pipeline_stage_id);
+        return this._pipelinePerformance.getForStage(pipeline_stage_id);
+    }
+
+    public async getProjectPlaneTileStatus(project_id: string, plane: number): Promise<any> {
+        return SchedulerHub.Instance.loadTileStatusForPlane(project_id, plane);
     }
 }

@@ -42,7 +42,7 @@ export class Projects extends RunnableTableModel<IProject> {
             region_y_max: region.y_max,
             region_z_min: region.z_min,
             region_z_max: region.z_max,
-            is_active: false,
+            is_processing: false,
             created_at: null,
             updated_at: null,
             deleted_at: null

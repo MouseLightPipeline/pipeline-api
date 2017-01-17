@@ -30,7 +30,7 @@ exports.up = function (knex, Promise) {
             table.integer("region_y_max");
             table.integer("region_z_min");
             table.integer("region_z_max");
-            table.boolean("is_active");
+            table.boolean("is_processing");
             table.timestamp("deleted_at");
             table.timestamps();
         }).createTable("PipelineStage", (table) => {
@@ -39,7 +39,8 @@ exports.up = function (knex, Promise) {
             table.string("description");
             table.integer("function_type");
             table.string("dst_path");
-            table.boolean("is_active");
+            table.boolean("is_processing");
+            table.integer("depth");
             table.uuid("project_id");
             table.foreign("project_id").references("Project.id");
             table.uuid("task_id");

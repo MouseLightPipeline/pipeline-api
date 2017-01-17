@@ -58,6 +58,9 @@ export class PipelineMapScheduler extends PipelineScheduler {
                     cut_offset: inputTile.cut_offset,
                     z_offset: inputTile.z_offset,
                     delta_z: inputTile.delta_z,
+                    duration: 0,
+                    cpu_high: 0,
+                    memory_high: 0,
                     created_at: now,
                     updated_at: now
                 });

@@ -11,7 +11,7 @@ import {PipelineStages, IPipelineStage} from "../data-model/pipelineStage";
 import {
     verifyTable, generatePipelineStageToProcessTableName,
     generatePipelineStageInProcessTableName, generatePipelineStateDatabaseName, connectorForFile,
-    generateProjectRootTableName, generatePipelineStageTableName
+    generateProjectRootTableName, generatePipelineStageTableName, generatePipelineCustomTableName
 } from "../data-access/knexPiplineStageConnection";
 import {PipelineWorkers} from "../data-model/pipelineWorker";
 import {PipelineWorkerClient} from "../graphql/client/pipelineWorkerClient";
@@ -49,6 +49,9 @@ export interface IPipelineTile {
     cut_offset?: number;
     z_offset?: number;
     delta_z?: number;
+    duration?: number;
+    cpu_high?: number;
+    memory_high?: number;
     created_at?: Date;
     updated_at?: Date;
     deleted_at?: Date;
@@ -81,14 +84,13 @@ export abstract class PipelineScheduler implements IWorkerInterface {
     protected _inProcessTableName: string;
     protected _toProcessTableName: string;
 
-    private _inProcessCount: number;
-    private _toProcessCount: number;
-
-
     private _isCancelRequested: boolean;
+    private _isProcessingRequested: boolean;
 
     protected constructor(pipelineStage: IPipelineStage) {
-        this._isCancelRequested = false;
+        this.IsCancelRequested = false;
+
+        this.IsProcessingRequested = false;
 
         this._pipelineStage = pipelineStage;
     }
@@ -99,6 +101,33 @@ export abstract class PipelineScheduler implements IWorkerInterface {
 
     public get IsCancelRequested() {
         return this._isCancelRequested;
+    }
+
+    public set IsProcessingRequested(b: boolean) {
+        this._isProcessingRequested = b;
+    }
+
+    public get IsProcessingRequested() {
+        return this._isProcessingRequested;
+    }
+
+    public async run() {
+        await this.createTables();
+
+        await this.performWork();
+    }
+
+    public async loadTileStatusForPlane(zIndex: number) {
+        let tiles = await this.outputTable.where("lat_z", zIndex).select("this_stage_status", "lat_x", "lat_y");
+
+        tiles = tiles.map(tile => {
+            tile["stage_id"] = this._pipelineStage.id;
+            tile["depth"] = this._pipelineStage.depth;
+
+            return tile;
+        });
+
+        return tiles;
     }
 
     protected get inputTable() {
@@ -164,25 +193,21 @@ export abstract class PipelineScheduler implements IWorkerInterface {
     protected async countInProcess(): Promise<number> {
         let rowsCount = await this._outputKnexConnector(this._inProcessTableName).count(DefaultPipelineIdKey);
 
-        this._inProcessCount = rowsCount[0][`count("${DefaultPipelineIdKey}")`];
-
-        return this._inProcessCount;
+        return rowsCount[0][`count("${DefaultPipelineIdKey}")`];
     }
 
     protected async countToProcess(): Promise<number> {
         let rowsCount = await this._outputKnexConnector(this._toProcessTableName).count(DefaultPipelineIdKey);
 
-        this._toProcessCount = rowsCount[0][`count("${DefaultPipelineIdKey}")`];
-
-        return this._toProcessCount;
+        return rowsCount[0][`count("${DefaultPipelineIdKey}")`];
     }
 
-    protected async updateInProcessStatus(): Promise<number> {
+    protected async updateInProcessStatus() {
         let inProcess = await this.loadInProcess();
 
         let workerManager = new PipelineWorkers();
 
-        // This should not thousands or even hundreds at a time, just a handful per machine at most per cycle, likely
+        // This should not be thousands or even hundreds at a time, just a handful per machine at most per cycle, likely
         // far less depending on how frequently we check, so don't bother with batching for now.
         inProcess.forEach(async(task) => {
             let workerForTask = await workerManager.get(task.worker_id);
@@ -213,8 +238,6 @@ export abstract class PipelineScheduler implements IWorkerInterface {
                 updatePipelineStagePerformance(this._pipelineStage.id, executionInfo);
             }
         });
-
-        return await this.countInProcess();
     }
 
     protected async getTaskContext(tile: IPipelineTile): Promise<any> {
@@ -232,13 +255,13 @@ export abstract class PipelineScheduler implements IWorkerInterface {
 
         debug(`scheduling workers from available ${waitingToProcess.length} pending`);
 
-        let projects = new Projects();
-
         let pipelineStages = new PipelineStages();
 
         let workerManager = new PipelineWorkers();
 
         let workers = await workerManager.getAll();
+
+        let projects = new Projects();
 
         let project: IProject = await projects.get(this._pipelineStage.project_id);
 
@@ -305,6 +328,7 @@ export abstract class PipelineScheduler implements IWorkerInterface {
 
                         if (taskExecution != null) {
                             let now = new Date();
+
                             await this.inProcessTable.insert({
                                 relative_path: pipelineTile.relative_path,
                                 tile_name: pipelineTile.tile_name,
@@ -314,6 +338,9 @@ export abstract class PipelineScheduler implements IWorkerInterface {
                                 created_at: now,
                                 updated_at: now
                             });
+
+                            pipelineTile.this_stage_status = TilePipelineStatus.Processing;
+                            await this.outputTable.where(DefaultPipelineIdKey, pipelineTile[DefaultPipelineIdKey]).update(pipelineTile);
 
                             await this.toProcessTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]).del();
                         }
@@ -350,7 +377,7 @@ export abstract class PipelineScheduler implements IWorkerInterface {
 
     protected async performWork() {
         if (this.IsCancelRequested) {
-            debug("cancel requested - early return");
+            debug("cancel requested - exiting stage worker");
 
             return;
         }
@@ -374,59 +401,26 @@ export abstract class PipelineScheduler implements IWorkerInterface {
                 debug("no input from previous stage yet");
             }
 
-            if (this.IsCancelRequested) {
-                updatePipelineStageCounts(this._pipelineStage.id, this._inProcessCount, await this.countToProcess());
-
-                debug("cancel requested - early return");
-
-                return;
-            }
-
             // Check and update the status of anything in-process
-            let inProcessCount = await this.updateInProcessStatus();
-
-
-            if (this.IsCancelRequested) {
-                updatePipelineStageCounts(this._pipelineStage.id, inProcessCount, await this.countToProcess());
-
-                debug("cancel requested - early return");
-
-                return;
-            }
-
-            // If there are no available schedulers, exit
+            await this.updateInProcessStatus();
 
             // Look if anything is already in the to-process queue
             let available = await this.loadToProcess();
 
-            //   If not, search database for to-process and put in to-process queue
+            //   If not, search database for newly available to-process and put in to-process queue
             if (available.length === 0) {
                 available = await this.updateToProcessQueue();
             }
 
-            if (this.IsCancelRequested) {
-                updatePipelineStageCounts(this._pipelineStage.id, inProcessCount, await this.countToProcess());
-
-                debug("cancel requested - early return");
-
-                return;
-            }
-
             // If there is any to-process, try to fill worker capacity
-            if (available.length > 0) {
+            if (this.IsProcessingRequested && available.length > 0) {
                 await this.scheduleFromList(available);
             }
 
-            updatePipelineStageCounts(this._pipelineStage.id, inProcessCount, await this.countToProcess());
+            updatePipelineStageCounts(this._pipelineStage.id, await this.countInProcess(), await this.countToProcess());
 
         } catch (err) {
             console.log(err);
-        }
-
-        if (this.IsCancelRequested) {
-            debug("cancel requested - early return");
-
-            return;
         }
 
         debug("resetting timer");
@@ -476,12 +470,6 @@ export abstract class PipelineScheduler implements IWorkerInterface {
             table.string(DefaultPipelineIdKey).primary().unique();
             table.timestamps();
         });
-    }
-
-    public async run() {
-        await this.createTables();
-
-        await this.performWork();
     }
 
     /*

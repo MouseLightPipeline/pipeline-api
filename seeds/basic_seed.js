@@ -165,7 +165,7 @@ function developmentSeed() {
                         region_y_max: -1,
                         region_z_min: -1,
                         region_z_max: -1,
-                        is_active: false,
+                        is_processing: false,
                         created_at: createDate(2, 0),
                         updated_at: createDate(1, 3.5)
                     }),
@@ -181,7 +181,7 @@ function developmentSeed() {
                         region_y_max: 3,
                         region_z_min: 2,
                         region_z_max: -1,
-                        is_active: false,
+                        is_processing: false,
                         created_at: createDate(2, 0),
                         updated_at: createDate(1, 3.5)
                     }),
@@ -197,7 +197,7 @@ function developmentSeed() {
                         region_y_max: -1,
                         region_z_min: -1,
                         region_z_max: -1,
-                        is_active: false,
+                        is_processing: false,
                         created_at: createDate(2, 0),
                         updated_at: createDate(1, 3.5)
                     })

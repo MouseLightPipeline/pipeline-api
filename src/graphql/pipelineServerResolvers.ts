@@ -37,6 +37,11 @@ interface ISetActiveStatusArguments {
     shouldBeActive: boolean;
 }
 
+interface IPipelinePlaneStatusArguments {
+    project_id: string;
+    plane: number;
+}
+
 let resolvers = {
     Query: {
         pipelineWorker(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IPipelineWorker> {
@@ -71,7 +76,11 @@ let resolvers = {
         },
         pipelineStagePerformances(_, __, context: IPipelineServerContext): Promise<IPipelineStagePerformance[]> {
             return context.getPipelineStagePerformances();
+        },
+        projectPlaneTileStatus(_, args: IPipelinePlaneStatusArguments, context: IPipelineServerContext): Promise<any> {
+            return context.getProjectPlaneTileStatus(args.project_id, args.plane);
         }
+
     },
     Mutation: {
         createProject(_, args: ICreateProjectArguments, context: IPipelineServerContext): Promise<IProject> {

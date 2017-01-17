@@ -1,7 +1,7 @@
 import {TableModel, ITableModelRow} from "./tableModel";
 
 export interface IRunnableTableModelRow extends ITableModelRow {
-    is_active: boolean;
+    is_processing: boolean;
 }
 
 export abstract class RunnableTableModel<T extends IRunnableTableModelRow> extends TableModel<T> {
@@ -9,18 +9,28 @@ export abstract class RunnableTableModel<T extends IRunnableTableModelRow> exten
         super(tableName);
     }
 
-    public async setStatus(id: string, shouldBeActive: boolean): Promise<T> {
-        let project: T = await this.get(id);
+    public async setProcessingStatus(id: string, shouldBeActive: boolean): Promise<T> {
+        let row: T = await this.get(id);
 
-        project.is_active = shouldBeActive;
+        row.is_processing = shouldBeActive;
 
-        await this.save(project);
+        await this.save(row);
 
-        return project;
+        return row;
+    }
+
+    protected didFetchRow(row: T): T {
+        row = super.didFetchRow(row);
+
+        // boolean comes through as 0 or 1.  Utilize truthiness of number type.
+
+        row.is_processing = (row.is_processing ? 1 : 0) > 0;
+
+        return row;
     }
 
     protected willSoftDelete(row: T): T {
-        row.is_active = false;
+        row.is_processing = false;
 
         return row;
     }

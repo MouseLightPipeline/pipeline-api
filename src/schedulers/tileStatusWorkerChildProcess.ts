@@ -18,7 +18,7 @@ async function startWorkerForProcess(projectId) {
 
     process.on("message", msg => {
         if (msg && msg.isCancelRequest) {
-            worker.IsCancelRequested = true;
+            worker.IsProcessingRequested = true;
         }
 
         process.disconnect();

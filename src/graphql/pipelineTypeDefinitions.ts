@@ -51,7 +51,7 @@ type Project implements ITableModel {
   region_y_max: Int
   region_z_min: Int
   region_z_max: Int
-  is_active: Boolean
+  is_processing: Boolean
   created_at: String
   updated_at: String
   deleted_at: String
@@ -87,7 +87,7 @@ type PipelineStage implements ITableModel {
   function_type: Int
   execution_order: Int
   dst_path: String
-  is_active: Boolean
+  is_processing: Boolean
   project_id: String
   task_id: String
   previous_stage_id: String
@@ -96,6 +96,26 @@ type PipelineStage implements ITableModel {
   deleted_at: String
   task: TaskDefinition
   performance: PipelineStagePerformance
+}
+
+type TileStageStatus {
+    stage_id: String
+    depth: Int
+    status: Int
+}
+
+type TileStatus {
+    x_index: Int
+    y_index: Int
+    stages: [TileStageStatus]
+}
+
+type TilePlane {
+    x_min: Int
+    x_max: Int
+    y_min: Int
+    y_max: Int
+    tiles: [TileStatus]
 }
 
 input RegionInput {
@@ -119,6 +139,7 @@ type Query {
   taskDefinitions: [TaskDefinition!]!
   pipelineStagePerformance(id: String!): PipelineStagePerformance
   pipelineStagePerformances: [PipelineStagePerformance!]!
+  projectPlaneTileStatus(project_id: String, plane: Int): TilePlane
 }
 
 type Mutation {

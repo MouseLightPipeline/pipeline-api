@@ -51,11 +51,7 @@ async function accessConnectorWorker(token: IConnectorQueueToken, completeCallba
     try {
         let requiredTable: string = token.requiredTables.length > 0 ? token.requiredTables[0] : null;
 
-        debug(`\tcalling original connector function for ${token.filename}`);
-
         let connector = await findConnection(token.filename, requiredTable);
-
-        debug(`\tresolving connector for ${token.filename}`);
 
         token.resolve(connector);
     } catch (err) {
@@ -80,8 +76,6 @@ function accessQueueWorker(token: IAccessQueueToken, completeCallback) {
         connectorQueues.set(token.filename, queue);
     }
 
-    debug(`\tresolving queue for ${token.filename}`);
-
     token.resolve(queue);
 
     completeCallback();
@@ -91,10 +85,6 @@ let connectorQueueAccess = asyncUtils.queue(accessQueueWorker, 1);
 
 export async function connectorForFile(name: string, requiredTable: string = null) {
     debug(`requesting connector for ${name}`);
-
-    if (requiredTable) {
-        debug(`\twith required table ${requiredTable}`);
-    }
 
     // Serialize access to queue for a particular connector so only one is created.
 
@@ -124,11 +114,8 @@ async function findConnection(name: string, requiredTable: string = null): Promi
     let connection: Knex = null;
 
     if (connectionMap.has(name)) {
-        debug(`\treturning existing connection for ${name}`);
         connection = connectionMap.get(name);
     } else {
-        debug(`\tcreating connection for ${name}`);
-
         connection = await createConnection(name, requiredTable);
     }
 
@@ -147,8 +134,11 @@ async function findConnection(name: string, requiredTable: string = null): Promi
             table.float("cut_offset");
             table.float("z_offset");
             table.float("delta_z");
-            table.timestamp("deleted_at");
+            table.float("duration");
+            table.float("cpu_high");
+            table.float("memory_high");
             table.timestamps();
+            table.timestamp("deleted_at");
         });
     }
 
@@ -156,12 +146,9 @@ async function findConnection(name: string, requiredTable: string = null): Promi
 }
 
 export async function verifyTable(connection, tableName: string, createFunction) {
-    debug(`verifying required table ${tableName}`);
-
     let test = await connection.schema.hasTable(tableName);
 
     if (!test) {
-        debug(`\tcreating required table ${tableName}`);
         await connection.schema.createTableIfNotExists(tableName, createFunction);
     }
 }
@@ -185,7 +172,6 @@ async function createConnection(name: string, requiredTable: string): Promise<Kn
     try {
         await knex.migrate.latest(configuration);
     } catch (err) {
-        debug("\t\tretrying connector acquisition in 2 seconds");
         return new Promise<Knex>((resolve) => {
             setTimeout(async() => {
                 let connector = await createConnection(name, requiredTable);

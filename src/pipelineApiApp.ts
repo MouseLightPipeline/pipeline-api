@@ -25,10 +25,10 @@ app.use(config.graphQlEndpoint, graphQLMiddleware());
 
 app.use(config.graphiQlEndpoint, graphiQLMiddleware(config));
 
-const server = SocketIoServer.use(app);
+SchedulerHub.Run(useChildProcessWorkers).then(() => {
+    const server = SocketIoServer.use(app);
 
-server.listen(PORT, () => {
-    debug(`running on http://localhost:${PORT}`);
-
-    SchedulerHub.Run(useChildProcessWorkers);
+    server.listen(PORT, () => {
+        debug(`running on http://localhost:${PORT}`);
+    });
 });

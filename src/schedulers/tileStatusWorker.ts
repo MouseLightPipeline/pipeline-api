@@ -42,6 +42,10 @@ export class TileStatusWorker extends PipelineScheduler {
     public constructor(project: IProject) {
         super(null);
 
+        this.IsCancelRequested = false;
+
+        this.IsProcessingRequested = true;
+
         this._project = project;
     }
 
@@ -67,27 +71,26 @@ export class TileStatusWorker extends PipelineScheduler {
             return;
         }
 
-        try {
-            let knownInput = this.performJsonUpdate();
+        if (this.IsProcessingRequested) {
+            try {
+                debug(`dashboard update for project ${this._project.name}`);
 
-            if (knownInput.length === 0) {
-                return;
+                let knownInput = this.performJsonUpdate();
+
+                if (knownInput.length > 0) {
+
+                    let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "prev_stage_status"]);
+
+                    let sorted = await this.muxInputOutputTiles(knownInput, knownOutput);
+
+                    await this.batchInsert(this._outputKnexConnector, this._outputTableName, sorted.toInsert);
+
+                    await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdatePrevious, DefaultPipelineIdKey);
+                }
+            } catch (err) {
+                console.log(err);
             }
-
-            debug(`update sqlite`);
-
-            let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "prev_stage_status"]);
-
-            let sorted = await this.muxInputOutputTiles(knownInput, knownOutput);
-
-            await this.batchInsert(this._outputKnexConnector, this._outputTableName, sorted.toInsert);
-
-            await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdatePrevious, DefaultPipelineIdKey);
-        } catch (err) {
-            console.log(err);
         }
-
-        debug("resetting timer");
 
         setTimeout(() => this.performWork(), perfConf.regenTileStatusJsonFileSeconds * 1000)
     }
@@ -163,6 +166,9 @@ export class TileStatusWorker extends PipelineScheduler {
                     cut_offset: inputTile.cut_offset,
                     z_offset: inputTile.z_offset,
                     delta_z: inputTile.delta_z,
+                    duration: 0,
+                    cpu_high: 0,
+                    memory_high: 0,
                     created_at: now,
                     updated_at: now
                 });
@@ -180,7 +186,7 @@ export class TileStatusWorker extends PipelineScheduler {
         let dataFile = path.join(this._project.root_path, dashboardJsonFile);
 
         if (!fs.existsSync(dataFile)) {
-            debug(`there is no dashboard.json file in the project root path ${dataFile}`);
+            debug(`\tthere is no dashboard.json file in the project root path ${dataFile}`);
             return;
         }
 
@@ -189,11 +195,8 @@ export class TileStatusWorker extends PipelineScheduler {
         let backupFile = path.join(this._project.root_path, tileStatusLastJsonFile);
 
         if (fs.existsSync(outputFile)) {
-            debug(`move existing json to .last`);
             fs.copySync(outputFile, backupFile, {clobber: true});
         }
-
-        debug(`update json`);
 
         let contents = fs.readFileSync(dataFile);
 

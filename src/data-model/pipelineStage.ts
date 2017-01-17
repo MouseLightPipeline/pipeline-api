@@ -17,6 +17,7 @@ export interface IPipelineStage extends IRunnableTableModelRow {
     previous_stage_id: string;
     dst_path: string;
     function_type: number;
+    depth: number;
 }
 
 export class PipelineStages extends RunnableTableModel<IPipelineStage> {
@@ -25,6 +26,16 @@ export class PipelineStages extends RunnableTableModel<IPipelineStage> {
     }
 
     public async create(project_id: string, task_id: string, previous_stage_id: string, dst_path: string, function_type: PipelineStageMethod): Promise<IPipelineStage> {
+        let previousDepth = 0;
+
+        if (previous_stage_id) {
+            let previousStage = await this.get(previous_stage_id);
+
+            if (previousStage) {
+                previousDepth = previousStage.depth;
+            }
+        }
+
         let pipelineStage = {
             id: uuid.v4(),
             name: "",
@@ -33,8 +44,9 @@ export class PipelineStages extends RunnableTableModel<IPipelineStage> {
             task_id: task_id,
             previous_stage_id: previous_stage_id,
             dst_path: dst_path,
-            is_active: false,
+            is_processing: false,
             function_type: function_type,
+            depth: previousDepth + 1,
             created_at: null,
             updated_at: null,
             deleted_at: null
