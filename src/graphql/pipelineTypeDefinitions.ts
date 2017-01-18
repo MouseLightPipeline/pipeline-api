@@ -111,6 +111,7 @@ type TileStatus {
 }
 
 type TilePlane {
+    max_depth: Int
     x_min: Int
     x_max: Int
     y_min: Int

@@ -9,7 +9,6 @@ import {Projects, IProject} from "../data-model/project";
 import {IRunnableTableModelRow} from "../data-model/runnableTableModel";
 import {startTileStatusFileWorker} from "./tileStatusWorkerChildProcess";
 import {startPipelineStageWorker} from "./pipelineMapSchedulerChildProcess";
-import {IPipelineTile} from "./pipelineScheduler";
 
 export interface IWorkerInterface {
     IsCancelRequested: boolean;
@@ -45,19 +44,28 @@ export class SchedulerHub {
 
         let stages = await pipelineStagesManager.getForProject(project_id);
 
+        let maxDepth = stages.reduce((current, stage) => Math.max(current, stage.depth), 0);
+
         let workers = stages.map(stage => this._pipelineStageWorkers.get(stage.id)).filter(worker => worker != null);
 
         let promises = workers.map(worker => {
             return worker.loadTileStatusForPlane(plane);
         });
 
-        let tilesAllStages: [][] = await Promise.all(promises);
+        let tilesAllStages = await Promise.all(promises);
 
         let tileArray = tilesAllStages.reduce((source, next) => source.concat(next), []);
 
         let tiles = {};
 
+        let x_min = 1e7, x_max = 0, y_min = 1e7, y_max = 0;
+
         tileArray.map(tile => {
+            x_min = Math.min(x_min, tile.lat_x);
+            x_max = Math.max(x_max, tile.lat_x);
+            y_min = Math.min(y_min, tile.lat_y);
+            y_max = Math.max(y_max, tile.lat_y);
+
             let t = tiles[`${tile.lat_x}_${tile.lat_y}`];
 
             if (!t) {
@@ -86,10 +94,11 @@ export class SchedulerHub {
         }
 
         return {
-            x_min: 0,
-            x_max: 0,
-            y_min: 0,
-            y_max: 0,
+            max_depth: maxDepth,
+            x_min: x_min,
+            x_max: x_max,
+            y_min: y_min,
+            y_max: y_max,
             tiles: output
         };
     }
