@@ -40,9 +40,13 @@ export class SchedulerHub {
     private _pipelineStageWorkers = new Map<string, IWorkerInterface>();
 
     public async loadTileStatusForPlane(project_id: string, plane: number): Promise<any> {
+        console.log(`request for plane ${plane} in project ${project_id}`);
+
         let pipelineStagesManager = new PipelineStages();
 
         let stages = await pipelineStagesManager.getForProject(project_id);
+
+        console.log(`\t ${stages.length} stages`);
 
         let maxDepth = stages.reduce((current, stage) => Math.max(current, stage.depth), 0);
 
@@ -55,6 +59,8 @@ export class SchedulerHub {
         let tilesAllStages = await Promise.all(promises);
 
         let tileArray = tilesAllStages.reduce((source, next) => source.concat(next), []);
+
+        console.log(`\t ${tileArray.length} tiles in plane`);
 
         let tiles = {};
 
@@ -92,6 +98,8 @@ export class SchedulerHub {
                 output.push(tiles[prop]);
             }
         }
+
+        console.log(`\t ${output.length} output length`);
 
         return {
             max_depth: maxDepth,
