@@ -72,7 +72,7 @@ function productionSeed() {
                         id: "44E49773-1C19-494B-B283-54466B94B70F".toLocaleLowerCase(),
                         name: "January Demo",
                         description: "Demo pipeline project",
-                        root_path: "/groups/mousebrainmicro/mousebrainmmicro/from_tier2/data/2016-10-31/Tiling",
+                        root_path: "/groups/mousebrainmicro/mousebrainmicro/from_tier2/data/2016-10-31/Tiling",
                         sample_number: 99998,
                         region_x_min: 277,
                         region_x_max: 281,
