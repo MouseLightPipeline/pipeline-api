@@ -2,6 +2,8 @@
 
 let env = process.env.NODE_ENV || "development";
 
+env = process.env.KNEX_ENV || env;
+
 if (env === "production") {
     exports.seed = productionSeed();
 } else {
@@ -63,6 +65,80 @@ function productionSeed() {
                         interpreter: 'none',
                         args: '',
                         work_units: 0,
+                        created_at: createDate(2, 0),
+                        updated_at: createDate(1, 3.5)
+                    }),
+                    knex("Project").insert({
+                        id: "44E49773-1C19-494B-B283-54466B94B70F".toLocaleLowerCase(),
+                        name: "January Demo",
+                        description: "Demo pipeline project",
+                        root_path: "/groups/mousebrainmicro/mousebrainmmicro/from_tier2/data/2016-10-31/Tiling",
+                        sample_number: 99998,
+                        region_x_min: -1,
+                        region_x_max: -1,
+                        region_y_min: -1,
+                        region_y_max: -1,
+                        region_z_min: -1,
+                        region_z_max: -1,
+                        is_processing: false,
+                        created_at: createDate(2, 0),
+                        updated_at: createDate(1, 3.5)
+                    }),
+                    knex("Project").insert({
+                        id: "AF8CB0D4-56C0-4DB8-8A1B-7B39540B2D04".toLocaleLowerCase(),
+                        name: "Small",
+                        description: "Small dashboard.json test project",
+                        root_path: "/Volumes/Spare/Projects/MouseLight/Dashboard Output/small",
+                        sample_number: 99998,
+                        region_x_min: -1,
+                        region_x_max: -1,
+                        region_y_min: -1,
+                        region_y_max: -1,
+                        region_z_min: -1,
+                        region_z_max: -1,
+                        is_processing: false,
+                        created_at: createDate(2, 0),
+                        updated_at: createDate(1, 3.5)
+                    }),
+                    knex("PipelineStage").insert({
+                        id: "828276A5-44C0-4BD1-87F7-9495BC3E9F6C".toLocaleLowerCase(),
+                        name: "Classifier",
+                        description: "Classifier",
+                        dst_path: "/nrs/mouselight/pipeline_output/2016-10-31-jan-demo/stage_1_classifier_output",
+                        function_type: 2,
+                        is_processing: 0,
+                        depth: 1,
+                        project_id: "44E49773-1C19-494B-B283-54466B94B70F".toLocaleLowerCase(),
+                        task_id: '1161F8E6-29D5-44B0-B6A9-8D3E54D23292'.toLocaleLowerCase(),
+                        previous_stage_id: null,
+                        created_at: createDate(2, 0),
+                        updated_at: createDate(1, 3.5)
+                    }),
+                    knex("PipelineStage").insert({
+                        id: "5188B927-4C50-4F97-B22B-B123DA78DAD6".toLocaleLowerCase(),
+                        name: "Descriptors",
+                        description: "Descriptors",
+                        dst_path:  "/nrs/mouselight/pipeline_output/2016-10-31-jan-demo/stage_2_descriptor_output",
+                        function_type: 2,
+                        is_processing: 0,
+                        depth: 2,
+                        project_id: "44E49773-1C19-494B-B283-54466B94B70F".toLocaleLowerCase(),
+                        task_id: 'A9F21399-07C0-425C-86F6-6E4F45BB06B9'.toLocaleLowerCase(),
+                        previous_stage_id: "828276A5-44C0-4BD1-87F7-9495BC3E9F6C".toLocaleLowerCase(),
+                        created_at: createDate(2, 0),
+                        updated_at: createDate(1, 3.5)
+                    }),
+                    knex("PipelineStage").insert({
+                        id: "2683AD99-E389-41FD-A54C-38834CCC7AE9".toLocaleLowerCase(),
+                        name: "Descriptor Merge",
+                        description: "Descriptor Merge",
+                        dst_path: "/nrs/mouselight/pipeline_output/2016-10-31-jan-demo/stage_3_descriptor_merge",
+                        function_type: 2,
+                        is_processing: 0,
+                        depth: 3,
+                        project_id: "44E49773-1C19-494B-B283-54466B94B70F".toLocaleLowerCase(),
+                        task_id: '3BA41D1C-13D0-4DEF-9B5B-54D940A0FA08'.toLocaleLowerCase(),
+                        previous_stage_id: "5188B927-4C50-4F97-B22B-B123DA78DAD6".toLocaleLowerCase(),
                         created_at: createDate(2, 0),
                         updated_at: createDate(1, 3.5)
                     })
