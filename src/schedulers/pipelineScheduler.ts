@@ -165,6 +165,38 @@ export abstract class PipelineScheduler implements IWorkerInterface {
         }).select("relative_path", "this_stage_status", "tile_name");
 
         if (unscheduled.length > 0) {
+            let projects = new Projects();
+
+            let project: IProject = await projects.get(this._pipelineStage.project_id);
+
+            unscheduled = unscheduled.filter(tile => {
+                if (project.region_x_min > -1 && tile.lat_x < project.region_x_min) {
+                    return false;
+                }
+
+                if (project.region_x_max > -1 && tile.lat_x > project.region_x_max) {
+                    return false;
+                }
+
+                if (project.region_y_min > -1 && tile.lat_y < project.region_y_min) {
+                    return false;
+                }
+
+                if (project.region_y_max > -1 && tile.lat_y > project.region_y_max) {
+                    return false;
+                }
+
+                if (project.region_z_min > -1 && tile.lat_z < project.region_z_min) {
+                    return false;
+                }
+
+                if (project.region_z_max > -1 && tile.lat_z > project.region_z_max) {
+                    return false;
+                }
+
+                return true;
+            });
+
             unscheduled = unscheduled.map(obj => {
                 obj.this_stage_status = TilePipelineStatus.Queued;
                 return obj;

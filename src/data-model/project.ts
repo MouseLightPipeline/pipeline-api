@@ -16,6 +16,12 @@ export interface IProject extends IRunnableTableModelRow {
     description: string;
     root_path: string;
     sample_number: number;
+    sample_x_min: number;
+    sample_x_max: number;
+    sample_y_min: number;
+    sample_y_max: number;
+    sample_z_min: number;
+    sample_z_max: number;
     region_x_min: number;
     region_x_max: number;
     region_y_min: number;
@@ -36,6 +42,12 @@ export class Projects extends RunnableTableModel<IProject> {
             description: description,
             root_path: rootPath,
             sample_number: sampleNumber,
+            sample_x_min: -1,
+            sample_x_max: -1,
+            sample_y_min: -1,
+            sample_y_max: -1,
+            sample_z_min: -1,
+            sample_z_max: -1,
             region_x_min: region.x_min,
             region_x_max: region.x_max,
             region_y_min: region.y_min,

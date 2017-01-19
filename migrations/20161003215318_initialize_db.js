@@ -24,6 +24,12 @@ exports.up = function (knex, Promise) {
             table.string("description");
             table.string("root_path");
             table.integer("sample_number");
+            table.integer("sample_x_min");
+            table.integer("sample_x_max");
+            table.integer("sample_y_min");
+            table.integer("sample_y_max");
+            table.integer("sample_z_min");
+            table.integer("sample_z_max");
             table.integer("region_x_min");
             table.integer("region_x_max");
             table.integer("region_y_min");

@@ -49,6 +49,10 @@ export class SchedulerHub {
     private _pipelineStageWorkers = new Map<string, IWorkerInterface>();
 
     public async loadTileStatusForPlane(project_id: string, plane: number): Promise<any> {
+        let projectsManager = new Projects();
+
+        let project = await projectsManager.get(project_id);
+
         let pipelineStagesManager = new PipelineStages();
 
         let stages = await pipelineStagesManager.getForProject(project_id);
@@ -116,10 +120,10 @@ export class SchedulerHub {
 
         return {
             max_depth: maxDepth,
-            x_min: x_min,
-            x_max: x_max,
-            y_min: y_min,
-            y_max: y_max,
+            x_min: project.sample_x_min >= 0 ? project.sample_x_min : x_min,
+            x_max: project.sample_x_max >= 0 ? project.sample_x_min : x_max,
+            y_min: project.sample_y_min >= 0 ? project.sample_y_min : x_min,
+            y_max: project.sample_y_max >= 0 ? project.sample_y_min : x_max,
             tiles: output
         };
     }

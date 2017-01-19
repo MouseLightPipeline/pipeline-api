@@ -4,7 +4,7 @@ const path = require("path");
 
 const debug = require("debug")("mouselight:pipeline-api:tile-status-worker");
 
-import {IProject} from "../data-model/project";
+import {IProject, Projects} from "../data-model/project";
 
 const dashboardJsonFile = "dashboard.json";
 const tileStatusJsonFile = "pipeline-storage.json";
@@ -75,7 +75,7 @@ export class TileStatusWorker extends PipelineScheduler {
             try {
                 debug(`dashboard update for project ${this._project.name}`);
 
-                let knownInput = this.performJsonUpdate();
+                let knownInput = await this.performJsonUpdate();
 
                 if (knownInput.length > 0) {
 
@@ -104,29 +104,31 @@ export class TileStatusWorker extends PipelineScheduler {
         let knownOutputLookup = knownOutput.map(obj => obj[DefaultPipelineIdKey]);
 
         knownInput.reduce((list, inputTile) => {
-            if (this._project.region_x_min > -1 && inputTile.lattice_position.x < this._project.region_x_min) {
-                return list;
-            }
+            /*
+             if (this._project.region_x_min > -1 && inputTile.lattice_position.x < this._project.region_x_min) {
+             return list;
+             }
 
-            if (this._project.region_x_max > -1 && inputTile.lattice_position.x > this._project.region_x_max) {
-                return list;
-            }
+             if (this._project.region_x_max > -1 && inputTile.lattice_position.x > this._project.region_x_max) {
+             return list;
+             }
 
-            if (this._project.region_y_min > -1 && inputTile.lattice_position.y < this._project.region_y_min) {
-                return list;
-            }
+             if (this._project.region_y_min > -1 && inputTile.lattice_position.y < this._project.region_y_min) {
+             return list;
+             }
 
-            if (this._project.region_y_max > -1 && inputTile.lattice_position.y > this._project.region_y_max) {
-                return list;
-            }
+             if (this._project.region_y_max > -1 && inputTile.lattice_position.y > this._project.region_y_max) {
+             return list;
+             }
 
-            if (this._project.region_z_min > -1 && inputTile.lattice_position.z < this._project.region_z_min) {
-                return list;
-            }
+             if (this._project.region_z_min > -1 && inputTile.lattice_position.z < this._project.region_z_min) {
+             return list;
+             }
 
-            if (this._project.region_z_max > -1 && inputTile.lattice_position.z > this._project.region_z_max) {
-                return list;
-            }
+             if (this._project.region_z_max > -1 && inputTile.lattice_position.z > this._project.region_z_max) {
+             return list;
+             }
+             */
 
             let idx = knownOutputLookup.indexOf(inputTile.relative_path);
 
@@ -180,7 +182,7 @@ export class TileStatusWorker extends PipelineScheduler {
         return sorted;
     }
 
-    private performJsonUpdate(): IDashboardJsonTile[] {
+    private async performJsonUpdate(): Promise<IDashboardJsonTile[]> {
         let tiles: IDashboardJsonTile[] = [];
 
         let dataFile = path.join(this._project.root_path, dashboardJsonFile);
@@ -201,6 +203,19 @@ export class TileStatusWorker extends PipelineScheduler {
         let contents = fs.readFileSync(dataFile);
 
         let jsonContent = JSON.parse(contents);
+
+        if (jsonContent.monitor && jsonContent.monitor.extents) {
+            this._project.sample_x_min = jsonContent.monitor.extents.minimumX;
+            this._project.sample_x_max = jsonContent.monitor.extents.maximumX;
+            this._project.sample_y_min = jsonContent.monitor.extents.minimumY;
+            this._project.sample_y_max = jsonContent.monitor.extents.maximumY;
+            this._project.sample_z_min = jsonContent.monitor.extents.minimumZ;
+            this._project.sample_z_max = jsonContent.monitor.extents.maximumZ;
+        }
+
+        let projects = new Projects();
+
+        await projects.save(this._project);
 
         for (let prop in jsonContent.tileMap) {
             if (jsonContent.tileMap.hasOwnProperty(prop)) {

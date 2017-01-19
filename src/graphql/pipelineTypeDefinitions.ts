@@ -45,7 +45,13 @@ type Project implements ITableModel {
   description: String
   root_path: String
   sample_number: Int
-  region_x_min:Int
+  sample_x_min: Int
+  sample_x_max: Int
+  sample_y_min: Int
+  sample_y_max: Int
+  sample_z_min: Int
+  sample_z_max: Int
+  region_x_min: Int
   region_x_max: Int
   region_y_min: Int
   region_y_max: Int
