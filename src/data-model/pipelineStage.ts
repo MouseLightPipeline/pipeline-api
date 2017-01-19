@@ -25,7 +25,7 @@ export class PipelineStages extends RunnableTableModel<IPipelineStage> {
         super("PipelineStage");
     }
 
-    public async create(project_id: string, task_id: string, previous_stage_id: string, dst_path: string, function_type: PipelineStageMethod): Promise<IPipelineStage> {
+    public async create(name: string, description: string, project_id: string, task_id: string, previous_stage_id: string, dst_path: string, function_type: PipelineStageMethod): Promise<IPipelineStage> {
         let previousDepth = 0;
 
         if (previous_stage_id) {
@@ -38,8 +38,8 @@ export class PipelineStages extends RunnableTableModel<IPipelineStage> {
 
         let pipelineStage = {
             id: uuid.v4(),
-            name: "",
-            description: "",
+            name: name,
+            description: description,
             project_id: project_id,
             task_id: task_id,
             previous_stage_id: previous_stage_id,

@@ -147,7 +147,7 @@ type Mutation {
   createProject(name: String, description: String, rootPath: String, sampleNumber: Int, region: RegionInput): Project
   setProjectStatus(id: String, shouldBeActive: Boolean): Project
   deleteProject(id: String!): Boolean
-  createPipelineStage(project_id: String, task_id: String, previous_stage_id: String, dst_path: String, function_type: Int): PipelineStage
+  createPipelineStage(name: String, description: String, project_id: String, task_id: String, previous_stage_id: String, dst_path: String, function_type: Int): PipelineStage
   setPipelineStageStatus(id: String, shouldBeActive: Boolean): PipelineStage
   deletePipelineStage(id: String!): Boolean
 }

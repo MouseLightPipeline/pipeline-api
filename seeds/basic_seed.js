@@ -173,36 +173,6 @@ function developmentSeed() {
                         created_at: createDate(3, 0)
                     }),
                     knex('TaskDefinition').insert({
-                        id: '1161F8E6-29D5-44B0-B6A9-8D3E54D23292'.toLocaleLowerCase(),
-                        name: 'ilastik Axon UInt16',
-                        description: 'ilastik Axon UInt16',
-                        script: 'tasks/ilastik-axon-uint16.sh',
-                        interpreter: 'none',
-                        args: '/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps',
-                        work_units: 10,
-                        created_at: createDate(3, 0)
-                    }),
-                    knex('TaskDefinition').insert({
-                        id: 'A9F21399-07C0-425C-86F6-6E4F45BB06B9'.toLocaleLowerCase(),
-                        name: 'dogDescriptor',
-                        description: '',
-                        script: 'tasks/dogDescriptor.sh',
-                        interpreter: 'none',
-                        args: '/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps',
-                        work_units: 2,
-                        created_at: createDate(3, 0)
-                    }),
-                    knex('TaskDefinition').insert({
-                        id: '3BA41D1C-13D0-4DEF-9B5B-54D940A0FA08'.toLocaleLowerCase(),
-                        name: 'getDescriptorsForTile',
-                        description: '',
-                        script: 'tasks/getDescriptorsForTile.sh',
-                        interpreter: 'none',
-                        args: '/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps',
-                        work_units: 1,
-                        created_at: createDate(3, 0)
-                    }),
-                    knex('TaskDefinition').insert({
                         id: '04B8313E-0E96-4194-9C06-22771ACD3986'.toLocaleLowerCase(),
                         name: 'Echo',
                         description: 'Simple command to test shell worker execution.  Will echo the passed arguments.',
@@ -260,7 +230,35 @@ function developmentSeed() {
                         is_processing: false,
                         created_at: createDate(2, 0),
                         updated_at: createDate(1, 3.5)
-                    })
+                    }),
+                    knex("PipelineStage").insert({
+                        id: "828276A5-44C0-4BD1-87F7-9495BC3E9F6C".toLocaleLowerCase(),
+                        name: "Classifier",
+                        description: "Classifier",
+                        dst_path: "/Volumes/Spare/Projects/MouseLight/PipelineOutput1",
+                        function_type: 2,
+                        is_processing: 0,
+                        depth: 1,
+                        project_id: "AF8CB0D4-56C0-4DB8-8A1B-7B39540B2D04".toLocaleLowerCase(),
+                        task_id: '1EC76026-4ECC-4D25-9C6E-CDF992A05DA3'.toLocaleLowerCase(),
+                        previous_stage_id: null,
+                        created_at: createDate(2, 0),
+                        updated_at: createDate(1, 3.5)
+                    }),
+                    knex("PipelineStage").insert({
+                        id: "5188B927-4C50-4F97-B22B-B123DA78DAD6".toLocaleLowerCase(),
+                        name: "Echos",
+                        description: "Echos",
+                        dst_path:  "/Volumes/Spare/Projects/MouseLight/PipelineOutput2",
+                        function_type: 2,
+                        is_processing: 0,
+                        depth: 2,
+                        project_id: "AF8CB0D4-56C0-4DB8-8A1B-7B39540B2D04".toLocaleLowerCase(),
+                        task_id: '04B8313E-0E96-4194-9C06-22771ACD3986'.toLocaleLowerCase(),
+                        previous_stage_id: "828276A5-44C0-4BD1-87F7-9495BC3E9F6C".toLocaleLowerCase(),
+                        created_at: createDate(2, 0),
+                        updated_at: createDate(1, 3.5)
+                    }),
                 ]);
             });
 

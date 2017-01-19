@@ -17,6 +17,8 @@ interface IIncludeSoftDeleteArgument {
 }
 
 interface ICreatePipelineStageArguments {
+    name: string;
+    description: string;
     project_id: string;
     task_id: string;
     previous_stage_id: string;
@@ -95,7 +97,7 @@ let resolvers = {
         },
         createPipelineStage(_, args: ICreatePipelineStageArguments, context: IPipelineServerContext): Promise<IPipelineStage> {
             debug(`resolve create pipeline stage for project ${args.project_id}`);
-            return context.createPipelineStage(args.project_id, args.task_id, args.previous_stage_id, args.dst_path, args.function_type);
+            return context.createPipelineStage(args.name, args.description, args.project_id, args.task_id, args.previous_stage_id, args.dst_path, args.function_type);
         },
         setPipelineStageStatus(_, args: ISetActiveStatusArguments, context: IPipelineServerContext) {
             return context.setPipelineStageStatus(args.id, args.shouldBeActive);
