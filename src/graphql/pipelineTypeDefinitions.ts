@@ -93,6 +93,7 @@ type PipelineStage implements ITableModel {
   function_type: Int
   execution_order: Int
   dst_path: String
+  depth: String
   is_processing: Boolean
   project_id: String
   task_id: String

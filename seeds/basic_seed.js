@@ -70,8 +70,8 @@ function productionSeed() {
                     }),
                     knex("Project").insert({
                         id: "44E49773-1C19-494B-B283-54466B94B70F".toLocaleLowerCase(),
-                        name: "January Demo",
-                        description: "Demo pipeline project",
+                        name: "Sample Brain",
+                        description: "Sample brain pipeline project",
                         root_path: "/groups/mousebrainmicro/mousebrainmicro/from_tier2/data/2016-10-31/Tiling",
                         sample_number: 99998,
                         region_x_min: 277,
