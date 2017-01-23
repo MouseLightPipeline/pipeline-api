@@ -190,11 +190,7 @@ export abstract class PipelineScheduler implements IWorkerInterface {
                     return false;
                 }
 
-                if (project.region_z_max > -1 && tile.lat_z > project.region_z_max) {
-                    return false;
-                }
-
-                return true;
+                return !(project.region_z_max > -1 && tile.lat_z > project.region_z_max);
             });
 
             unscheduled = unscheduled.map(obj => {
@@ -261,13 +257,15 @@ export abstract class PipelineScheduler implements IWorkerInterface {
                         break;
                 }
 
-                // Tile should be marked complete, not be present in any intermediate tables, and not change again.
+                // Tile should be marked with status and not be present in any intermediate tables.
 
-                await this.outputTable.where(DefaultPipelineIdKey, task[DefaultPipelineIdKey]).update({this_stage_status: TilePipelineStatus.Complete});
+                await this.outputTable.where(DefaultPipelineIdKey, task[DefaultPipelineIdKey]).update({this_stage_status: tileStatus});
 
                 await this.inProcessTable.where(DefaultPipelineIdKey, task[DefaultPipelineIdKey]).del();
 
-                updatePipelineStagePerformance(this._pipelineStage.id, executionInfo);
+                if (tileStatus === TilePipelineStatus.Complete) {
+                    updatePipelineStagePerformance(this._pipelineStage.id, executionInfo);
+                }
             }
         });
     }

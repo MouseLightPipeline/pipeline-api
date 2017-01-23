@@ -49,15 +49,26 @@ export class SchedulerHub {
     private _pipelineStageWorkers = new Map<string, IWorkerInterface>();
 
     public async loadTileStatusForPlane(project_id: string, plane: number): Promise<any> {
+        if (plane == null) {
+            debug("plane not defined");
+            return kEmptyTileMap;
+        }
+
         let projectsManager = new Projects();
 
         let project = await projectsManager.get(project_id);
+
+        if (!project) {
+            debug("project not defined");
+            return kEmptyTileMap;
+        }
 
         let pipelineStagesManager = new PipelineStages();
 
         let stages = await pipelineStagesManager.getForProject(project_id);
 
         if (stages.length === 0) {
+            debug("no stages for project");
             return kEmptyTileMap;
         }
 
@@ -66,6 +77,7 @@ export class SchedulerHub {
         let workers = stages.map(stage => this._pipelineStageWorkers.get(stage.id)).filter(worker => worker != null);
 
         if (workers.length === 0) {
+            debug("project not running");
             return kEmptyTileMap;
         }
 
@@ -78,6 +90,7 @@ export class SchedulerHub {
         let tileArray = tilesAllStages.reduce((source, next) => source.concat(next), []);
 
         if (tileArray.length === 0) {
+            debug("not tiles across all stages");
             return kEmptyTileMap;
         }
 

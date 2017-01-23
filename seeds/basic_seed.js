@@ -18,16 +18,6 @@ function productionSeed() {
                 return Promise.all([
                     // Inserts seed entries
                     knex('TaskDefinition').insert({
-                        id: '1EC76026-4ECC-4D25-9C6E-CDF992A05DA3'.toLocaleLowerCase(),
-                        name: 'ilastik Pixel Classifier Test',
-                        description: 'Calls ilastik with test project.',
-                        script: 'tasks/pixel_shell.sh',
-                        interpreter: 'none',
-                        args: 'test/pixel_classifier_test',
-                        work_units: 4,
-                        created_at: createDate(3, 0)
-                    }),
-                    knex('TaskDefinition').insert({
                         id: '1161F8E6-29D5-44B0-B6A9-8D3E54D23292'.toLocaleLowerCase(),
                         name: 'ilastik Axon UInt16',
                         description: 'ilastik Axon UInt16',
@@ -102,7 +92,7 @@ function productionSeed() {
                         id: "5188B927-4C50-4F97-B22B-B123DA78DAD6".toLocaleLowerCase(),
                         name: "Descriptors",
                         description: "Descriptors",
-                        dst_path:  "/nrs/mouselight/pipeline_output/2016-10-31-jan-demo/stage_2_descriptor_output",
+                        dst_path: "/nrs/mouselight/pipeline_output/2016-10-31-jan-demo/stage_2_descriptor_output",
                         function_type: 2,
                         is_processing: 0,
                         depth: 2,
@@ -173,12 +163,32 @@ function developmentSeed() {
                         created_at: createDate(3, 0)
                     }),
                     knex('TaskDefinition').insert({
+                        id: 'A9F21399-07C0-425C-86F6-6E4F45BB06B9'.toLocaleLowerCase(),
+                        name: 'dogDescriptor',
+                        description: '',
+                        script: 'tasks/dogDescriptor.sh',
+                        interpreter: 'none',
+                        args: '/Volumes/Spare/Projects/MouseLight/Apps/Pipeline/dogDescriptor /groups/mousebrainmicro/mousebrainmicro/Software/mcr/v90',
+                        work_units: 2,
+                        created_at: createDate(3, 0)
+                    }),
+                    knex('TaskDefinition').insert({
+                        id: '3BA41D1C-13D0-4DEF-9B5B-54D940A0FA08'.toLocaleLowerCase(),
+                        name: 'getDescriptorsForTile',
+                        description: '',
+                        script: 'tasks/getDescriptorsForTile.sh',
+                        interpreter: 'none',
+                        args: '/Volumes/Spare/Projects/MouseLight/Apps/Pipeline/dogDescriptor/getDescriptorPerTile /groups/mousebrainmicro/mousebrainmicro/Software/mcr/v90',
+                        work_units: 1,
+                        created_at: createDate(3, 0)
+                    }),
+                    knex('TaskDefinition').insert({
                         id: '04B8313E-0E96-4194-9C06-22771ACD3986'.toLocaleLowerCase(),
                         name: 'Echo',
-                        description: 'Simple command to test shell worker execution.  Will echo the passed arguments.',
-                        script: 'task/echo.sh',
+                        description: 'Simple command to test shell worker execution.  Will echo all arguments.',
+                        script: 'tasks/echo.sh',
                         interpreter: 'none',
-                        args: '',
+                        args: '"custom arg 1" "custom arg 2"',
                         work_units: 0,
                         created_at: createDate(2, 0),
                         updated_at: createDate(1, 3.5)
@@ -247,18 +257,32 @@ function developmentSeed() {
                     }),
                     knex("PipelineStage").insert({
                         id: "5188B927-4C50-4F97-B22B-B123DA78DAD6".toLocaleLowerCase(),
-                        name: "Echos",
-                        description: "Echos",
-                        dst_path:  "/Volumes/Spare/Projects/MouseLight/PipelineOutput2",
+                        name: "Descriptors",
+                        description: "Descriptors",
+                        dst_path: "/Volumes/Spare/Projects/MouseLight/PipelineOutput2",
                         function_type: 2,
                         is_processing: 0,
                         depth: 2,
                         project_id: "AF8CB0D4-56C0-4DB8-8A1B-7B39540B2D04".toLocaleLowerCase(),
-                        task_id: '04B8313E-0E96-4194-9C06-22771ACD3986'.toLocaleLowerCase(),
+                        task_id: 'A9F21399-07C0-425C-86F6-6E4F45BB06B9'.toLocaleLowerCase(),
                         previous_stage_id: "828276A5-44C0-4BD1-87F7-9495BC3E9F6C".toLocaleLowerCase(),
                         created_at: createDate(2, 0),
                         updated_at: createDate(1, 3.5)
                     }),
+                    knex("PipelineStage").insert({
+                        id: "2683AD99-E389-41FD-A54C-38834CCC7AE9".toLocaleLowerCase(),
+                        name: "Descriptor Merge",
+                        description: "Descriptor Merge",
+                        dst_path: "/Volumes/Spare/Projects/MouseLight/PipelineOutput3",
+                        function_type: 2,
+                        is_processing: 0,
+                        depth: 3,
+                        project_id: "AF8CB0D4-56C0-4DB8-8A1B-7B39540B2D04".toLocaleLowerCase(),
+                        task_id: '3BA41D1C-13D0-4DEF-9B5B-54D940A0FA08'.toLocaleLowerCase(),
+                        previous_stage_id: "5188B927-4C50-4F97-B22B-B123DA78DAD6".toLocaleLowerCase(),
+                        created_at: createDate(2, 0),
+                        updated_at: createDate(1, 3.5)
+                    })
                 ]);
             });
 
