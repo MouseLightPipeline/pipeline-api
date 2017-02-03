@@ -10,8 +10,8 @@ import {IRunnableTableModelRow} from "../data-model/runnableTableModel";
 import {startTileStatusFileWorker} from "./tileStatusWorkerChildProcess";
 import {startPipelineStageWorker} from "./pipelineMapSchedulerChildProcess";
 
-export interface IWorkerInterface {
-    IsCancelRequested: boolean;
+export interface ISchedulerInterface {
+    IsExitRequested: boolean;
     IsProcessingRequested: boolean;
 
     loadTileStatusForPlane(zIndex: number);
@@ -45,100 +45,104 @@ export class SchedulerHub {
 
     private _useChildProcessWorkers: boolean;
 
-    private _tileStatusWorkers = new Map<string, IWorkerInterface>();
-    private _pipelineStageWorkers = new Map<string, IWorkerInterface>();
+    private _pipelineStageWorkers = new Map<string, ISchedulerInterface>();
 
     public async loadTileStatusForPlane(project_id: string, plane: number): Promise<any> {
-        if (plane == null) {
-            debug("plane not defined");
-            return kEmptyTileMap;
-        }
-
-        let projectsManager = new Projects();
-
-        let project = await projectsManager.get(project_id);
-
-        if (!project) {
-            debug("project not defined");
-            return kEmptyTileMap;
-        }
-
-        let pipelineStagesManager = new PipelineStages();
-
-        let stages = await pipelineStagesManager.getForProject(project_id);
-
-        if (stages.length === 0) {
-            debug("no stages for project");
-            return kEmptyTileMap;
-        }
-
-        let maxDepth = stages.reduce((current, stage) => Math.max(current, stage.depth), 0);
-
-        let workers = stages.map(stage => this._pipelineStageWorkers.get(stage.id)).filter(worker => worker != null);
-
-        if (workers.length === 0) {
-            debug("project not running");
-            return kEmptyTileMap;
-        }
-
-        let promises = workers.map(worker => {
-            return worker.loadTileStatusForPlane(plane);
-        });
-
-        let tilesAllStages = await Promise.all(promises);
-
-        let tileArray = tilesAllStages.reduce((source, next) => source.concat(next), []);
-
-        if (tileArray.length === 0) {
-            debug("not tiles across all stages");
-            return kEmptyTileMap;
-        }
-
-        let tiles = {};
-
-        let x_min = 1e7, x_max = 0, y_min = 1e7, y_max = 0;
-
-        tileArray.map(tile => {
-            x_min = Math.min(x_min, tile.lat_x);
-            x_max = Math.max(x_max, tile.lat_x);
-            y_min = Math.min(y_min, tile.lat_y);
-            y_max = Math.max(y_max, tile.lat_y);
-
-            let t = tiles[`${tile.lat_x}_${tile.lat_y}`];
-
-            if (!t) {
-                t = {
-                    x_index: tile.lat_x,
-                    y_index: tile.lat_y,
-                    stages: []
-                };
-
-                tiles[`${tile.lat_x}_${tile.lat_y}`] = t;
+        try {
+            if (plane == null) {
+                debug("plane not defined");
+                return kEmptyTileMap;
             }
 
-            t.stages.push({
-                stage_id: tile.stage_id,
-                depth: tile.depth,
-                status: tile.this_stage_status
+            const projectsManager = new Projects();
+
+            const project = await projectsManager.get(project_id);
+
+            if (!project) {
+                debug("project not defined");
+                return kEmptyTileMap;
+            }
+
+            const pipelineStagesManager = new PipelineStages();
+
+            const stages = await pipelineStagesManager.getForProject(project_id);
+
+            if (stages.length === 0) {
+                debug("no stages for project");
+                return kEmptyTileMap;
+            }
+
+            const maxDepth = stages.reduce((current, stage) => Math.max(current, stage.depth), 0);
+
+            const workers = stages.map(stage => this._pipelineStageWorkers.get(stage.id)).filter(worker => worker != null);
+
+            if (workers.length === 0) {
+                debug("project not running");
+                return kEmptyTileMap;
+            }
+
+            const promises = workers.map(worker => {
+                return worker.loadTileStatusForPlane(plane);
             });
-        });
 
-        let output = [];
+            const tilesAllStages = await Promise.all(promises);
 
-        for (let prop in tiles) {
-            if (tiles.hasOwnProperty(prop)) {
-                output.push(tiles[prop]);
+            const tileArray = tilesAllStages.reduce((source, next) => source.concat(next), []);
+
+            if (tileArray.length === 0) {
+                debug("no tiles across all stages");
+                return kEmptyTileMap;
             }
-        }
 
-        return {
-            max_depth: maxDepth,
-            x_min: project.sample_x_min >= 0 ? project.sample_x_min : x_min,
-            x_max: project.sample_x_max >= 0 ? project.sample_x_min : x_max,
-            y_min: project.sample_y_min >= 0 ? project.sample_y_min : x_min,
-            y_max: project.sample_y_max >= 0 ? project.sample_y_min : x_max,
-            tiles: output
-        };
+            let tiles = {};
+
+            let x_min = 1e7, x_max = 0, y_min = 1e7, y_max = 0;
+
+            tileArray.map(tile => {
+                x_min = Math.min(x_min, tile.lat_x);
+                x_max = Math.max(x_max, tile.lat_x);
+                y_min = Math.min(y_min, tile.lat_y);
+                y_max = Math.max(y_max, tile.lat_y);
+
+                let t = tiles[`${tile.lat_x}_${tile.lat_y}`];
+
+                if (!t) {
+                    t = {
+                        x_index: tile.lat_x,
+                        y_index: tile.lat_y,
+                        stages: []
+                    };
+
+                    tiles[`${tile.lat_x}_${tile.lat_y}`] = t;
+                }
+
+                t.stages.push({
+                    stage_id: tile.stage_id,
+                    depth: tile.depth,
+                    status: tile.this_stage_status
+                });
+            });
+
+            let output = [];
+
+            for (let prop in tiles) {
+                if (tiles.hasOwnProperty(prop)) {
+                    output.push(tiles[prop]);
+                }
+            }
+
+            return {
+                max_depth: maxDepth,
+                x_min: project.sample_x_min >= 0 ? project.sample_x_min : x_min,
+                x_max: project.sample_x_max >= 0 ? project.sample_x_min : x_max,
+                y_min: project.sample_y_min >= 0 ? project.sample_y_min : x_min,
+                y_max: project.sample_y_max >= 0 ? project.sample_y_min : x_max,
+                tiles: output
+            };
+        } catch (err) {
+            console.log(err);
+            return {};
+        }
     }
 
     private constructor(useChildProcessWorkers: boolean = false) {
@@ -151,52 +155,48 @@ export class SchedulerHub {
 
     private async manageAllWorkers() {
         try {
-            let projectsManager = new Projects();
+            const projectsManager = new Projects();
 
-            let projects: IProject[] = await projectsManager.getAll();
+            const projects: IProject[] = await projectsManager.getAll();
 
-            // Turn on/off dashboard.json parsing.
-            // TODO This can go as the first step in pause/resume project
-            await this.manageWorkers(projects, this._tileStatusWorkers, startTileStatusFileWorker, "/tileStatusWorkerChildProcess.js");
-
-            let pipelineStagesManager = new PipelineStages();
-
-            // let pipelinesPerProject = await Promise.all(projects.map(project => pipelineStagesManager.getForProject(project.id)));
-
-            // console.log(pipelinesPerProject);
+            const pipelineStagesManager = new PipelineStages();
 
             // Turn stage workers off for projects that have been turned off.
-            let pausedProjects = projects.filter(item => (item.is_processing || 0) === 0);
+            const pausedProjects = projects.filter(item => (item.is_processing || 0) === 0);
 
             await Promise.all(pausedProjects.map(project => this.pauseStagesForProject(pipelineStagesManager, project)));
 
             // Turn stage workers on (but not necessarily processing) for projects that are active for stats.
             // Individual stage processing is maintained in the next step.
-            let resumedProjects = projects.filter(item => item.is_processing === true);
+            const resumedProjects = projects.filter(item => item.is_processing === true);
 
             await Promise.all(resumedProjects.map(project => this.resumeStagesForProject(pipelineStagesManager, project)));
 
             // Refresh processing state for active workers.
             await this.manageStageProcessingFlag();
         } catch (err) {
-            debug(`Exception (manageAllWorkers): ${err}`);
+            debug(`exception (manageAllWorkers): ${err}`);
         }
 
         setTimeout(() => this.manageAllWorkers(), 10 * 1000);
     }
 
     private async resumeStagesForProject(pipelineStagesManager: PipelineStages, project: IProject) {
-        let stages = await pipelineStagesManager.getForProject(project.id);
+        const stages = await pipelineStagesManager.getForProject(project.id);
+
+        await this.addWorker(project, startTileStatusFileWorker, "/tileStatusWorkerChildProcess.js");
 
         await Promise.all(stages.map(stage => this.resumeStage(pipelineStagesManager, stage)));
     }
 
     private async resumeStage(pipelineStagesManager: PipelineStages, stage: IPipelineStage): Promise <boolean> {
-        return this.addWorker(stage, this._pipelineStageWorkers, startPipelineStageWorker, "/pipelineMapSchedulerChildProcess.js");
+        return this.addWorker(stage, startPipelineStageWorker, "/pipelineMapSchedulerChildProcess.js");
     }
 
     private async pauseStagesForProject(pipelineStagesManager: PipelineStages, project: IProject) {
-        let stages = await pipelineStagesManager.getForProject(project.id);
+        const stages = await pipelineStagesManager.getForProject(project.id);
+
+        await this.removeWorker(project/*, this._tileStatusWorkers*/);
 
         await Promise.all(stages.map(stage => this.pauseStage(pipelineStagesManager, stage)));
     }
@@ -204,15 +204,15 @@ export class SchedulerHub {
     private async pauseStage(pipelineStagesManager: PipelineStages, stage: IPipelineStage): Promise <boolean> {
         await pipelineStagesManager.setProcessingStatus(stage.id, false);
 
-        return this.removeWorker(stage, this._pipelineStageWorkers);
+        return this.removeWorker(stage/*, this._pipelineStageWorkers*/);
     }
 
     private async manageStageProcessingFlag() {
-        let pipelineStagesManager = new PipelineStages();
+        const pipelineStagesManager = new PipelineStages();
 
-        let stages: IPipelineStage[] = await pipelineStagesManager.getAll();
+        const stages: IPipelineStage[] = await pipelineStagesManager.getAll();
 
-        stages.map(stage => {
+        return stages.map(stage => {
             let worker = this._pipelineStageWorkers.get(stage.id);
 
             if (worker) {
@@ -221,18 +221,8 @@ export class SchedulerHub {
         });
     }
 
-    private manageWorkers(items: IRunnableTableModelRow[], workerMap: Map<string, IWorkerInterface>, inProcessFunction, childProcessModuleName) {
-        let activeItems = items.filter(item => item.is_processing !== null && item.is_processing);
-
-        activeItems.map(async(item) => this.addWorker(item, workerMap, inProcessFunction, childProcessModuleName));
-
-        let inactiveItems = items.filter(item => (item.is_processing || 0) === 0);
-
-        inactiveItems.map(item => this.removeWorker(item, workerMap));
-    }
-
-    private async addWorker(item: IRunnableTableModelRow, workerMap: Map<string, IWorkerInterface>, inProcessFunction, childProcessModuleName): Promise<boolean> {
-        let worker = workerMap.get(item.id);
+    private async addWorker(item: IRunnableTableModelRow, inProcessFunction, childProcessModuleName): Promise<boolean> {
+        let worker = this._pipelineStageWorkers.get(item.id);
 
         if (!worker) {
             debug(`add worker for ${item.id}`);
@@ -241,7 +231,7 @@ export class SchedulerHub {
             worker.IsProcessingRequested = item.is_processing;
 
             if (worker) {
-                workerMap.set(item.id, worker);
+                this._pipelineStageWorkers.set(item.id, worker);
             }
 
             return true;
@@ -250,15 +240,15 @@ export class SchedulerHub {
         return false;
     }
 
-    private removeWorker(item: IRunnableTableModelRow, workerMap: Map<string, IWorkerInterface>): boolean {
-        let worker = workerMap.get(item.id);
+    private removeWorker(item: IRunnableTableModelRow): boolean {
+        const worker = this._pipelineStageWorkers.get(item.id);
 
         if (worker) {
             debug(`remove worker for ${item.id}`);
 
-            worker.IsCancelRequested = true;
+            worker.IsExitRequested = true;
 
-            workerMap.delete(item.id);
+            this._pipelineStageWorkers.delete(item.id);
 
             return true;
         }
@@ -270,7 +260,7 @@ export class SchedulerHub {
         // Options
         //   silent - pumps stdio back through this parent process
         //   execArv - remove possible $DEBUG flag on parent process causing address in use conflict
-        let worker_process = child_process.fork(path.join(__dirname, moduleName), args, {silent: true, execArgv: []});
+        const worker_process = child_process.fork(path.join(__dirname, moduleName), args, {silent: true, execArgv: []});
 
         worker_process.stdout.on("data", data => console.log(`${data.toString().slice(0, -1)}`));
 

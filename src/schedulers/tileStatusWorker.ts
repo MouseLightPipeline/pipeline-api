@@ -1,5 +1,5 @@
 import Timer = NodeJS.Timer;
-const fs = require("fs-extra");
+const fse = require("fs-extra");
 const path = require("path");
 
 const debug = require("debug")("mouselight:pipeline-api:tile-status-worker");
@@ -15,7 +15,9 @@ import {
 } from "../data-access/knexPiplineStageConnection";
 
 import performanceConfiguration from "../../config/performance.config"
-import {PipelineScheduler, DefaultPipelineIdKey, TilePipelineStatus} from "./pipelineScheduler";
+import {
+    PipelineScheduler, DefaultPipelineIdKey, TilePipelineStatus
+} from "./pipelineScheduler";
 const perfConf = performanceConfiguration();
 
 interface IPosition {
@@ -42,31 +44,44 @@ export class TileStatusWorker extends PipelineScheduler {
     public constructor(project: IProject) {
         super(null);
 
-        this.IsCancelRequested = false;
+        this.IsExitRequested = false;
 
         this.IsProcessingRequested = true;
 
         this._project = project;
     }
 
-    public async run() {
+    protected async createTables() {
+        if (this.IsExitRequested) {
+            debug("cancel request - early return");
+            return;
+        }
+
+        try {
+            fse.ensureDirSync(this._project.root_path);
+        } catch (err) {
+            // Most likely drive/share is not present or failed permissions.
+            if (err && err.code === "EACCES") {
+                debug("tile status output directory permission denied");
+            } else {
+                debug(err);
+            }
+            return false;
+        }
+
         this._inputTableName = null;
 
         this._inputKnexConnector = null;
-
-        if (!fs.existsSync(this._project.root_path)) {
-            fs.mkdirSync(this._project.root_path);
-        }
 
         this._outputTableName = generateProjectRootTableName(this._project.id);
 
         this._outputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(this._project.root_path), this._outputTableName);
 
-        await this.performWork();
+        return !!this._outputKnexConnector;
     }
 
     protected async performWork() {
-        if (this.IsCancelRequested) {
+        if (this.IsExitRequested) {
             debug("cancel request - early return");
             return;
         }
@@ -104,32 +119,6 @@ export class TileStatusWorker extends PipelineScheduler {
         let knownOutputLookup = knownOutput.map(obj => obj[DefaultPipelineIdKey]);
 
         knownInput.reduce((list, inputTile) => {
-            /*
-             if (this._project.region_x_min > -1 && inputTile.lattice_position.x < this._project.region_x_min) {
-             return list;
-             }
-
-             if (this._project.region_x_max > -1 && inputTile.lattice_position.x > this._project.region_x_max) {
-             return list;
-             }
-
-             if (this._project.region_y_min > -1 && inputTile.lattice_position.y < this._project.region_y_min) {
-             return list;
-             }
-
-             if (this._project.region_y_max > -1 && inputTile.lattice_position.y > this._project.region_y_max) {
-             return list;
-             }
-
-             if (this._project.region_z_min > -1 && inputTile.lattice_position.z < this._project.region_z_min) {
-             return list;
-             }
-
-             if (this._project.region_z_max > -1 && inputTile.lattice_position.z > this._project.region_z_max) {
-             return list;
-             }
-             */
-
             let idx = knownOutputLookup.indexOf(inputTile.relative_path);
 
             let existingOutput = idx > -1 ? knownOutput[idx] : null;
@@ -187,7 +176,7 @@ export class TileStatusWorker extends PipelineScheduler {
 
         let dataFile = path.join(this._project.root_path, dashboardJsonFile);
 
-        if (!fs.existsSync(dataFile)) {
+        if (!fse.existsSync(dataFile)) {
             debug(`\tthere is no dashboard.json file in the project root path ${dataFile}`);
             return;
         }
@@ -196,11 +185,11 @@ export class TileStatusWorker extends PipelineScheduler {
 
         let backupFile = path.join(this._project.root_path, tileStatusLastJsonFile);
 
-        if (fs.existsSync(outputFile)) {
-            fs.copySync(outputFile, backupFile, {clobber: true});
+        if (fse.existsSync(outputFile)) {
+            fse.copySync(outputFile, backupFile, {clobber: true});
         }
 
-        let contents = fs.readFileSync(dataFile);
+        let contents = fse.readFileSync(dataFile);
 
         let jsonContent = JSON.parse(contents);
 
@@ -238,11 +227,11 @@ export class TileStatusWorker extends PipelineScheduler {
             }
         }
 
-        if (fs.existsSync(outputFile)) {
-            fs.unlinkSync(outputFile);
+        if (fse.existsSync(outputFile)) {
+            fse.unlinkSync(outputFile);
         }
 
-        fs.outputJSONSync(outputFile, tiles);
+        fse.outputJSONSync(outputFile, tiles);
 
         return tiles;
     }

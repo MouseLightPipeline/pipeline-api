@@ -1,17 +1,17 @@
 import {ExecutionStatusCode, CompletionStatusCode} from "../data-model/taskExecution";
 const path = require("path");
-const fs = require("fs-extra");
+const fse = require("fs-extra");
 const debug = require("debug")("mouselight:pipeline-api:pipeline-worker");
 
 import {updatePipelineStagePerformance, updatePipelineStageCounts} from "../data-model/pipelineStagePerformance";
-import {IWorkerInterface} from "./schedulerHub";
+import {ISchedulerInterface} from "./schedulerHub";
 import performanceConfiguration from "../../config/performance.config"
 import {Projects, IProject} from "../data-model/project";
 import {PipelineStages, IPipelineStage} from "../data-model/pipelineStage";
 import {
     verifyTable, generatePipelineStageToProcessTableName,
     generatePipelineStageInProcessTableName, generatePipelineStateDatabaseName, connectorForFile,
-    generateProjectRootTableName, generatePipelineStageTableName, generatePipelineCustomTableName
+    generatePipelineStageTableName
 } from "../data-access/knexPiplineStageConnection";
 import {PipelineWorkers} from "../data-model/pipelineWorker";
 import {PipelineWorkerClient} from "../graphql/client/pipelineWorkerClient";
@@ -72,7 +72,7 @@ export interface IToProcessTile {
     updated_at: Date;
 }
 
-export abstract class PipelineScheduler implements IWorkerInterface {
+export abstract class PipelineScheduler implements ISchedulerInterface {
     protected _pipelineStage: IPipelineStage;
 
     protected _inputKnexConnector: any;
@@ -87,19 +87,21 @@ export abstract class PipelineScheduler implements IWorkerInterface {
     private _isCancelRequested: boolean;
     private _isProcessingRequested: boolean;
 
+    private _isInitialized: boolean = false;
+
     protected constructor(pipelineStage: IPipelineStage) {
-        this.IsCancelRequested = false;
+        this.IsExitRequested = false;
 
         this.IsProcessingRequested = false;
 
         this._pipelineStage = pipelineStage;
     }
 
-    public set IsCancelRequested(b: boolean) {
+    public set IsExitRequested(b: boolean) {
         this._isCancelRequested = b;
     }
 
-    public get IsCancelRequested() {
+    public get IsExitRequested() {
         return this._isCancelRequested;
     }
 
@@ -112,12 +114,18 @@ export abstract class PipelineScheduler implements IWorkerInterface {
     }
 
     public async run() {
-        await this.createTables();
+        if (this._isInitialized) {
+            return;
+        }
 
-        await this.performWork();
+        this.transitionToInitialized();
     }
 
     public async loadTileStatusForPlane(zIndex: number) {
+        if (!this._outputKnexConnector) {
+            return [];
+        }
+
         let tiles = await this.outputTable.where("lat_z", zIndex).select("this_stage_status", "lat_x", "lat_y");
 
         tiles = tiles.map(tile => {
@@ -346,7 +354,7 @@ export abstract class PipelineScheduler implements IWorkerInterface {
 
                         let outputPath = path.join(this._pipelineStage.dst_path, pipelineTile.relative_path);
 
-                        fs.ensureDirSync(outputPath);
+                        fse.ensureDirSync(outputPath);
 
                         let args = [project.name, project.root_path, src_path, this._pipelineStage.dst_path, pipelineTile.relative_path, pipelineTile.tile_name];
 
@@ -406,7 +414,7 @@ export abstract class PipelineScheduler implements IWorkerInterface {
     }
 
     protected async performWork() {
-        if (this.IsCancelRequested) {
+        if (this.IsExitRequested) {
             debug("cancel requested - exiting stage worker");
 
             return;
@@ -459,29 +467,70 @@ export abstract class PipelineScheduler implements IWorkerInterface {
     }
 
     protected async createTables() {
+        if (this.IsExitRequested) {
+            debug("cancel request - early return");
+            return false;
+        }
+
+        let inputTableBaseName = "";
+
+        let srcPath = "";
+
         if (this._pipelineStage.previous_stage_id) {
             let pipelineManager = new PipelineStages();
 
             let previousPipeline = await pipelineManager.get(this._pipelineStage.previous_stage_id);
 
-            this._inputTableName = generatePipelineStageTableName(previousPipeline.id);
+            inputTableBaseName = previousPipeline.id;
 
-            this._inputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(previousPipeline.dst_path), this._inputTableName);
+            srcPath = previousPipeline.dst_path;
         } else {
             let projectManager = new Projects();
 
             let project = await projectManager.get(this._pipelineStage.project_id);
 
-            this._inputTableName = generateProjectRootTableName(project.id);
+            inputTableBaseName = project.id;
 
-            this._inputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(project.root_path), this._inputTableName);
+            srcPath = project.root_path;
         }
 
-        fs.ensureDirSync(this._pipelineStage.dst_path);
+        try {
+            fse.ensureDirSync(srcPath);
+        } catch (err) {
+            if (err && err.code === "EACCES") {
+                debug("pipeline source directory permission denied");
+            } else {
+                debug(err);
+            }
+            return false;
+        }
+
+        try {
+            fse.ensureDirSync(this._pipelineStage.dst_path);
+        } catch (err) {
+            if (err && err.code === "EACCES") {
+                debug("pipeline output directory permission denied");
+            } else {
+                debug(err);
+            }
+            return false;
+        }
+
+        this._inputTableName = generatePipelineStageTableName(inputTableBaseName);
+
+        this._inputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(srcPath), this._inputTableName);
+
+        if (!this._inputKnexConnector) {
+            return false;
+        }
 
         this._outputTableName = generatePipelineStageTableName(this._pipelineStage.id);
 
         this._outputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(this._pipelineStage.dst_path), this._outputTableName);
+
+        if (!this._outputKnexConnector) {
+            return false;
+        }
 
         this._inProcessTableName = generatePipelineStageInProcessTableName(this._pipelineStage.id);
 
@@ -500,6 +549,39 @@ export abstract class PipelineScheduler implements IWorkerInterface {
             table.string(DefaultPipelineIdKey).primary().unique();
             table.timestamps();
         });
+
+        return true;
+    }
+
+    /*
+     * State transitions
+     */
+    private transitionToInitialized() {
+        this._isInitialized = true;
+
+        setImmediate(() => this.transitionToEstablishDataConnection());
+    }
+
+    private async transitionToEstablishDataConnection() {
+        if (this.IsExitRequested) {
+            return;
+        }
+
+        const connected = await this.createTables();
+
+        if (connected) {
+            await this.transitionToProcessStage()
+        } else {
+            setTimeout(() => this.transitionToEstablishDataConnection(), perfConf.regenTileStatusJsonFileSeconds * 1000);
+        }
+    }
+
+    private async transitionToProcessStage() {
+        if (this.IsExitRequested) {
+            return;
+        }
+
+        await this.performWork();
     }
 
     /*

@@ -104,7 +104,7 @@ function productionSeed() {
                     }),
                     knex("PipelineStage").insert({
                         id: "2683AD99-E389-41FD-A54C-38834CCC7AE9".toLocaleLowerCase(),
-                        name: "Descriptor Merge",
+                        name: "Merge Descriptors",
                         description: "Descriptor Merge",
                         dst_path: "/nrs/mouselight/pipeline_output/2016-10-31-jan-demo/stage_3_descriptor_merge",
                         function_type: 2,
@@ -271,7 +271,7 @@ function developmentSeed() {
                     }),
                     knex("PipelineStage").insert({
                         id: "2683AD99-E389-41FD-A54C-38834CCC7AE9".toLocaleLowerCase(),
-                        name: "Descriptor Merge",
+                        name: "Merge Descriptors",
                         description: "Descriptor Merge",
                         dst_path: "/Volumes/Spare/Projects/MouseLight/PipelineOutput3",
                         function_type: 2,

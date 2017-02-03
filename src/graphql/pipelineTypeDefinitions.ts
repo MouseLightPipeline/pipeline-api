@@ -61,6 +61,7 @@ type Project implements ITableModel {
   created_at: String
   updated_at: String
   deleted_at: String
+  stages: [PipelineStage]
 }
 
 type PipelineStagePerformance implements ITableModel {
@@ -93,16 +94,18 @@ type PipelineStage implements ITableModel {
   function_type: Int
   execution_order: Int
   dst_path: String
-  depth: String
+  depth: Int
   is_processing: Boolean
   project_id: String
   task_id: String
   previous_stage_id: String
+  project: Project
+  task: TaskDefinition
+  performance: PipelineStagePerformance
+  previous_stage: PipelineStage
   created_at: String
   updated_at: String
   deleted_at: String
-  task: TaskDefinition
-  performance: PipelineStagePerformance
 }
 
 type TileStageStatus {
@@ -135,6 +138,15 @@ input RegionInput {
   z_max: Int
 }
 
+input ProjectInput {
+  id: String
+  name: String
+  description: String
+  root_path: String
+  sample_number: Int
+  region_bounds: RegionInput
+}
+
 type Query {
   pipelineWorker(id: String!): PipelineWorker
   pipelineWorkers: [PipelineWorker!]!
@@ -151,9 +163,11 @@ type Query {
 }
 
 type Mutation {
-  createProject(name: String, description: String, rootPath: String, sampleNumber: Int, region: RegionInput): Project
+  createProject(project: ProjectInput): Project
+  updateProject(project: ProjectInput): Project
   setProjectStatus(id: String, shouldBeActive: Boolean): Project
   deleteProject(id: String!): Boolean
+  
   createPipelineStage(name: String, description: String, project_id: String, task_id: String, previous_stage_id: String, dst_path: String, function_type: Int): PipelineStage
   setPipelineStageStatus(id: String, shouldBeActive: Boolean): PipelineStage
   deletePipelineStage(id: String!): Boolean

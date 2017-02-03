@@ -47,6 +47,43 @@ interface IAccessQueueToken {
     reject: any;
 }
 
+const connectionMap = new Map<string, Knex>();
+
+const connectorQueueAccess = asyncUtils.queue(accessQueueWorker, 1);
+
+export async function connectorForFile(name: string, requiredTable: string = null) {
+    debug(`requesting connector for ${name}`);
+
+    // Serialize access to queue for a particular connector so only one is created.
+
+    let queue = await new Promise<AsyncQueue<IConnectorQueueToken>>((resolve, reject) => {
+        connectorQueueAccess.push({
+            filename: name,
+            resolve: resolve,
+            reject: reject
+        });
+    });
+
+    // Serialize access to a connector so that only one is created and required tables are created once.
+
+    return new Promise<Knex>((resolve, reject) => {
+        queue.push({
+            filename: name,
+            requiredTables: [requiredTable],
+            resolve: resolve,
+            reject: reject,
+        });
+    });
+}
+
+export async function verifyTable(connection, tableName: string, createFunction) {
+    let test = await connection.schema.hasTable(tableName);
+
+    if (!test) {
+        await connection.schema.createTableIfNotExists(tableName, createFunction);
+    }
+}
+
 async function accessConnectorWorker(token: IConnectorQueueToken, completeCallback) {
     try {
         let requiredTable: string = token.requiredTables.length > 0 ? token.requiredTables[0] : null;
@@ -81,35 +118,6 @@ function accessQueueWorker(token: IAccessQueueToken, completeCallback) {
     completeCallback();
 }
 
-let connectorQueueAccess = asyncUtils.queue(accessQueueWorker, 1);
-
-export async function connectorForFile(name: string, requiredTable: string = null) {
-    debug(`requesting connector for ${name}`);
-
-    // Serialize access to queue for a particular connector so only one is created.
-
-    let queue = await new Promise<AsyncQueue<IConnectorQueueToken>>((resolve, reject) => {
-        connectorQueueAccess.push({
-            filename: name,
-            resolve: resolve,
-            reject: reject
-        });
-    });
-
-    // Serialize access to a connector so that only one is created and required tables are created once.
-
-    return new Promise<Knex>((resolve, reject) => {
-        queue.push({
-            filename: name,
-            requiredTables: [requiredTable],
-            resolve: resolve,
-            reject: reject,
-        });
-    });
-}
-
-let connectionMap = new Map<string, Knex>();
-
 async function findConnection(name: string, requiredTable: string = null): Promise<Knex> {
     let connection: Knex = null;
 
@@ -119,7 +127,7 @@ async function findConnection(name: string, requiredTable: string = null): Promi
         connection = await createConnection(name, requiredTable);
     }
 
-    if (requiredTable) {
+    if (connection && requiredTable) {
         await verifyTable(connection, requiredTable, (table) => {
             table.string("relative_path").primary().unique();
             table.string("tile_name");
@@ -145,14 +153,6 @@ async function findConnection(name: string, requiredTable: string = null): Promi
     return connection;
 }
 
-export async function verifyTable(connection, tableName: string, createFunction) {
-    let test = await connection.schema.hasTable(tableName);
-
-    if (!test) {
-        await connection.schema.createTableIfNotExists(tableName, createFunction);
-    }
-}
-
 async function createConnection(name: string, requiredTable: string): Promise<Knex> {
     const configuration: IDatabaseConfig = {
         client: "sqlite3",
@@ -172,12 +172,8 @@ async function createConnection(name: string, requiredTable: string): Promise<Kn
     try {
         await knex.migrate.latest(configuration);
     } catch (err) {
-        return new Promise<Knex>((resolve) => {
-            setTimeout(async() => {
-                let connector = await createConnection(name, requiredTable);
-                resolve(connector);
-            }, 2000);
-        })
+        debug(err);
+        return null;
     }
 
     connectionMap.set(name, knex);

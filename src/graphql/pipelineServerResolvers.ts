@@ -4,7 +4,7 @@ const debug = require("debug")("mouselight:pipeline-api:resolvers");
 
 import {ITaskDefinition} from "../data-model/taskDefinition";
 import {IPipelineStage} from "../data-model/pipelineStage";
-import {IProject, IProjectGridRegion} from "../data-model/project";
+import {IProject, IProjectGridRegion, IProjectInput} from "../data-model/project";
 import {IPipelineWorker} from "../data-model/pipelineWorker";
 import {IPipelineStagePerformance} from "../data-model/pipelineStagePerformance";
 
@@ -27,11 +27,12 @@ interface ICreatePipelineStageArguments {
 }
 
 interface ICreateProjectArguments {
-    name: string;
-    description: string;
-    rootPath: string;
-    sampleNumber: number
-    region: IProjectGridRegion;
+    project: IProjectInput;
+
+}
+
+interface IUpdateProjectArguments {
+    project: IProjectInput;
 }
 
 interface ISetActiveStatusArguments {
@@ -86,8 +87,11 @@ let resolvers = {
     },
     Mutation: {
         createProject(_, args: ICreateProjectArguments, context: IPipelineServerContext): Promise<IProject> {
-            debug(`resolve create project ${args.name}`);
-            return context.createProject(args.name, args.description, args.rootPath, args.sampleNumber, args.region);
+            debug(`resolve create project ${args.project.name}`);
+            return context.createProject(args.project);
+        },
+        updateProject(_, args: IUpdateProjectArguments, context: IPipelineServerContext): Promise<IProject> {
+            return context.updateProject(args.project);
         },
         setProjectStatus(_, args: ISetActiveStatusArguments, context: IPipelineServerContext) {
             return context.setProjectStatus(args.id, args.shouldBeActive);
@@ -106,12 +110,23 @@ let resolvers = {
             return context.deletePipelineStage(args.id);
         }
     },
+    Project: {
+        stages(project, _, context: IPipelineServerContext): any {
+            return context.getPipelineStagesForProject(project.id);
+        }
+    },
     PipelineStage: {
         performance(stage, _, context: IPipelineServerContext): any {
             return context.getForStage(stage.id);
         },
         task(stage, _, context: IPipelineServerContext): any {
             return context.getTaskDefinition(stage.task_id);
+        },
+        project(stage, _, context: IPipelineServerContext): any {
+            return context.getProject(stage.project_id);
+        },
+        previous_stage(stage, _, context: IPipelineServerContext): any {
+            return context.getPipelineStage(stage.previous_stage_id);
         }
     }
 };

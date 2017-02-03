@@ -12,9 +12,11 @@ export abstract class RunnableTableModel<T extends IRunnableTableModelRow> exten
     public async setProcessingStatus(id: string, shouldBeActive: boolean): Promise<T> {
         let row: T = await this.get(id);
 
-        row.is_processing = shouldBeActive;
+        if (row.is_processing !== shouldBeActive) {
+            row.is_processing = shouldBeActive;
 
-        await this.save(row);
+            await this.save(row);
+        }
 
         return row;
     }

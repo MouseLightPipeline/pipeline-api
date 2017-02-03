@@ -26,6 +26,8 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
             table.string("relative_path_z_minus_1");
             table.string("tile_name_z_minus_1");
         });
+
+        return true;
     }
 
     protected async getTaskContext(tile: IPipelineTile): Promise<any> {
