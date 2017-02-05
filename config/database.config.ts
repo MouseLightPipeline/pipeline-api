@@ -40,6 +40,17 @@ const configurations: IConfiguration<IDatabaseConfig> = {
             tableName: "knex_migrations"
         }
     },
+    staging: {
+        client: "sqlite3",
+        connection: {
+            filename: path.join(internalDataPath, "system-data.sqlite3")
+        },
+        acquireConnectionTimeout: 180000,
+        useNullAsDefault: true,
+        migrations: {
+            tableName: "knex_migrations"
+        }
+    },
     production: {
         client: "sqlite3",
         connection: {

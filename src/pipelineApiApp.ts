@@ -11,7 +11,7 @@ import {SchedulerHub} from "./schedulers/schedulerHub";
 
 const config = serverConfiguration();
 
-const PORT = process.env.PORT || config.port;
+const PORT = process.env.API_PORT || config.port;
 
 const useChildProcessWorkers = process.env.USE_CHILD_PROCESS_WORKERS || false;
 

@@ -20,6 +20,12 @@ const configurations: IConfiguration<IServerConfig> = {
         graphiQlEndpoint: "/graphiql",
         machineId: "1BCC812D-97CE-4B14-AD48-5C3C9B9B416E".toLocaleLowerCase()
     },
+    staging: {
+        port: 3050,
+        graphQlEndpoint: "/graphql",
+        graphiQlEndpoint: "/graphiql",
+        machineId: "1BCC812D-97CE-4B14-AD48-5C3C9B9B416E".toLocaleLowerCase()
+    },
     production: {
         port: 3000,
         graphQlEndpoint: "/graphql",
