@@ -170,7 +170,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         let unscheduled: IPipelineTile[] = await this.outputTable.where({
             prev_stage_status: TilePipelineStatus.Complete,
             this_stage_status: TilePipelineStatus.Incomplete,
-        }).select("relative_path", "this_stage_status", "tile_name");
+        }).select();
 
         if (unscheduled.length > 0) {
             let projects = new Projects();
