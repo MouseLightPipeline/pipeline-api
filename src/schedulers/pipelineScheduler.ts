@@ -172,7 +172,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             this_stage_status: TilePipelineStatus.Incomplete,
         }).select();
 
-        debug.log(`potentially ${unscheduled.length} unscheduled`);
+        debug(`potentially ${unscheduled.length} unscheduled`);
 
         if (unscheduled.length > 0) {
             let projects = new Projects();
