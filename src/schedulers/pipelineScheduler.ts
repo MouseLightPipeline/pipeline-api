@@ -11,7 +11,7 @@ import {PipelineStages, IPipelineStage} from "../data-model/pipelineStage";
 import {
     verifyTable, generatePipelineStageToProcessTableName,
     generatePipelineStageInProcessTableName, generatePipelineStateDatabaseName, connectorForFile,
-    generatePipelineStageTableName
+    generatePipelineStageTableName, generateProjectRootTableName
 } from "../data-access/knexPiplineStageConnection";
 import {PipelineWorkers} from "../data-model/pipelineWorker";
 import {PipelineWorkerClient} from "../graphql/client/pipelineWorkerClient";
@@ -472,8 +472,6 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             return false;
         }
 
-        let inputTableBaseName = "";
-
         let srcPath = "";
 
         if (this._pipelineStage.previous_stage_id) {
@@ -481,7 +479,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
             let previousPipeline = await pipelineManager.get(this._pipelineStage.previous_stage_id);
 
-            inputTableBaseName = previousPipeline.id;
+            this._inputTableName = generatePipelineStageTableName(this._pipelineStage.previous_stage_id);
 
             srcPath = previousPipeline.dst_path;
         } else {
@@ -489,7 +487,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
             let project = await projectManager.get(this._pipelineStage.project_id);
 
-            inputTableBaseName = project.id;
+            this._inputTableName = generateProjectRootTableName(project.id);
 
             srcPath = project.root_path;
         }
@@ -515,8 +513,6 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             }
             return false;
         }
-
-        this._inputTableName = generatePipelineStageTableName(inputTableBaseName);
 
         this._inputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(srcPath), this._inputTableName);
 

@@ -265,7 +265,7 @@ function developmentSeed() {
                         depth: 2,
                         project_id: "af8cb0d4-56c0-4db8-8a1b-7b39540b2d04",
                         task_id: "a9f21399-07c0-425c-86f6-6e4f45bb06b9",
-                        previous_stage_id: "828276A5-44C0-4BD1-87F7-9495BC3E9F6C",
+                        previous_stage_id: "828276a5-44c0-4bd1-87f7-9495bc3e9f6c",
                         created_at: createDate(2, 0),
                         updated_at: createDate(1, 3.5)
                     }),
