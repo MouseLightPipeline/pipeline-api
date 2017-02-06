@@ -172,8 +172,6 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             this_stage_status: TilePipelineStatus.Incomplete,
         }).select();
 
-        debug(`potentially ${unscheduled.length} unscheduled`);
-
         if (unscheduled.length > 0) {
             let projects = new Projects();
 
@@ -202,8 +200,6 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
                 return !(project.region_z_max > -1 && tile.lat_z > project.region_z_max);
             });
-
-            debug(`${unscheduled} remain after region filtering`);
 
             unscheduled = unscheduled.map(obj => {
                 obj.this_stage_status = TilePipelineStatus.Queued;
