@@ -2,9 +2,9 @@ import {knex} from "../data-access/knexConnector"
 
 export interface ITableModelRow {
     id: string;
-    created_at: Date;
-    updated_at: Date;
-    deleted_at: Date;
+    created_at?: Date;
+    updated_at?: Date;
+    deleted_at?: Date;
 }
 
 export abstract class TableModel<T extends ITableModelRow> {
@@ -14,6 +14,14 @@ export abstract class TableModel<T extends ITableModelRow> {
     public constructor(tableName: string, idKey: string = "id") {
         this._tableName = tableName;
         this._idKey = idKey;
+    }
+
+    public get idKey(): string {
+        return this._idKey;
+    }
+
+    public get tableName(): string {
+        return this._tableName;
     }
 
     public async get(id: string): Promise<T> {
@@ -44,14 +52,6 @@ export abstract class TableModel<T extends ITableModelRow> {
         }
     }
 
-    public get idKey(): string {
-        return this._idKey;
-    }
-
-    public get tableName(): string {
-        return this._tableName;
-    }
-
     public async insertRow(row: T) {
         await this.save(row);
 
@@ -59,6 +59,14 @@ export abstract class TableModel<T extends ITableModelRow> {
         row = await this.get(row.id);
 
         return row;
+    }
+
+    public async update(obj: T) {
+        let row = await this.get(obj.id);
+
+        row = Object.assign(row, obj);
+
+        return this.save(row);
     }
 
     public async save(row: T) {

@@ -173,7 +173,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         }).select();
 
         if (unscheduled.length > 0) {
-            let projects = new Projects();
+            let projects = Projects.defaultManager();
 
             let project: IProject = await projects.get(this._pipelineStage.project_id);
 
@@ -299,7 +299,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
         let workers = await workerManager.getAll();
 
-        let projects = new Projects();
+        let projects = Projects.defaultManager();
 
         let project: IProject = await projects.get(this._pipelineStage.project_id);
 
@@ -439,7 +439,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                 debug("no input from previous stage yet");
             }
 
-            // Check and update the status of anything in-process
+            // Check and updateFromInputProject the status of anything in-process
             await this.updateInProcessStatus();
 
             // Look if anything is already in the to-process queue
@@ -483,7 +483,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
             srcPath = previousPipeline.dst_path;
         } else {
-            let projectManager = new Projects();
+            let projectManager = Projects.defaultManager();
 
             let project = await projectManager.get(this._pipelineStage.project_id);
 

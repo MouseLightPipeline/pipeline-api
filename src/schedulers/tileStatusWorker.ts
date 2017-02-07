@@ -172,6 +172,10 @@ export class TileStatusWorker extends PipelineScheduler {
     }
 
     private async performJsonUpdate(): Promise<IDashboardJsonTile[]> {
+        const projectUpdate: IProject = {
+            id: this._project.id
+        };
+
         let tiles: IDashboardJsonTile[] = [];
 
         let dataFile = path.join(this._project.root_path, dashboardJsonFile);
@@ -194,17 +198,15 @@ export class TileStatusWorker extends PipelineScheduler {
         let jsonContent = JSON.parse(contents);
 
         if (jsonContent.monitor && jsonContent.monitor.extents) {
-            this._project.sample_x_min = jsonContent.monitor.extents.minimumX;
-            this._project.sample_x_max = jsonContent.monitor.extents.maximumX;
-            this._project.sample_y_min = jsonContent.monitor.extents.minimumY;
-            this._project.sample_y_max = jsonContent.monitor.extents.maximumY;
-            this._project.sample_z_min = jsonContent.monitor.extents.minimumZ;
-            this._project.sample_z_max = jsonContent.monitor.extents.maximumZ;
+            projectUpdate.sample_x_min = jsonContent.monitor.extents.minimumX;
+            projectUpdate.sample_x_max = jsonContent.monitor.extents.maximumX;
+            projectUpdate.sample_y_min = jsonContent.monitor.extents.minimumY;
+            projectUpdate.sample_y_max = jsonContent.monitor.extents.maximumY;
+            projectUpdate.sample_z_min = jsonContent.monitor.extents.minimumZ;
+            projectUpdate.sample_z_max = jsonContent.monitor.extents.maximumZ;
+
+            this._project = await Projects.defaultManager().update(projectUpdate);
         }
-
-        let projects = new Projects();
-
-        await projects.save(this._project);
 
         for (let prop in jsonContent.tileMap) {
             if (jsonContent.tileMap.hasOwnProperty(prop)) {

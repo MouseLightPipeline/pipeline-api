@@ -54,7 +54,7 @@ export class SchedulerHub {
                 return kEmptyTileMap;
             }
 
-            const projectsManager = new Projects();
+            const projectsManager = Projects.defaultManager();
 
             const project = await projectsManager.get(project_id);
 
@@ -155,7 +155,7 @@ export class SchedulerHub {
 
     private async manageAllWorkers() {
         try {
-            const projectsManager = new Projects();
+            const projectsManager = Projects.defaultManager();
 
             const projects: IProject[] = await projectsManager.getAll();
 

@@ -5,6 +5,9 @@ import {IPipelineWorker, PipelineWorkers} from "../data-model/pipelineWorker";
 import {IPipelineStagePerformance, pipelineStagePerformanceInstance} from "../data-model/pipelineStagePerformance";
 import {SchedulerHub} from "../schedulers/schedulerHub";
 
+const debug = require("debug")("mouselight:pipeline-api:context");
+
+
 export interface IPipelineServerContext {
     getPipelineWorker(id: string): Promise<IPipelineWorker>;
     getPipelineWorkers(): Promise<IPipelineWorker[]>;
@@ -35,7 +38,7 @@ export interface IPipelineServerContext {
 
 export class PipelineServerContext implements IPipelineServerContext {
     private _taskDefinitions = new TaskDefinitions();
-    private _projects = new Projects();
+    private _projects = Projects.defaultManager();
     private _pipelineStages = new PipelineStages();
     private _workers = new PipelineWorkers();
     private _pipelinePerformance = pipelineStagePerformanceInstance;
@@ -61,7 +64,7 @@ export class PipelineServerContext implements IPipelineServerContext {
     }
 
     public updateProject(project: IProjectInput): Promise<IProject> {
-        return this._projects.update(project);
+        return this._projects.updateFromInputProject(project);
     }
 
     public setProjectStatus(id: string, shouldBeActive: boolean): Promise<IProject> {

@@ -24,26 +24,30 @@ export interface IProjectInput {
 }
 
 export interface IProject extends IRunnableTableModelRow {
-    name: string;
-    description: string;
-    root_path: string;
-    sample_number: number;
-    sample_x_min: number;
-    sample_x_max: number;
-    sample_y_min: number;
-    sample_y_max: number;
-    sample_z_min: number;
-    sample_z_max: number;
-    region_x_min: number;
-    region_x_max: number;
-    region_y_min: number;
-    region_y_max: number;
-    region_z_min: number;
-    region_z_max: number;
+    name?: string;
+    description?: string;
+    root_path?: string;
+    sample_number?: number;
+    sample_x_min?: number;
+    sample_x_max?: number;
+    sample_y_min?: number;
+    sample_y_max?: number;
+    sample_z_min?: number;
+    sample_z_max?: number;
+    region_x_min?: number;
+    region_x_max?: number;
+    region_y_min?: number;
+    region_y_max?: number;
+    region_z_min?: number;
+    region_z_max?: number;
 }
 
 export class Projects extends RunnableTableModel<IProject> {
-    public constructor() {
+    public static defaultManager() {
+        return new Projects();
+    }
+
+    private constructor() {
         super("Project");
     }
 
@@ -84,7 +88,7 @@ export class Projects extends RunnableTableModel<IProject> {
         return await this.insertRow(row);
     }
 
-    public async update(project: IProjectInput): Promise<IProject> {
+    public async updateFromInputProject(project: IProjectInput): Promise<IProject> {
         if (!project.id || project.id.length === 0) {
             return this.create(project);
         }

@@ -1,7 +1,7 @@
 import {TableModel, ITableModelRow} from "./tableModel";
 
 export interface IRunnableTableModelRow extends ITableModelRow {
-    is_processing: boolean;
+    is_processing?: boolean;
 }
 
 export abstract class RunnableTableModel<T extends IRunnableTableModelRow> extends TableModel<T> {
@@ -21,11 +21,14 @@ export abstract class RunnableTableModel<T extends IRunnableTableModelRow> exten
         return row;
     }
 
+    protected willSaveRow(row: T): T {
+        return super.willSaveRow(row);
+    }
+
     protected didFetchRow(row: T): T {
         row = super.didFetchRow(row);
 
         // boolean comes through as 0 or 1.  Utilize truthiness of number type.
-
         row.is_processing = (row.is_processing ? 1 : 0) > 0;
 
         return row;

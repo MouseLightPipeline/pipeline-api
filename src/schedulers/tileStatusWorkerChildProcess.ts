@@ -30,9 +30,7 @@ async function startWorkerForProcess(projectId) {
 export async function startTileStatusFileWorker(projectId: string) {
     let tileStatusWorker = null;
 
-    let projectsManager = new Projects();
-
-    let project = await projectsManager.get(projectId);
+    let project = await Projects.defaultManager().get(projectId);
 
     if (project) {
         tileStatusWorker = new TileStatusWorker(project);

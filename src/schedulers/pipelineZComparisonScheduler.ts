@@ -65,7 +65,7 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
         let knownZIndexMapIdLookup = zIndexMapRows.map(obj => obj[DefaultPipelineIdKey]);
 
         knownInput.reduce((list, inputTile) => {
-            // All input tiles will have an output tile.  Insert or update as required.
+            // All input tiles will have an output tile.  Insert or updateFromInputProject as required.
 
             let idx = knownOutputIdLookup.indexOf(inputTile[DefaultPipelineIdKey]);
 
