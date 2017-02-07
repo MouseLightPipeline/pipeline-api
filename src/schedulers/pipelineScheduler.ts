@@ -416,7 +416,6 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
     protected async performWork() {
         if (this.IsExitRequested) {
             debug("cancel requested - exiting stage worker");
-
             return;
         }
 
@@ -445,16 +444,22 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             // Look if anything is already in the to-process queue
             let available = await this.loadToProcess();
 
+            debug(`${available.length} existing available to process`);
+
             //   If not, search database for newly available to-process and put in to-process queue
             if (available.length === 0) {
                 available = await this.updateToProcessQueue();
+
+                debug(`${available.length} newly added available to process`);
             }
 
             // If there is any to-process, try to fill worker capacity
             if (this.IsProcessingRequested && available.length > 0) {
+                debug(`scheduling processing`);
                 await this.scheduleFromList(available);
             }
 
+            debug(`updating counts`);
             updatePipelineStageCounts(this._pipelineStage.id, await this.countInProcess(), await this.countToProcess());
 
         } catch (err) {
@@ -555,28 +560,36 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
     private transitionToInitialized() {
         this._isInitialized = true;
 
+        debug(`transitioning ${this._pipelineStage.id} to establish data connection`);
+
         setImmediate(() => this.transitionToEstablishDataConnection());
     }
 
     private async transitionToEstablishDataConnection() {
         if (this.IsExitRequested) {
+            debug(`exit requested for ${this._pipelineStage.id} during transition to establish data connection`);
             return;
         }
 
         const connected = await this.createTables();
 
         if (connected) {
+            debug(`transitioning ${this._pipelineStage.id} to establish data connection`);
+
             await this.transitionToProcessStage()
         } else {
+            debug(`failed to establish data connection for ${this._pipelineStage.id} setting timeout retry`);
             setTimeout(() => this.transitionToEstablishDataConnection(), perfConf.regenTileStatusJsonFileSeconds * 1000);
         }
     }
 
     private async transitionToProcessStage() {
         if (this.IsExitRequested) {
+            debug(`exit requested for ${this._pipelineStage.id} during transition to process stage`);
             return;
         }
 
+        debug(`transitioning ${this._pipelineStage.id} to perform work`);
         await this.performWork();
     }
 
