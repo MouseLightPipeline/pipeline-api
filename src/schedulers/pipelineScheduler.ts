@@ -558,39 +558,51 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
      * State transitions
      */
     private transitionToInitialized() {
-        this._isInitialized = true;
+        try {
+            this._isInitialized = true;
 
-        debug(`transitioning ${this._pipelineStage.id} to establish data connection`);
+            // debug(`transitioning ${this._pipelineStage.id} to establish data connection`);
 
-        setImmediate(() => this.transitionToEstablishDataConnection());
+            setImmediate(() => this.transitionToEstablishDataConnection());
+        } catch (err) {
+            debug(err);
+        }
     }
 
     private async transitionToEstablishDataConnection() {
-        if (this.IsExitRequested) {
-            debug(`exit requested for ${this._pipelineStage.id} during transition to establish data connection`);
-            return;
-        }
+        try {
+            if (this.IsExitRequested) {
+                // debug(`exit requested for ${this._pipelineStage.id} during transition to establish data connection`);
+                return;
+            }
 
-        const connected = await this.createTables();
+            const connected = await this.createTables();
 
-        if (connected) {
-            debug(`transitioning ${this._pipelineStage.id} to establish data connection`);
+            if (connected) {
+                // debug(`transitioning ${this._pipelineStage.id} to establish data connection`);
 
-            await this.transitionToProcessStage()
-        } else {
-            debug(`failed to establish data connection for ${this._pipelineStage.id} setting timeout retry`);
-            setTimeout(() => this.transitionToEstablishDataConnection(), perfConf.regenTileStatusJsonFileSeconds * 1000);
+                await this.transitionToProcessStage()
+            } else {
+                // debug(`failed to establish data connection for ${this._pipelineStage.id} setting timeout retry`);
+                setTimeout(() => this.transitionToEstablishDataConnection(), perfConf.regenTileStatusJsonFileSeconds * 1000);
+            }
+        } catch (err) {
+            debug(err);
         }
     }
 
     private async transitionToProcessStage() {
-        if (this.IsExitRequested) {
-            debug(`exit requested for ${this._pipelineStage.id} during transition to process stage`);
-            return;
-        }
+        try {
+            if (this.IsExitRequested) {
+                // debug(`exit requested for ${this._pipelineStage.id} during transition to process stage`);
+                return;
+            }
 
-        debug(`transitioning ${this._pipelineStage.id} to perform work`);
-        await this.performWork();
+            // debug(`transitioning ${this._pipelineStage.id} to perform work`);
+            await this.performWork();
+        } catch (err) {
+            debug(err);
+        }
     }
 
     /*
