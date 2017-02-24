@@ -28,14 +28,18 @@ async function startWorkerForProcess(stageId) {
 export async function startPipelineStageWorker(stageId) {
     let pipelineWorker = null;
 
-    let pipelineStagesManager = new PipelineStages();
+    try {
+        let pipelineStagesManager = new PipelineStages();
 
-    let stage = await pipelineStagesManager.get(stageId);
+        let stage = await pipelineStagesManager.get(stageId);
 
-    if (stage) {
-        pipelineWorker = new PipelineMapScheduler(stage);
+        if (stage) {
+            pipelineWorker = new PipelineMapScheduler(stage);
 
-        pipelineWorker.run();
+            pipelineWorker.run();
+        }
+    } catch (err) {
+        debug(err);
     }
 
     return pipelineWorker;
