@@ -343,7 +343,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                         return true;
                     }
 
-                    let capacity = worker.work_unit_capacity - taskLoad;
+                    let capacity = worker.work_unit_capacity - taskLoad + 0.1;
 
                     if (capacity >= task.work_units) {
                         debug(`found worker ${worker.name} with sufficient capacity ${capacity}`);
