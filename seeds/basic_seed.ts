@@ -24,7 +24,7 @@ function productionSeed() {
                         script: "tasks/ilastik-axon-uint16.sh",
                         interpreter: "none",
                         args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps",
-                        work_units: 10,
+                        work_units: 4,
                         created_at: createDate(3, 0)
                     }),
                     knex("TaskDefinition").insert({
