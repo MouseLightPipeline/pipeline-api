@@ -19,9 +19,9 @@ function productionSeed() {
                     // Inserts seed entries
                     knex("TaskDefinition").insert({
                         id: "1161f8e6-29d5-44b0-b6a9-8d3e54d23292",
-                        name: "ilastik Axon UInt16",
-                        description: "ilastik Axon UInt16",
-                        script: "tasks/ilastik-axon-uint16.sh",
+                        name: "Axon UInt16",
+                        description: "Axon UInt16",
+                        script: "tasks/axon-uint16.sh",
                         interpreter: "none",
                         args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps",
                         work_units: 4,
