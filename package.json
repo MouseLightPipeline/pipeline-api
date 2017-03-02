@@ -1,18 +1,20 @@
 {
-  "name": "ml",
+  "name": "mlpipelineapi",
   "version": "0.1.0",
   "description": "",
-  "main": "app.js",
+  "main": "src/pipelineApiApp.js",
   "scripts": {
     "dev": "DEBUG=mouselight* node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
     "devknex": "DEBUG=mouselight*,knex:query,knex:client,knex:pool node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
     "start": "node src/pipelineApiApp.js",
     "deploy-dev": "nohup DEBUG=mouselight* node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
-    "deploy-run": "nohup node src/pipelineApiApp.js > /dev/null 2>&1"
+    "deploy-run": "nohup node src/pipelineApiApp.js > /dev/null 2>&1",
+    "docker-build": "docker build -t leapsci/mlpipelineapi ."
   },
   "author": "Patrick Edson <pedson@leapscientific.com> (http://github.com/pedson)",
   "license": "Janelia",
   "dependencies": {
+    "@types/cookies": "^0.6.0",
     "apollo-client": "^0.5.20",
     "apollo-server": "^0.3.2",
     "async": "^2.1.4",

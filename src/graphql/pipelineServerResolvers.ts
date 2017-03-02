@@ -4,7 +4,7 @@ const debug = require("debug")("mouselight:pipeline-api:resolvers");
 
 import {ITaskDefinition} from "../data-model/taskDefinition";
 import {IPipelineStage} from "../data-model/pipelineStage";
-import {IProject, IProjectGridRegion, IProjectInput} from "../data-model/project";
+import {IProject, IProjectInput} from "../data-model/project";
 import {IPipelineWorker} from "../data-model/pipelineWorker";
 import {IPipelineStagePerformance} from "../data-model/pipelineStagePerformance";
 
