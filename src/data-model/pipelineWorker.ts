@@ -27,7 +27,8 @@ export interface IPipelineWorker extends ITableModelRow {
     load_average: number;
     work_unit_capacity: number;
     last_seen: Date;
-    status?: PipelineWorkerStatus,
+    status?: PipelineWorkerStatus;
+    is_in_scheduler_pool: boolean;
     task_load?: number;
 }
 
@@ -67,6 +68,17 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
 
     public static setWorkerTaskLoad(id: string, count: number) {
         PipelineWorkers._workerTaskLoadMap[id] = count;
+    }
+
+    public async setShouldBeInSchedulerPool(id: string, shouldBeInSchedulerPool: boolean): Promise<IPipelineWorker> {
+        let worker = await this.get(id);
+
+        if (worker && (worker.is_in_scheduler_pool != shouldBeInSchedulerPool)) {
+            worker.is_in_scheduler_pool = shouldBeInSchedulerPool;
+            await this.save(worker);
+        }
+
+        return worker;
     }
 
     public async getForMachineId(machineId: string): Promise<IPipelineWorker> {
@@ -120,6 +132,7 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
             free_memory: 0,
             load_average: 0,
             work_unit_capacity: 0,
+            is_in_scheduler_pool: true,
             last_seen: null,
             created_at: null,
             updated_at: null,

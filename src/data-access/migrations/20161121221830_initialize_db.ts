@@ -1,6 +1,6 @@
 exports.up = function (knex, Promise) {
     return knex.schema
-        .createTable("DummyTable", (table) => {
+        .createTableIfNotExists("DummyTable", (table) => {
             table.increments().primary();
             table.timestamps();
         });

@@ -45,6 +45,11 @@ interface IPipelinePlaneStatusArguments {
     plane: number;
 }
 
+interface IActiveWorkerArguments {
+    id: string;
+    shouldBeInSchedulerPool: boolean;
+}
+
 let resolvers = {
     Query: {
         pipelineWorker(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IPipelineWorker> {
@@ -108,6 +113,9 @@ let resolvers = {
         },
         deletePipelineStage(_, args: IIdOnlyArgument, context: IPipelineServerContext) {
             return context.deletePipelineStage(args.id);
+        },
+        setWorkerAvailability(_, args: IActiveWorkerArguments, context: IPipelineServerContext) {
+            return context.setWorkerAvailability(args.id, args.shouldBeInSchedulerPool);
         }
     },
     Project: {

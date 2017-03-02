@@ -11,6 +11,7 @@ const debug = require("debug")("mouselight:pipeline-api:context");
 export interface IPipelineServerContext {
     getPipelineWorker(id: string): Promise<IPipelineWorker>;
     getPipelineWorkers(): Promise<IPipelineWorker[]>;
+    setWorkerAvailability(id: string, shouldBeInSchedulerPool: boolean): Promise<IPipelineWorker>;
 
     getProject(id: string): Promise<IProject>;
     getProjects(includeSoftDelete: boolean): Promise<IProject[]>;
@@ -49,6 +50,10 @@ export class PipelineServerContext implements IPipelineServerContext {
 
     public getPipelineWorkers(): Promise<IPipelineWorker[]> {
         return this._workers.getAll();
+    }
+
+    public setWorkerAvailability(id: string, shouldBeInSchedulerPool: boolean): Promise<IPipelineWorker> {
+        return this._workers.setShouldBeInSchedulerPool(id, shouldBeInSchedulerPool);
     }
 
     public getProject(id: string): Promise<IProject> {

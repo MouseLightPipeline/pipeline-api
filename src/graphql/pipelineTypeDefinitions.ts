@@ -22,6 +22,7 @@ type PipelineWorker implements ITableModel {
   last_seen: String
   task_load: Float
   status: Int
+  is_in_scheduler_pool: Boolean
   created_at: String
   updated_at: String
   deleted_at: String
@@ -171,6 +172,8 @@ type Mutation {
   createPipelineStage(name: String, description: String, project_id: String, task_id: String, previous_stage_id: String, dst_path: String, function_type: Int): PipelineStage
   setPipelineStageStatus(id: String, shouldBeActive: Boolean): PipelineStage
   deletePipelineStage(id: String!): Boolean
+  
+  setWorkerAvailability(id: String!, shouldBeInSchedulerPool: Boolean!): PipelineWorker
 }
 
 schema {

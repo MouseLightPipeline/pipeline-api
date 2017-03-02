@@ -297,7 +297,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
         let workerManager = new PipelineWorkers();
 
-        let workers = await workerManager.getAll();
+        let workers = (await workerManager.getAll()).filter(worker => worker.is_in_scheduler_pool);
 
         let projects = Projects.defaultManager();
 
@@ -419,8 +419,6 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             return;
         }
 
-        debug(`performing update for ${this._pipelineStage.id}`);
-
         try {
             // Update the database with the completion status of tiles from the previous stage.  This essentially converts
             // this_stage_status from the previous stage id table to prev_stage_status for this stage.
@@ -459,14 +457,11 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                 await this.scheduleFromList(available);
             }
 
-            debug(`updating counts`);
             updatePipelineStageCounts(this._pipelineStage.id, await this.countInProcess(), await this.countToProcess());
 
         } catch (err) {
             console.log(err);
         }
-
-        debug("resetting timer");
 
         setTimeout(() => this.performWork(), perfConf.regenTileStatusJsonFileSeconds * 1000)
     }
