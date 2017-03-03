@@ -15,7 +15,7 @@ import {
 } from "../data-access/knexPiplineStageConnection";
 import {PipelineWorkers} from "../data-model/pipelineWorker";
 import {PipelineWorkerClient} from "../graphql/client/pipelineWorkerClient";
-import {TaskDefinitions} from "../data-model/taskDefinition";
+import {ITaskDefinition} from "../data-model/taskDefinition";
 import * as Knex from "knex";
 
 const perfConf = performanceConfiguration();
@@ -311,9 +311,13 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             src_path = previousStage.dst_path;
         }
 
-        let tasks = new TaskDefinitions();
+        // Store most recent worker representation of task once for schedule loop.  Allows for workers to override
+        // work units, etc.
+        const workerTaskMap = new Map<string, ITaskDefinition>();
 
-        let task = await tasks.get(this._pipelineStage.task_id);
+        // let tasks = new TaskDefinitions();
+
+        // let task = await tasks.get(this._pipelineStage.task_id);
 
         // The promise returned for each queued item should be true to continue through the list, false to exit the
         // promise chain and not complete the list.
@@ -345,10 +349,21 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
                     let capacity = worker.work_unit_capacity - taskLoad + 0.1;
 
+                    if (!workerTaskMap.has(worker.id)) {
+                        const result = await PipelineWorkerClient.Instance().queryTaskDefinition(worker, this._pipelineStage.task_id);
+
+                        if (result) {
+                            workerTaskMap.set(worker.id, result);
+                        } else {
+                            debug(`Could not get task definition ${this._pipelineStage.task_id} from worker ${worker.id}`);
+                            return true;
+                        }
+                    }
+
+                    let task = workerTaskMap.get(worker.id);
+
                     if (capacity >= task.work_units) {
                         debug(`found worker ${worker.name} with sufficient capacity ${capacity}`);
-
-                        PipelineWorkers.setWorkerTaskLoad(worker.id, taskLoad + task.work_units);
 
                         let pipelineTile = (await this.outputTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]))[0];
 
@@ -377,7 +392,10 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                                 updated_at: now
                             });
 
+                            PipelineWorkers.setWorkerTaskLoad(worker.id, taskLoad + taskExecution.work_units);
+
                             pipelineTile.this_stage_status = TilePipelineStatus.Processing;
+
                             await this.outputTable.where(DefaultPipelineIdKey, pipelineTile[DefaultPipelineIdKey]).update(pipelineTile);
 
                             await this.toProcessTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]).del();

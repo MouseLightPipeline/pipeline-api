@@ -6,6 +6,7 @@ const debug = require("debug")("mouselight:pipeline-api:pipeline-worker-client")
 
 import {IPipelineWorker, PipelineWorkerStatus, PipelineWorkers} from "../../data-model/pipelineWorker";
 import {ITaskExecution} from "../../data-model/taskExecution";
+import {ITaskDefinition} from "../../data-model/taskDefinition";
 
 export class PipelineWorkerClient {
     private static _instance: PipelineWorkerClient = null;
@@ -20,6 +21,54 @@ export class PipelineWorkerClient {
 
     private _idClientMap = new Map<string, ApolloClient>();
 
+    public async queryTaskDefinition(worker: IPipelineWorker, taskId: string): Promise<ITaskDefinition> {
+        if (worker === null) {
+            return null;
+        }
+
+        let client = this._idClientMap[worker.id];
+
+        if (client == null) {
+            const uri = `http://${worker.address}:${worker.port}/graphql`;
+
+            debug(`creating apollo client during query tasks with uri ${uri}`);
+            const networkInterface = createNetworkInterface({uri: uri});
+
+            client = new ApolloClient({
+                networkInterface
+            });
+
+            this._idClientMap[worker.id] = client;
+        }
+
+        try {
+            let response = await client.query({
+                query: gql`
+                query($id: String!) {
+                    taskDefinition(id: $id) {
+                        id
+                        name
+                        description
+                        script
+                        interpreter
+                        ars
+                        work_units
+                    }
+                }`,
+                variables: {
+                    id: taskId
+                },
+                forceFetch: true
+            });
+
+            return response.data.taskDefinition;
+        } catch (err) {
+            debug(`error querying task definition for worker ${worker.name}`);
+        }
+
+        return null;
+    }
+
     public async queryTaskExecution(worker: IPipelineWorker, executionId: string): Promise<ITaskExecution> {
         if (worker === null) {
             return null;
@@ -28,8 +77,10 @@ export class PipelineWorkerClient {
         let client = this._idClientMap[worker.id];
 
         if (client == null) {
-            debug(`creating apollo client during query tasks with uri http://${worker.address}:3001/graphql`);
-            const networkInterface = createNetworkInterface({uri: `http://${worker.address}:3001/graphql`});
+            const uri = `http://${worker.address}:${worker.port}/graphql`;
+
+            debug(`creating apollo client during query tasks with uri ${uri}`);
+            const networkInterface = createNetworkInterface({uri: uri});
 
             client = new ApolloClient({
                 networkInterface
@@ -49,6 +100,7 @@ export class PipelineWorkerClient {
                         execution_status_code
                         max_cpu
                         max_memory
+                        work_units
                         started_at
                         completed_at
                     }
@@ -72,8 +124,10 @@ export class PipelineWorkerClient {
         let client = this._idClientMap[worker.id];
 
         if (client == null) {
-            debug(`creating apollo client during start task with uri http://${worker.address}:3001/graphql`);
-            const networkInterface = createNetworkInterface({uri: `http://${worker.address}:3001/graphql`});
+            const uri = `http://${worker.address}:${worker.port}/graphql`;
+
+            debug(`creating apollo client during start task with uri ${uri}`);
+            const networkInterface = createNetworkInterface({uri: uri});
 
             client = new ApolloClient({
                 networkInterface

@@ -31,6 +31,7 @@ export interface ITaskExecution {
     last_process_status_code?: number;
     max_memory?: number;
     max_cpu?: number;
+    work_units?: number;
     started_at?: Date;
     completed_at?: Date;
 }
