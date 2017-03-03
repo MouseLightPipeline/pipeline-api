@@ -73,7 +73,7 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
     public async setShouldBeInSchedulerPool(id: string, shouldBeInSchedulerPool: boolean): Promise<IPipelineWorker> {
         let worker = await this.get(id);
 
-        if (worker && (worker.is_in_scheduler_pool != shouldBeInSchedulerPool)) {
+        if (worker && (worker.is_in_scheduler_pool !== shouldBeInSchedulerPool)) {
             worker.is_in_scheduler_pool = shouldBeInSchedulerPool;
             await this.save(worker);
         }
