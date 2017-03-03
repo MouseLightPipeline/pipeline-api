@@ -51,7 +51,7 @@ export class PipelineWorkerClient {
                         description
                         script
                         interpreter
-                        ars
+                        args
                         work_units
                     }
                 }`,
@@ -145,6 +145,8 @@ export class PipelineWorkerClient {
                         last_process_status_code
                         completion_status_code
                         execution_status_code
+                        work_units
+                        started_at
                         completed_at
                     }
                 }`,
