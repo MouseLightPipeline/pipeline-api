@@ -23,6 +23,7 @@ type PipelineWorker implements ITableModel {
   task_load: Float
   status: Int
   is_in_scheduler_pool: Boolean
+  is_cluster_proxy: Boolean
   created_at: String
   updated_at: String
   deleted_at: String

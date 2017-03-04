@@ -29,6 +29,7 @@ export interface IPipelineWorker extends ITableModelRow {
     last_seen: Date;
     status?: PipelineWorkerStatus;
     is_in_scheduler_pool: boolean;
+    is_cluster_proxy: boolean;
     task_load?: number;
 }
 
@@ -132,7 +133,8 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
             free_memory: 0,
             load_average: 0,
             work_unit_capacity: 0,
-            is_in_scheduler_pool: true,
+            is_in_scheduler_pool: false,
+            is_cluster_proxy: false,
             last_seen: null,
             created_at: null,
             updated_at: null,

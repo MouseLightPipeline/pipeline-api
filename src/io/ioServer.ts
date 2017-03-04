@@ -59,6 +59,7 @@ export class SocketIoServer {
         worker.total_memory = workerInformation.machineProperties.totalMemory;
         worker.free_memory = workerInformation.machineProperties.freeMemory;
         worker.load_average = workerInformation.machineProperties.loadAverage[0];
+        worker.is_cluster_proxy = workerInformation.isClusterProxy;
         worker.last_seen = new Date();
 
         await workerManager.save(worker);

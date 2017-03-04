@@ -5,7 +5,7 @@ WORKDIR /app
 # Bundle app source
 COPY . .
 
-# Have native modules - get rid off current platform, if present
+# Have native modules - get rid of current platform, if present
 RUN rm -rf node_modules
 
 # Local/build misc
