@@ -44,22 +44,21 @@ export class SocketIoServer {
         // Update worker for last seen.
         let workerManager = new PipelineWorkers();
 
-        let worker = await workerManager.getForMachineId(workerInformation.machineId);
+        let worker = await workerManager.getForMachineId(workerInformation.worker.id);
 
-        worker.machine_id = workerInformation.machineId;
-        worker.name = workerInformation.name;
-        worker.address = workerInformation.networkAddress;
-        worker.port = parseInt(workerInformation.networkPort);
-        worker.work_unit_capacity = workerInformation.workUnitCapacity;
-        worker.os_type = workerInformation.machineProperties.osType;
-        worker.platform = workerInformation.machineProperties.platform;
-        worker.arch = workerInformation.machineProperties.arch;
-        worker.release = workerInformation.machineProperties.release;
-        worker.cpu_count = workerInformation.machineProperties.cpuCount;
-        worker.total_memory = workerInformation.machineProperties.totalMemory;
-        worker.free_memory = workerInformation.machineProperties.freeMemory;
-        worker.load_average = workerInformation.machineProperties.loadAverage[0];
-        worker.is_cluster_proxy = workerInformation.isClusterProxy;
+        worker.machine_id = workerInformation.worker.id;
+        worker.work_unit_capacity = workerInformation.worker.work_capacity;
+        worker.is_cluster_proxy = workerInformation.worker.is_cluster_proxy;
+        // worker.is_accepting_jobs = workerInformation.worker.is_accepting_jobs;
+        worker.name = workerInformation.service.name;
+        worker.address = workerInformation.service.networkAddress;
+        worker.port = parseInt(workerInformation.service.networkPort);
+        worker.os_type = workerInformation.service.machineProperties.osType;
+        worker.platform = workerInformation.service.machineProperties.platform;
+        worker.arch = workerInformation.service.machineProperties.arch;
+        worker.release = workerInformation.service.machineProperties.release;
+        worker.cpu_count = workerInformation.service.machineProperties.cpuCount;
+        worker.total_memory = workerInformation.service.machineProperties.totalMemory;
         worker.last_seen = new Date();
 
         await workerManager.save(worker);
@@ -71,6 +70,7 @@ export class SocketIoServer {
 
         let worker = await workerManager.getForMachineId(heartbeatData.machineId);
 
+        worker.work_unit_capacity = heartbeatData.capacity;
         worker.last_seen = new Date();
 
         worker = await workerManager.save(worker);
