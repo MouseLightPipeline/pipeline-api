@@ -409,15 +409,14 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                             await this.outputTable.where(DefaultPipelineIdKey, pipelineTile[DefaultPipelineIdKey]).update(pipelineTile);
 
                             await this.toProcessTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]).del();
+
+                            debug(`started task on worker ${worker.name} with execution id ${taskExecution.id}`);
+
+                            return false;
                         }
-
-                        debug(`started task on worker ${worker.name} with execution id ${taskExecution.id}`);
-
-                        return false;
+                    } else {
+                        debug(`worker ${worker.name} has insufficient capacity ${capacity} of ${worker.work_unit_capacity}`);
                     }
-
-                    debug(`worker ${worker.name} has insufficient capacity ${capacity} of ${worker.work_unit_capacity}`);
-
                 } catch (err) {
                     debug(`worker ${worker.name} with error starting execution ${err}`);
                 }
@@ -427,6 +426,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                     return false;
                 }
 
+                // Did not start due to unavailability or error starting.  Return true to keep looking for a worker.
                 return true;
             });
 
@@ -435,7 +435,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                 return false;
             }
 
-            debug(`worker search for tile ${toProcessTile[DefaultPipelineIdKey]} resolves with stillLookingForWorker: ${stillLookingForWorker}`);
+            // debug(`worker search for tile ${toProcessTile[DefaultPipelineIdKey]} resolves with stillLookingForWorker: ${stillLookingForWorker}`);
 
             // If result is true, a worker was never found for the last tile so short circuit be returning a promise
             // that resolves to false.  Otherwise, the tile task was launched, so try the next one.
