@@ -107,7 +107,7 @@ export class TileStatusWorker extends PipelineScheduler {
             }
         }
 
-        setTimeout(() => this.performWork(), perfConf.regenTileStatusJsonFileSeconds * 1000)
+        setTimeout(() => this.performWork(), perfConf.pipelineSchedulerIntervalSeconds * 5 * 1000)
     }
 
     protected async muxInputOutputTiles(knownInput: IDashboardJsonTile[], knownOutput) {
