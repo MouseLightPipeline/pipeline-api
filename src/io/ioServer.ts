@@ -71,7 +71,7 @@ export class SocketIoServer {
         let worker = await workerManager.getForMachineId(heartbeatData.worker.id);
 
         worker.is_cluster_proxy = heartbeatData.worker.is_cluster_proxy;
-        worker.work_unit_capacity = heartbeatData.capacity;
+        worker.work_unit_capacity = heartbeatData.worker.work_capacity;
         worker.last_seen = new Date();
 
         worker = await workerManager.save(worker);
