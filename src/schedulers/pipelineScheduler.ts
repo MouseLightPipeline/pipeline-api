@@ -243,39 +243,49 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
         let workerManager = new PipelineWorkers();
 
-        // This should not be thousands or even hundreds at a time, just a handful per machine at most per cycle, likely
-        // far less depending on how frequently we check, so don't bother with batching for now.
-        inProcess.forEach(async(task) => {
-            let workerForTask = await workerManager.get(task.worker_id);
+        if (inProcess.length > 0) {
+            debug(`updating status of ${inProcess.length} in process tiles`);
 
-            let executionInfo = await PipelineWorkerClient.Instance().queryTaskExecution(workerForTask, task.task_execution_id);
+            // This should not be thousands or even hundreds at a time, just a handful per machine at most per cycle, likely
+            // far less depending on how frequently we check, so don't bother with batching for now.
+            await Promise.all(inProcess.map(tile => this.updateOneExecutingTile(workerManager, tile)));
 
-            if (executionInfo != null && executionInfo.execution_status_code === ExecutionStatusCode.Completed) {
-                let tileStatus = TilePipelineStatus.Queued;
+            debug(`updated status of ${inProcess.length} in process tiles`);
+        } else {
+            debug(`no in process tiles to update`);
+        }
+    }
 
-                switch (executionInfo.completion_status_code) {
-                    case CompletionStatusCode.Success:
-                        tileStatus = TilePipelineStatus.Complete;
-                        break;
-                    case CompletionStatusCode.Error:
-                        tileStatus = TilePipelineStatus.Failed; // Do not queue again
-                        break;
-                    case CompletionStatusCode.Cancel:
-                        tileStatus = TilePipelineStatus.Incomplete; // Return to incomplete to be queued again
-                        break;
-                }
+    private async updateOneExecutingTile(workerManager: PipelineWorkers, tile: IInProcessTile): Promise<void> {
+        let workerForTask = await workerManager.get(tile.worker_id);
 
-                // Tile should be marked with status and not be present in any intermediate tables.
+        let executionInfo = await PipelineWorkerClient.Instance().queryTaskExecution(workerForTask, tile.task_execution_id);
 
-                await this.outputTable.where(DefaultPipelineIdKey, task[DefaultPipelineIdKey]).update({this_stage_status: tileStatus});
+        if (executionInfo != null && executionInfo.execution_status_code === ExecutionStatusCode.Completed) {
+            let tileStatus = TilePipelineStatus.Queued;
 
-                await this.inProcessTable.where(DefaultPipelineIdKey, task[DefaultPipelineIdKey]).del();
-
-                if (tileStatus === TilePipelineStatus.Complete) {
-                    updatePipelineStagePerformance(this._pipelineStage.id, executionInfo);
-                }
+            switch (executionInfo.completion_status_code) {
+                case CompletionStatusCode.Success:
+                    tileStatus = TilePipelineStatus.Complete;
+                    break;
+                case CompletionStatusCode.Error:
+                    tileStatus = TilePipelineStatus.Failed; // Do not queue again
+                    break;
+                case CompletionStatusCode.Cancel:
+                    tileStatus = TilePipelineStatus.Incomplete; // Return to incomplete to be queued again
+                    break;
             }
-        });
+
+            // Tile should be marked with status and not be present in any intermediate tables.
+
+            await this.outputTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]).update({this_stage_status: tileStatus});
+
+            await this.inProcessTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]).del();
+
+            if (tileStatus === TilePipelineStatus.Complete) {
+                updatePipelineStagePerformance(this._pipelineStage.id, executionInfo);
+            }
+        }
     }
 
     protected async getTaskContext(tile: IPipelineTile): Promise<any> {
@@ -412,8 +422,18 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                     debug(`worker ${worker.name} with error starting execution ${err}`);
                 }
 
+                if (!this.IsProcessingRequested || this.IsExitRequested) {
+                    debug("cancel requested - exiting stage worker");
+                    return false;
+                }
+
                 return true;
             });
+
+            if (!this.IsProcessingRequested || this.IsExitRequested) {
+                debug("cancel requested - exiting stage worker");
+                return false;
+            }
 
             debug(`worker search for tile ${toProcessTile[DefaultPipelineIdKey]} resolves with stillLookingForWorker: ${stillLookingForWorker}`);
 
@@ -438,35 +458,41 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         }
 
         try {
-            // Update the database with the completion status of tiles from the previous stage.  This essentially converts
-            // this_stage_status from the previous stage id table to prev_stage_status for this stage.
-            let knownInput = await this.inputTable.select();
-
-            if (knownInput.length > 0) {
-                let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "prev_stage_status"]);
-
-                let sorted = await this.muxInputOutputTiles(knownInput, knownOutput);
-
-                await this.batchInsert(this._outputKnexConnector, this._outputTableName, sorted.toInsert);
-
-                await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdatePrevious, DefaultPipelineIdKey);
-            } else {
-                debug("no input from previous stage yet");
-            }
-
             // Check and updateFromInputProject the status of anything in-process
             await this.updateInProcessStatus();
 
             // Look if anything is already in the to-process queue
             let available = await this.loadToProcess();
 
-            debug(`${available.length} existing available to process`);
-
             //   If not, search database for newly available to-process and put in to-process queue
             if (available.length === 0) {
+                debug(`no known tiles ready for processing`);
+
+                // Update the database with the completion status of tiles from the previous stage.  This essentially converts
+                // this_stage_status from the previous stage id table to prev_stage_status for this stage.
+                let knownInput = await this.inputTable.select();
+
+                if (knownInput.length > 0) {
+                    debug(`updating known input tiles`);
+
+                    let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "prev_stage_status"]);
+
+                    let sorted = await this.muxInputOutputTiles(knownInput, knownOutput);
+
+                    await this.batchInsert(this._outputKnexConnector, this._outputTableName, sorted.toInsert);
+
+                    await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdatePrevious, DefaultPipelineIdKey);
+                } else {
+                    debug("no input from previous stage yet");
+                }
+
+                debug(`updating to process queue`);
+
                 available = await this.updateToProcessQueue();
 
                 debug(`${available.length} newly added available to process`);
+            } else {
+                debug(`skipping input and available update with ${available.length} available to process`);
             }
 
             // If there is any to-process, try to fill worker capacity
@@ -481,7 +507,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             console.log(err);
         }
 
-        setTimeout(() => this.performWork(), perfConf.regenTileStatusJsonFileSeconds * 1000)
+        setTimeout(() => this.performWork(), perfConf.pipelineSchedulerIntervalSeconds * 1000)
     }
 
     protected async createTables() {
@@ -597,7 +623,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                 await this.transitionToProcessStage()
             } else {
                 // debug(`failed to establish data connection for ${this._pipelineStage.id} setting timeout retry`);
-                setTimeout(() => this.transitionToEstablishDataConnection(), perfConf.regenTileStatusJsonFileSeconds * 1000);
+                setTimeout(() => this.transitionToEstablishDataConnection(), perfConf.pipelineSchedulerIntervalSeconds * 1000);
             }
         } catch (err) {
             debug(err);
