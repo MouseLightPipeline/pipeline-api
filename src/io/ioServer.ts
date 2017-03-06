@@ -68,8 +68,9 @@ export class SocketIoServer {
         // Update worker for last seen.
         let workerManager = new PipelineWorkers();
 
-        let worker = await workerManager.getForMachineId(heartbeatData.machineId);
+        let worker = await workerManager.getForMachineId(heartbeatData.worker.id);
 
+        worker.is_cluster_proxy = heartbeatData.worker.is_cluster_proxy;
         worker.work_unit_capacity = heartbeatData.capacity;
         worker.last_seen = new Date();
 
