@@ -7,7 +7,7 @@ interface IPerformanceConfig {
 
 const configurations: IConfiguration<IPerformanceConfig> = {
     development: {
-        pipelineSchedulerIntervalSeconds: 60,
+        pipelineSchedulerIntervalSeconds: 10,
         regenTileStatusSqliteChunkSize: 50
     },
     test: {

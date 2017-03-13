@@ -295,20 +295,14 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         return [];
     }
 
-    protected async scheduleFromList(waitingToProcess: IToProcessTile[]) {
-        if (!waitingToProcess || waitingToProcess.length === 0) {
-            return;
-        }
-
-        debug(`scheduling workers from available ${waitingToProcess.length} pending`);
-
+    protected async scheduleFromList() {
         let pipelineStages = new PipelineStages();
 
         let workerManager = new PipelineWorkers();
 
         // Use cluster proxies as last resort when behind.
         let workers = (await workerManager.getAll()).filter(worker => worker.is_in_scheduler_pool).sort((a, b) => {
-            if (a.is_cluster_proxy === a.is_cluster_proxy) {
+            if (a.is_cluster_proxy === b.is_cluster_proxy) {
                 return 0;
             }
 
@@ -332,6 +326,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         //
         // The goal is to fill a worker completely before moving on to the next worker.
         await this.queue(workers, async(worker: IPipelineWorker) => {
+
             let taskLoad = PipelineWorkers.getWorkerTaskLoad(worker.id);
 
             if (taskLoad < 0) {
@@ -350,10 +345,18 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
             if (capacity < task.work_units) {
                 debug(`worker ${worker.name} has insufficient capacity ${capacity} of ${worker.work_unit_capacity}`);
-                return false;
+                return true;
             }
 
             debug(`worker ${worker.name} has load ${taskLoad} of capacity ${worker.work_unit_capacity}`);
+
+            let waitingToProcess = await this.loadToProcess();
+
+            if (!waitingToProcess || waitingToProcess.length === 0) {
+                return false;
+            }
+
+            debug(`scheduling worker from available ${waitingToProcess.length} pending`);
 
             // Will continue through all tiles until the worker reaches full capacity
             let stillLookingForTilesForWorker = await this.queue(waitingToProcess, async(toProcessTile: IToProcessTile) => {
@@ -411,6 +414,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                     }
                 } catch (err) {
                     debug(`worker ${worker.name} with error starting execution ${err}`);
+                    return false;
                 }
 
                 if (!this.IsProcessingRequested || this.IsExitRequested) {
@@ -490,7 +494,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             // If there is any to-process, try to fill worker capacity
             if (this.IsProcessingRequested && available.length > 0) {
                 debug(`scheduling processing`);
-                await this.scheduleFromList(available);
+                await this.scheduleFromList();
             }
 
             updatePipelineStageCounts(this._pipelineStage.id, await this.countInProcess(), await this.countToProcess());
