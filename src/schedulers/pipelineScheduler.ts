@@ -13,9 +13,8 @@ import {
     generatePipelineStageInProcessTableName, generatePipelineStateDatabaseName, connectorForFile,
     generatePipelineStageTableName, generateProjectRootTableName
 } from "../data-access/knexPiplineStageConnection";
-import {PipelineWorkers} from "../data-model/pipelineWorker";
+import {PipelineWorkers, IPipelineWorker} from "../data-model/pipelineWorker";
 import {PipelineWorkerClient} from "../graphql/client/pipelineWorkerClient";
-import {ITaskDefinition} from "../data-model/taskDefinition";
 import * as Knex from "knex";
 
 const perfConf = performanceConfiguration();
@@ -307,7 +306,14 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
         let workerManager = new PipelineWorkers();
 
-        let workers = (await workerManager.getAll()).filter(worker => worker.is_in_scheduler_pool);
+        // Use cluster proxies as last resort when behind.
+        let workers = (await workerManager.getAll()).filter(worker => worker.is_in_scheduler_pool).sort((a, b) => {
+            if (a.is_cluster_proxy === a.is_cluster_proxy) {
+                return 0;
+            }
+
+            return a.is_cluster_proxy ? 1 : -1;
+        });
 
         let projects = Projects.defaultManager();
 
@@ -321,101 +327,87 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             src_path = previousStage.dst_path;
         }
 
-        // Store most recent worker representation of task once for schedule loop.  Allows for workers to override
-        // work units, etc.
-        const workerTaskMap = new Map<string, ITaskDefinition>();
-
-        // let tasks = new TaskDefinitions();
-
-        // let task = await tasks.get(this._pipelineStage.task_id);
-
         // The promise returned for each queued item should be true to continue through the list, false to exit the
         // promise chain and not complete the list.
-        // The queue for waiting tiles should return true if a worker was found and there is a chance there is another
-        // worker available for the next tile and false if the current tile failed to find a worker and the rest should
-        // just be skipped this event cycle.
-        // The queue for workers should return true if it _did not accept the task_ so that we continue to look for an
-        // available worker and false if it did launch a task so that we exit the queue and start on the next tile.
-        // That is why the worker queue promise chain resolves to a variable named stillLookingForWorker, and each
-        // tile promise resolves to !stillLookingForWorker.
-        await this.queue(waitingToProcess, async(toProcessTile: IToProcessTile) => {
-            // Will continue until a worker with capacity is found and a task is started.  Workers without capacity
-            // return false continuing the iteration.
-            debug(`looking for worker for tile ${toProcessTile[DefaultPipelineIdKey]}`);
+        //
+        // The goal is to fill a worker completely before moving on to the next worker.
+        await this.queue(workers, async(worker: IPipelineWorker) => {
+            let taskLoad = PipelineWorkers.getWorkerTaskLoad(worker.id);
 
-            let stillLookingForWorker = await this.queue(workers, async(worker) => {
+            if (taskLoad < 0) {
+                debug(`worker ${worker.name} skipped (unknown/unreported task load)`);
+                return true;
+            }
+
+            const task = await PipelineWorkerClient.Instance().queryTaskDefinition(worker, this._pipelineStage.task_id);
+
+            if (!task) {
+                debug(`could not get task definition ${this._pipelineStage.task_id} from worker ${worker.id}`);
+                return true;
+            }
+
+            let capacity = worker.work_unit_capacity - taskLoad + 0.1;
+
+            if (capacity < task.work_units) {
+                debug(`worker ${worker.name} has insufficient capacity ${capacity} of ${worker.work_unit_capacity}`);
+                return false;
+            }
+
+            debug(`worker ${worker.name} has load ${taskLoad} of capacity ${worker.work_unit_capacity}`);
+
+            // Will continue through all tiles until the worker reaches full capacity
+            let stillLookingForTilesForWorker = await this.queue(waitingToProcess, async(toProcessTile: IToProcessTile) => {
                 // Return true to continue searching for an available worker and false if the task is launched.
-
                 try {
-                    let taskLoad = PipelineWorkers.getWorkerTaskLoad(worker.id);
+                    let pipelineTile = (await this.outputTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]))[0];
 
-                    debug(`worker ${worker.name} has load ${taskLoad} of capacity ${worker.work_unit_capacity}`);
+                    let outputPath = path.join(this._pipelineStage.dst_path, pipelineTile.relative_path);
 
-                    if (taskLoad < 0) {
-                        // No information
-                        debug(`worker ${worker.name} skipped (unknown/unreported task load)`);
-                        return true;
-                    }
+                    fse.ensureDirSync(outputPath);
 
-                    let capacity = worker.work_unit_capacity - taskLoad + 0.1;
+                    let args = [project.name, project.root_path, src_path, this._pipelineStage.dst_path, pipelineTile.relative_path, pipelineTile.tile_name];
 
-                    if (!workerTaskMap.has(worker.id)) {
-                        const result = await PipelineWorkerClient.Instance().queryTaskDefinition(worker, this._pipelineStage.task_id);
+                    let context = await this.getTaskContext(pipelineTile);
 
-                        if (result) {
-                            workerTaskMap.set(worker.id, result);
-                        } else {
-                            debug(`Could not get task definition ${this._pipelineStage.task_id} from worker ${worker.id}`);
-                            return true;
-                        }
-                    }
+                    args = args.concat(this.getTaskArguments(pipelineTile, context));
 
-                    let task = workerTaskMap.get(worker.id);
+                    let taskExecution = await PipelineWorkerClient.Instance().startTaskExecution(worker, this._pipelineStage.task_id, args);
 
-                    if (capacity >= task.work_units) {
-                        debug(`found worker ${worker.name} with sufficient capacity ${capacity}`);
+                    if (taskExecution != null) {
+                        let now = new Date();
 
-                        let pipelineTile = (await this.outputTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]))[0];
+                        await this.inProcessTable.insert({
+                            relative_path: pipelineTile.relative_path,
+                            tile_name: pipelineTile.tile_name,
+                            worker_id: worker.id,
+                            worker_last_seen: now,
+                            task_execution_id: taskExecution.id,
+                            created_at: now,
+                            updated_at: now
+                        });
 
-                        let outputPath = path.join(this._pipelineStage.dst_path, pipelineTile.relative_path);
+                        PipelineWorkers.setWorkerTaskLoad(worker.id, taskLoad);
 
-                        fse.ensureDirSync(outputPath);
+                        pipelineTile.this_stage_status = TilePipelineStatus.Processing;
 
-                        let args = [project.name, project.root_path, src_path, this._pipelineStage.dst_path, pipelineTile.relative_path, pipelineTile.tile_name];
+                        await this.outputTable.where(DefaultPipelineIdKey, pipelineTile[DefaultPipelineIdKey]).update(pipelineTile);
 
-                        let context = await this.getTaskContext(pipelineTile);
+                        await this.toProcessTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]).del();
 
-                        args = args.concat(this.getTaskArguments(pipelineTile, context));
+                        debug(`started task on worker ${worker.name} with execution id ${taskExecution.id}`);
 
-                        let taskExecution = await PipelineWorkerClient.Instance().startTaskExecution(worker, this._pipelineStage.task_id, args);
+                        taskLoad += taskExecution.work_units;
 
-                        if (taskExecution != null) {
-                            let now = new Date();
+                        capacity = worker.work_unit_capacity - taskLoad + 0.1;
 
-                            await this.inProcessTable.insert({
-                                relative_path: pipelineTile.relative_path,
-                                tile_name: pipelineTile.tile_name,
-                                worker_id: worker.id,
-                                worker_last_seen: now,
-                                task_execution_id: taskExecution.id,
-                                created_at: now,
-                                updated_at: now
-                            });
-
-                            PipelineWorkers.setWorkerTaskLoad(worker.id, taskLoad + taskExecution.work_units);
-
-                            pipelineTile.this_stage_status = TilePipelineStatus.Processing;
-
-                            await this.outputTable.where(DefaultPipelineIdKey, pipelineTile[DefaultPipelineIdKey]).update(pipelineTile);
-
-                            await this.toProcessTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]).del();
-
-                            debug(`started task on worker ${worker.name} with execution id ${taskExecution.id}`);
-
+                        // Does this worker have enough capacity to handle more tiles from this task given the work units
+                        // per task on this worker.
+                        if (capacity < task.work_units) {
+                            debug(`worker ${worker.name} has insufficient capacity ${capacity} of ${worker.work_unit_capacity} for further tasks`);
                             return false;
                         }
-                    } else {
-                        debug(`worker ${worker.name} has insufficient capacity ${capacity} of ${worker.work_unit_capacity}`);
+
+                        return true;
                     }
                 } catch (err) {
                     debug(`worker ${worker.name} with error starting execution ${err}`);
@@ -435,12 +427,12 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                 return false;
             }
 
-            // debug(`worker search for tile ${toProcessTile[DefaultPipelineIdKey]} resolves with stillLookingForWorker: ${stillLookingForWorker}`);
+            // debug(`worker search for tile ${toProcessTile[DefaultPipelineIdKey]} resolves with stillLookingForTilesForWorker: ${stillLookingForTilesForWorker}`);
 
             // If result is true, a worker was never found for the last tile so short circuit be returning a promise
             // that resolves to false.  Otherwise, the tile task was launched, so try the next one.
 
-            return Promise.resolve(!stillLookingForWorker);
+            return Promise.resolve(!stillLookingForTilesForWorker);
         });
     }
 
