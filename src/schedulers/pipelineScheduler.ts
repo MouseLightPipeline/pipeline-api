@@ -389,6 +389,8 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                             updated_at: now
                         });
 
+                        taskLoad += taskExecution.work_units;
+
                         PipelineWorkers.setWorkerTaskLoad(worker.id, taskLoad);
 
                         pipelineTile.this_stage_status = TilePipelineStatus.Processing;
@@ -398,8 +400,6 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                         await this.toProcessTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]).del();
 
                         debug(`started task on worker ${worker.name} with execution id ${taskExecution.id}`);
-
-                        taskLoad += taskExecution.work_units;
 
                         capacity = worker.work_unit_capacity - taskLoad + 0.1;
 
