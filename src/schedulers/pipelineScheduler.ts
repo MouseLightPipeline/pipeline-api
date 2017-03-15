@@ -125,7 +125,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             return [];
         }
 
-        let tiles = await this.outputTable.where("lat_z", zIndex).select("id", "this_stage_status", "lat_x", "lat_y");
+        let tiles = await this.outputTable.where("lat_z", zIndex).select("relative_path", "this_stage_status", "lat_x", "lat_y");
 
         tiles = tiles.map(tile => {
             tile["stage_id"] = this._pipelineStage.id;

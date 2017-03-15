@@ -123,13 +123,13 @@ export class SchedulerHub {
 
                 if (existing.length === 0) {
                     t.stages.push({
-                        id: tile.id,
+                        relative_path: tile.relative_path,
                         stage_id: tile.stage_id,
                         depth: tile.depth,
                         status: tile.this_stage_status
                     });
                 } else if (tile.this_stage_status > existing.status) {
-                    existing.id = tile.id;
+                    existing.relative_path = tile.relative_path;
                     existing.stage_id = tile.stage_id;
                     existing.depth = tile.depth;
                     // This is not strictly correct as failed enum > complete and complete is probably what you want
