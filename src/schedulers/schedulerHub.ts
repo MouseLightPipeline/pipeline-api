@@ -116,15 +116,31 @@ export class SchedulerHub {
                     tiles[`${tile.lat_x}_${tile.lat_y}`] = t;
                 }
 
-                t.stages.push({
-                    stage_id: tile.stage_id,
-                    depth: tile.depth,
-                    status: tile.this_stage_status
-                });
+                // Duplicate tiles exist.  Use whatever is further along (i.e., a repeat of an incomplete that is complete
+                // and processing supercedes.
+
+                const existing = t.stages.filter(s => s.depth === tile.depth);
+
+                if (existing.length === 0) {
+                    t.stages.push({
+                        id: tile.id,
+                        stage_id: tile.stage_id,
+                        depth: tile.depth,
+                        status: tile.this_stage_status
+                    });
+                } else if (tile.this_stage_status > existing.status) {
+                    existing.id = tile.id;
+                    existing.stage_id = tile.stage_id;
+                    existing.depth = tile.depth;
+                    // This is not strictly correct as failed enum > complete and complete is probably what you want
+                    // to know.
+                    existing.status = tile.this_stage_status;
+                }
             });
 
             let output = [];
 
+            // I forget what I am trying to drop here?
             for (let prop in tiles) {
                 if (tiles.hasOwnProperty(prop)) {
                     output.push(tiles[prop]);

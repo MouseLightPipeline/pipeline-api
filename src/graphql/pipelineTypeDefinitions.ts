@@ -111,6 +111,7 @@ type PipelineStage implements ITableModel {
 }
 
 type TileStageStatus {
+    id: String
     stage_id: String
     depth: Int
     status: Int
