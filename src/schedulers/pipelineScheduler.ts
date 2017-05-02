@@ -300,14 +300,21 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
         let workerManager = new PipelineWorkers();
 
+        let allWorkers = await workerManager.getAll();
+
         // Use cluster proxies as last resort when behind.
-        let workers = (await workerManager.getAll()).filter(worker => worker.is_in_scheduler_pool).sort((a, b) => {
+        let workers = allWorkers.filter(worker => worker.is_in_scheduler_pool).sort((a, b) => {
             if (a.is_cluster_proxy === b.is_cluster_proxy) {
                 return 0;
             }
 
             return a.is_cluster_proxy ? 1 : -1;
         });
+
+        if (workers.length === 0) {
+            debug(`no available workers to schedule (of ${allWorkers.length} known)`);
+            return;
+        }
 
         let projects = Projects.defaultManager();
 
