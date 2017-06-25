@@ -23,7 +23,7 @@ app.use(bodyParser.json());
 
 app.use(config.graphQlEndpoint, graphQLMiddleware());
 
-app.use(config.graphiQlEndpoint, graphiQLMiddleware(config));
+app.use(["/", config.graphiQlEndpoint], graphiQLMiddleware(config));
 
 SchedulerHub.Run(useChildProcessWorkers).then(() => {
     const server = SocketIoServer.use(app);

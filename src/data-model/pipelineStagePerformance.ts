@@ -1,4 +1,4 @@
-import * as uuid from "node-uuid";
+import * as uuid from "uuid";
 const AsyncLock = require("async");
 
 const debug = require("debug")("mouselight:pipeline-api:pipeline-stage-performance");

@@ -1,23 +1,23 @@
-import * as apolloServer  from "apollo-server";
+import { graphqlExpress, graphiqlExpress } from "graphql-server-express";
 
 import {schema} from "./schema";
 import {PipelineServerContext} from "../pipelineServerContext";
 
 export function graphQLMiddleware() {
-    return apolloServer.apolloExpress(graphqlRequestHandler);
+    return graphqlExpress(graphqlRequestHandler);
 }
 
 export function graphiQLMiddleware(configuration) {
-    return apolloServer.graphiqlExpress({endpointURL: configuration.graphQlEndpoint});
+    return graphiqlExpress({endpointURL: configuration.graphQlEndpoint});
 }
 
-function graphqlRequestHandler(req) {
+function graphqlRequestHandler(req: any) {
     // Get the query, the same way express-graphql does it.
     // https://github.com/graphql/express-graphql/blob/3fa6e68582d6d933d37fa9e841da5d2aa39261cd/src/index.js#L257
     const query = req.query.query || req.body.query;
 
     if (query && query.length > 3000) {
-        // None of our app's queries are this long.  Probably indicates someone trying to send an overly expensive query.
+        // None of our app"s queries are this long.  Probably indicates someone trying to send an overly expensive query.
         throw new Error("Query too large.");
     }
 
