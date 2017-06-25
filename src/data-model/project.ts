@@ -1,4 +1,4 @@
-import * as uuid from "uuid";
+import {v4} from "uuid";
 
 import {IRunnableTableModelRow, RunnableTableModel} from "./runnableTableModel";
 
@@ -62,7 +62,7 @@ export class Projects extends RunnableTableModel<IProject> {
             };
 
         const row = {
-            id: uuid.v4(),
+            id: v4(),
             name: project.name || "",
             description: project.description || "",
             root_path: project.root_path || "",

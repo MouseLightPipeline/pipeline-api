@@ -1,4 +1,4 @@
-import * as uuid from "uuid";
+import {v4} from "uuid";
 const AsyncLock = require("async");
 
 const debug = require("debug")("mouselight:pipeline-api:pipeline-stage-performance");
@@ -126,7 +126,7 @@ export class PipelineStagePerformance extends TableModel<IPipelineStagePerforman
 
 function create(pipelineStageId: string): IPipelineStagePerformance {
     return {
-        id: uuid.v4(),
+        id: v4(),
         pipeline_stage_id: pipelineStageId,
         num_in_process: 0,
         num_ready_to_process: 0,

@@ -1,4 +1,4 @@
-import * as uuid from "uuid";
+import {v4} from "uuid";
 
 const debug = require("debug")("mouselight:pipeline-api:worker");
 
@@ -119,7 +119,7 @@ export class PipelineWorkers extends TableModel<IPipelineWorker> {
 
     private async create(machineId: string) {
         let worker = {
-            id: uuid.v4(),
+            id: v4(),
             machine_id: machineId,
             name: "",
             address: "",

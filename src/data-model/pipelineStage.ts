@@ -1,4 +1,4 @@
-import * as uuid from "uuid";
+import {v4} from "uuid";
 
 import {IRunnableTableModelRow, RunnableTableModel} from "./runnableTableModel";
 import {knex} from "../data-access/knexConnector";
@@ -37,7 +37,7 @@ export class PipelineStages extends RunnableTableModel<IPipelineStage> {
         }
 
         let pipelineStage = {
-            id: uuid.v4(),
+            id: v4(),
             name: name,
             description: description,
             project_id: project_id,
