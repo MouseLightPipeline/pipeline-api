@@ -1,12 +1,5 @@
-let typeDefinitions = `    
-interface ITableModel {
-  id: String!
-  created_at: String
-  updated_at: String
-  deleted_at: String
-}
-
-type PipelineWorker implements ITableModel {
+let typeDefinitions = `
+type PipelineWorker {
   id: String!
   machine_id: String
   name: String
@@ -29,19 +22,31 @@ type PipelineWorker implements ITableModel {
   deleted_at: String
 }
 
-type TaskDefinition implements ITableModel {
+type TaskRepository {
+  id: String!
+  name: String!
+  description: String!
+  location: String!
+  taskDefinitions: [TaskDefinition!]!
+  created_at: String
+  updated_at: String
+  deleted_at: String
+}
+
+type TaskDefinition {
   id: String!
   name: String!
   description: String!
   script: String!
   interpreter: String!
+  taskRepository: TaskRepository
   args: String!
   created_at: String
   updated_at: String
   deleted_at: String
 }
 
-type Project implements ITableModel {
+type Project {
   id: String!
   name: String
   description: String
@@ -66,7 +71,7 @@ type Project implements ITableModel {
   stages: [PipelineStage]
 }
 
-type PipelineStagePerformance implements ITableModel {
+type PipelineStagePerformance {
   id: String!
   pipeline_stage_id: String
   num_in_process: Int
@@ -89,7 +94,7 @@ type PipelineStagePerformance implements ITableModel {
   deleted_at: String
 }
 
-type PipelineStage implements ITableModel {
+type PipelineStage {
   id: String!
   name: String
   description: String
@@ -111,25 +116,35 @@ type PipelineStage implements ITableModel {
 }
 
 type TileStageStatus {
-    relative_path: String
-    stage_id: String
-    depth: Int
-    status: Int
+  relative_path: String
+  stage_id: String
+  depth: Int
+  status: Int
 }
 
 type TileStatus {
-    x_index: Int
-    y_index: Int
-    stages: [TileStageStatus]
+  x_index: Int
+  y_index: Int
+  stages: [TileStageStatus]
 }
 
 type TilePlane {
-    max_depth: Int
-    x_min: Int
-    x_max: Int
-    y_min: Int
-    y_max: Int
-    tiles: [TileStatus]
+  max_depth: Int
+  x_min: Int
+  x_max: Int
+  y_min: Int
+  y_max: Int
+  tiles: [TileStatus]
+}
+
+type MutateTaskRepositoryOutput {
+    taskRepository: TaskRepository
+    error: String
+}
+
+type DeleteTaskRepositoryOutput {
+    id: String
+    error: String
 }
 
 input RegionInput {
@@ -150,6 +165,13 @@ input ProjectInput {
   region_bounds: RegionInput
 }
 
+input TaskRepositoryInput {
+    id: String
+    name: String
+    location: String
+    description: String
+}
+
 type Query {
   pipelineWorker(id: String!): PipelineWorker
   pipelineWorkers: [PipelineWorker!]!
@@ -160,6 +182,8 @@ type Query {
   pipelineStagesForProject(id: String!): [PipelineStage!]!
   taskDefinition(id: String!): TaskDefinition
   taskDefinitions: [TaskDefinition!]!
+  taskRepository(id: String!): TaskRepository
+  taskRepositories: [TaskRepository!]!
   pipelineStagePerformance(id: String!): PipelineStagePerformance
   pipelineStagePerformances: [PipelineStagePerformance!]!
   projectPlaneTileStatus(project_id: String, plane: Int): TilePlane
@@ -175,6 +199,10 @@ type Mutation {
   setPipelineStageStatus(id: String, shouldBeActive: Boolean): PipelineStage
   deletePipelineStage(id: String!): Boolean
   
+  createTaskRepository(taskRepository: TaskRepositoryInput): MutateTaskRepositoryOutput
+  updateTaskRepository(taskRepository: TaskRepositoryInput): MutateTaskRepositoryOutput
+  deleteTaskRepository(taskRepository: TaskRepositoryInput): DeleteTaskRepositoryOutput
+
   setWorkerAvailability(id: String!, shouldBeInSchedulerPool: Boolean!): PipelineWorker
 }
 

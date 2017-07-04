@@ -5,7 +5,7 @@ exports.up = (knex, Promise) => {
 };
 
 exports.down = (knex, Promise) => {
-    return knex.schema.table('PipelineWorker', (table) => {
-        table.dropColumn('is_cluster_proxy');
+    return knex.schema.table("PipelineWorker", (table) => {
+        table.dropColumn("is_cluster_proxy");
     });
 };

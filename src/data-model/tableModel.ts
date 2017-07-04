@@ -1,4 +1,5 @@
 import {knex} from "../data-access/knexConnector"
+import {v4} from "uuid";
 
 export interface ITableModelRow {
     id: string;
@@ -53,6 +54,10 @@ export abstract class TableModel<T extends ITableModelRow> {
     }
 
     public async insertRow(row: T) {
+        if (!row.id) {
+            row.id = v4();
+        }
+
         await this.save(row);
 
         // Retrieves back through data loader
