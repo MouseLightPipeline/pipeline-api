@@ -1,5 +1,6 @@
 import {TableModel, ITableModelRow} from "./tableModel";
 import {knex} from "../data-access/knexConnector";
+import {isUndefined} from "util";
 
 export interface ITaskDefinition extends ITableModelRow {
     name: string;
@@ -35,7 +36,7 @@ export class TaskDefinitions extends TableModel<ITaskDefinition> {
         }
 
         row.name = taskDefinition.name || row.name;
-        row.task_repository_id = taskDefinition.task_repository_id || row.task_repository_id;
+        row.task_repository_id = isUndefined(taskDefinition.task_repository_id) ? row.task_repository_id : taskDefinition.task_repository_id;
         row.script = taskDefinition.script || row.script;
         row.interpreter = taskDefinition.interpreter || row.interpreter;
         row.args = taskDefinition.args || row.args;

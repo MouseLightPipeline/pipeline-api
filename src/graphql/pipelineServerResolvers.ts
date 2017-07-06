@@ -15,6 +15,9 @@ interface IIdOnlyArgument {
     id: string;
 }
 
+interface ITaskDefinitionIdArguments {
+    task_definition_id: string;
+}
 interface IIncludeSoftDeleteArgument {
     includeDeleted: boolean;
 }
@@ -104,6 +107,9 @@ let resolvers = {
         },
         projectPlaneTileStatus(_, args: IPipelinePlaneStatusArguments, context: IPipelineServerContext): Promise<any> {
             return context.getProjectPlaneTileStatus(args.project_id, args.plane);
+        },
+        scriptContents(_, args: ITaskDefinitionIdArguments, context: IPipelineServerContext): Promise<string> {
+            return context.getScriptContents(args.task_definition_id);
         }
     },
     Mutation: {
@@ -186,6 +192,9 @@ let resolvers = {
         },
         pipeline_stages(taskDefinition: ITaskDefinition, _, context: IPipelineServerContext): any {
           return context.getPipelineStagesForTaskDefinition(taskDefinition.id);
+        },
+        script_status(taskDefinition: ITaskDefinition, _, context: IPipelineServerContext): any {
+            return context.getScriptStatusForTaskDefinition(taskDefinition);
         }
     }
 };

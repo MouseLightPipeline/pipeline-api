@@ -39,11 +39,12 @@ type TaskDefinition {
   description: String!
   script: String!
   interpreter: String!
+  args: String!
+  work_units: Float
   task_repository_id: String
   task_repository: TaskRepository
   pipeline_stages: [PipelineStage!]!
-  args: String!
-  work_units: Float
+  script_status: Boolean
   created_at: String
   updated_at: String
   deleted_at: String
@@ -212,6 +213,7 @@ type Query {
   pipelineStagePerformance(id: String!): PipelineStagePerformance
   pipelineStagePerformances: [PipelineStagePerformance!]!
   projectPlaneTileStatus(project_id: String, plane: Int): TilePlane
+  scriptContents(task_definition_id: String): String
 }
 
 type Mutation {

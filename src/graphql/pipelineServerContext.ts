@@ -1,3 +1,6 @@
+import * as path from "path";
+import * as fs from "fs";
+
 import {ITaskDefinition, TaskDefinitions} from "../data-model/taskDefinition";
 import {Projects, IProject, IProjectInput} from "../data-model/project";
 import {IPipelineStage, PipelineStages, PipelineStageMethod} from "../data-model/pipelineStage";
@@ -57,6 +60,8 @@ export interface IPipelineServerContext {
 
     getTaskDefinition(id: string): Promise<ITaskDefinition>;
     getTaskDefinitions(): Promise<ITaskDefinition[]>;
+    getScriptStatusForTaskDefinition(taskDefinition: ITaskDefinition): Promise<boolean>;
+    getScriptContents(taskDefinitionId: string): Promise<string>;
     createTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionMutationOutput>;
     updateTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionMutationOutput>;
     deleteTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionDeleteOutput>;
@@ -222,6 +227,28 @@ export class PipelineServerContext implements IPipelineServerContext {
         return this._taskDefinitions.getAll();
     }
 
+    public async getScriptStatusForTaskDefinition(taskDefinition: ITaskDefinition): Promise<boolean> {
+        const scriptPath = await this._getFullScriptPath(taskDefinition);
+
+        return fs.existsSync(scriptPath);
+    }
+
+    public async getScriptContents(taskDefinitionId: string): Promise<string> {
+        const taskDefinition = await this._taskDefinitions.get(taskDefinitionId);
+
+        if (taskDefinition) {
+            const haveScript = await this.getScriptStatusForTaskDefinition(taskDefinition);
+
+            if (haveScript) {
+                const scriptPath = await this._getFullScriptPath(taskDefinition);
+
+                return fs.readFileSync(scriptPath, "utf8");
+            }
+        }
+
+        return null;
+    }
+
     public getPipelineStagePerformance(id: string): Promise<IPipelineStagePerformance> {
         return this._pipelinePerformance.get(id);
     }
@@ -236,5 +263,21 @@ export class PipelineServerContext implements IPipelineServerContext {
 
     public getProjectPlaneTileStatus(project_id: string, plane: number): Promise<any> {
         return SchedulerHub.Instance.loadTileStatusForPlane(project_id, plane);
+    }
+
+    private async _getFullScriptPath(taskDefinition: ITaskDefinition): Promise<string> {
+        let scriptPath = taskDefinition.script;
+
+        if (taskDefinition.task_repository_id) {
+            const repo = await this._taskRepositories.get(taskDefinition.task_repository_id);
+
+            scriptPath = path.join(repo.location, scriptPath);
+        } else {
+            if (!path.isAbsolute(scriptPath)) {
+                scriptPath = path.join(process.cwd(), scriptPath);
+            }
+        }
+
+        return scriptPath;
     }
 }
