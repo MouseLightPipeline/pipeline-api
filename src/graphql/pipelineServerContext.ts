@@ -18,6 +18,16 @@ export interface ITaskRepositoryDeleteOutput {
     error: string;
 }
 
+export interface ITaskDefinitionMutationOutput {
+    taskDefinition: ITaskDefinition;
+    error: string;
+}
+
+export interface ITaskDefinitionDeleteOutput {
+    id: string;
+    error: string;
+}
+
 export interface IPipelineServerContext {
     getPipelineWorker(id: string): Promise<IPipelineWorker>;
     getPipelineWorkers(): Promise<IPipelineWorker[]>;
@@ -33,6 +43,7 @@ export interface IPipelineServerContext {
     getPipelineStage(id: string): Promise<IPipelineStage>;
     getPipelineStages(): Promise<IPipelineStage[]>;
     getPipelineStagesForProject(id: string): Promise<IPipelineStage[]>;
+    getPipelineStagesForTaskDefinition(id: string): Promise<IPipelineStage[]>;
     createPipelineStage(name: string, description: string, project_id: string, task_id: string, previous_stage_id: string, dst_path: string, function_type: number): Promise<IPipelineStage>;
     setPipelineStageStatus(id: string, shouldBeActive: boolean): Promise<IPipelineStage>;
     deletePipelineStage(id: string): Promise<boolean>;
@@ -46,6 +57,9 @@ export interface IPipelineServerContext {
 
     getTaskDefinition(id: string): Promise<ITaskDefinition>;
     getTaskDefinitions(): Promise<ITaskDefinition[]>;
+    createTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionMutationOutput>;
+    updateTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionMutationOutput>;
+    deleteTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionDeleteOutput>;
 
     getPipelineStagePerformance(id: string): Promise<IPipelineStagePerformance>;
     getPipelineStagePerformances(): Promise<IPipelineStagePerformance[]>;
@@ -110,6 +124,10 @@ export class PipelineServerContext implements IPipelineServerContext {
         return this._pipelineStages.getForProject(id);
     }
 
+    public getPipelineStagesForTaskDefinition(id: string): Promise<IPipelineStage[]> {
+        return this._pipelineStages.getForTask(id);
+    }
+
     public createPipelineStage(name: string, description: string, project_id: string, task_id: string, previous_stage_id: string, dst_path: string, function_type: PipelineStageMethod): Promise<IPipelineStage> {
         return this._pipelineStages.create(name, description, project_id, task_id, previous_stage_id, dst_path, function_type);
     }
@@ -158,6 +176,38 @@ export class PipelineServerContext implements IPipelineServerContext {
                 return {id: taskRepository.id, error: ""};
             } else {
                 return {id: null, error: "Could not delete repository (no error message)"};
+            }
+        } catch (err) {
+            return {id: null, error: err.message}
+        }
+    }
+
+    public async createTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionMutationOutput> {
+        try {
+            const result = await this._taskDefinitions.create(taskDefinition);
+
+            return {taskDefinition: result, error: ""};
+        } catch (err) {
+            return {taskDefinition: null, error: err.message}
+        }
+    }
+
+    public async updateTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionMutationOutput> {
+        try {
+            return {taskDefinition: await this._taskDefinitions.updateTaskDefinition(taskDefinition), error: ""};
+        } catch (err) {
+            return {taskDefinition: null, error: err.message}
+        }
+    }
+
+    public async deleteTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionDeleteOutput> {
+        try {
+            const result = await this._taskDefinitions.softDelete(taskDefinition.id);
+
+            if (result) {
+                return {id: taskDefinition.id, error: ""};
+            } else {
+                return {id: null, error: "Could not delete task definition (no error message)"};
             }
         } catch (err) {
             return {id: null, error: err.message}

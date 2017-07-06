@@ -62,4 +62,13 @@ export class PipelineStages extends RunnableTableModel<IPipelineStage> {
 
         return this.fetch(idList);
     }
+
+
+    public async getForTask(id: string): Promise<IPipelineStage[]> {
+        let objList = await knex(this.tableName).select(this.idKey).where({task_id: id}).whereNull("deleted_at").orderBy("id");
+
+        let idList = <string[]>objList.map(obj => obj.id);
+
+        return this.fetch(idList);
+    }
 }

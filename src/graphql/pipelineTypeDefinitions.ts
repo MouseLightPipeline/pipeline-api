@@ -27,7 +27,7 @@ type TaskRepository {
   name: String!
   description: String!
   location: String!
-  taskDefinitions: [TaskDefinition!]!
+  task_definitions: [TaskDefinition!]!
   created_at: String
   updated_at: String
   deleted_at: String
@@ -39,8 +39,11 @@ type TaskDefinition {
   description: String!
   script: String!
   interpreter: String!
-  taskRepository: TaskRepository
+  task_repository_id: String
+  task_repository: TaskRepository
+  pipeline_stages: [PipelineStage!]!
   args: String!
+  work_units: Float
   created_at: String
   updated_at: String
   deleted_at: String
@@ -147,6 +150,16 @@ type DeleteTaskRepositoryOutput {
     error: String
 }
 
+type MutateTaskDefinitionOutput {
+    taskDefinition: TaskDefinition
+    error: String
+}
+
+type DeleteTaskDefinitionOutput {
+    id: String
+    error: String
+}
+
 input RegionInput {
   x_min: Int
   x_max: Int
@@ -171,6 +184,18 @@ input TaskRepositoryInput {
     location: String
     description: String
 }
+
+input TaskDefinitionInput {
+  id: String
+  name: String
+  description: String
+  script: String
+  interpreter: String
+  task_repository_id: String
+  args: String
+  work_units: Float
+}
+
 
 type Query {
   pipelineWorker(id: String!): PipelineWorker
@@ -202,6 +227,10 @@ type Mutation {
   createTaskRepository(taskRepository: TaskRepositoryInput): MutateTaskRepositoryOutput
   updateTaskRepository(taskRepository: TaskRepositoryInput): MutateTaskRepositoryOutput
   deleteTaskRepository(taskRepository: TaskRepositoryInput): DeleteTaskRepositoryOutput
+  
+  createTaskDefinition(taskDefinition: TaskDefinitionInput): MutateTaskDefinitionOutput
+  updateTaskDefinition(taskDefinition: TaskDefinitionInput): MutateTaskDefinitionOutput
+  deleteTaskDefinition(taskDefinition: TaskDefinitionInput): DeleteTaskDefinitionOutput
 
   setWorkerAvailability(id: String!, shouldBeInSchedulerPool: Boolean!): PipelineWorker
 }

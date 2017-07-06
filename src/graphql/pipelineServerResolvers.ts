@@ -7,7 +7,7 @@ import {IPipelineWorker} from "../data-model/pipelineWorker";
 import {IPipelineStagePerformance} from "../data-model/pipelineStagePerformance";
 import {ITaskRepository} from "../data-model/taskRepository";
 import {
-    IPipelineServerContext, ITaskRepositoryDeleteOutput,
+    IPipelineServerContext, ITaskDefinitionDeleteOutput, ITaskDefinitionMutationOutput, ITaskRepositoryDeleteOutput,
     ITaskRepositoryMutationOutput
 } from "./pipelineServerContext";
 
@@ -40,6 +40,10 @@ interface IUpdateProjectArguments {
 
 interface IMutateRepositoryArguments {
     taskRepository: ITaskRepository;
+}
+
+interface IMutateTaskDefinitionArguments {
+    taskDefinition: ITaskDefinition;
 }
 
 interface ISetActiveStatusArguments {
@@ -135,6 +139,15 @@ let resolvers = {
         deleteTaskRepository(_, args: IMutateRepositoryArguments, context: IPipelineServerContext): Promise<ITaskRepositoryDeleteOutput> {
             return context.deleteTaskRepository(args.taskRepository);
         },
+        createTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: IPipelineServerContext): Promise<ITaskDefinitionMutationOutput> {
+            return context.createTaskDefinition(args.taskDefinition);
+        },
+        updateTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: IPipelineServerContext): Promise<ITaskDefinitionMutationOutput> {
+            return context.updateTaskDefinition(args.taskDefinition);
+        },
+        deleteTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: IPipelineServerContext): Promise<ITaskDefinitionDeleteOutput> {
+            return context.deleteTaskDefinition(args.taskDefinition);
+        },
         setWorkerAvailability(_, args: IActiveWorkerArguments, context: IPipelineServerContext) {
             return context.setWorkerAvailability(args.id, args.shouldBeInSchedulerPool);
         }
@@ -159,8 +172,20 @@ let resolvers = {
         }
     },
     TaskRepository: {
-        taskDefinitions(repository, _, context: IPipelineServerContext): any {
+        task_definitions(repository: ITaskRepository, _, context: IPipelineServerContext): any {
             return context.getRepositoryTasks(repository.id);
+        }
+    },
+    TaskDefinition: {
+        task_repository(taskDefinition: ITaskDefinition, _, context: IPipelineServerContext): any {
+            if (taskDefinition.task_repository_id) {
+                return context.getTaskRepository(taskDefinition.task_repository_id);
+            }
+
+            return null;
+        },
+        pipeline_stages(taskDefinition: ITaskDefinition, _, context: IPipelineServerContext): any {
+          return context.getPipelineStagesForTaskDefinition(taskDefinition.id);
         }
     }
 };
