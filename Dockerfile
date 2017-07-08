@@ -1,23 +1,15 @@
-FROM node:7
+FROM node:7.10
 
 WORKDIR /app
 
-# Bundle app source
+RUN yarn global add typescript sequelize-cli knex
+
 COPY . .
 
-# Have native modules - get rid of current platform, if present
-RUN rm -rf node_modules
+RUN yarn install
 
-# Local/build misc
-RUN rm -rf .idea .git .DS_Store internal-data
-
-# Build tools
-RUN npm install -g typescript@2.1.6 knex && npm cache clean
-
-# Install app dependencies
-RUN npm install && npm cache clean
-
-# Compile
 RUN tsc
+
+CMD ["npm", "run", "start"]
 
 EXPOSE  3000

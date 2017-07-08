@@ -1,8 +1,4 @@
-/*
- * Called from the knex command line - es5 only.
- */
-require('babel-register');
-
-const databaseConfiguration = require("./config/database.config.js").default();
-
-module.exports = databaseConfiguration;
+"use strict";
+const knexfile_config_1 = require("./options/knexfile.config");
+module.exports = knexfile_config_1.KnexDatabaseConfiguration;
+//# sourceMappingURL=knexfile.js.map

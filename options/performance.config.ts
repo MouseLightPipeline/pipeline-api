@@ -6,18 +6,6 @@ interface IPerformanceConfig {
 }
 
 const configurations: IConfiguration<IPerformanceConfig> = {
-    development: {
-        pipelineSchedulerIntervalSeconds: 10,
-        regenTileStatusSqliteChunkSize: 50
-    },
-    test: {
-        pipelineSchedulerIntervalSeconds: 60,
-        regenTileStatusSqliteChunkSize: 50
-    },
-    staging: {
-        pipelineSchedulerIntervalSeconds: 60,
-        regenTileStatusSqliteChunkSize: 50
-    },
     production: {
         pipelineSchedulerIntervalSeconds: 60,
         regenTileStatusSqliteChunkSize: 50
@@ -25,7 +13,7 @@ const configurations: IConfiguration<IPerformanceConfig> = {
 };
 
 export default function (): IPerformanceConfig {
-    let env = process.env.NODE_ENV || "development";
+    let env = process.env.NODE_ENV || "production";
 
     return configurations[env];
 }

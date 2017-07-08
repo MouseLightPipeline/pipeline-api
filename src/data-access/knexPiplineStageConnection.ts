@@ -6,7 +6,7 @@ const asyncUtils = require("async");
 
 const debug = require("debug")("mouselight:pipeline-api:knex-pipeline-connector");
 
-import {IDatabaseConfig} from "../../config/database.config";
+import {IDatabaseConfig} from "../../options/knexfile.config";
 
 const PipelineStageDatabaseFile = "pipeline-storage.sqlite3";
 
@@ -162,7 +162,7 @@ async function createConnection(name: string, requiredTable: string): Promise<Kn
         acquireConnectionTimeout: 180000,
         useNullAsDefault: true,
         migrations: {
-            directory: "src/data-access/migrations",
+            directory: "src/data-access/knex-migrations",
             tableName: "knex_migrations"
         }
     };

@@ -5,7 +5,7 @@ const debug = require("debug")("mouselight:pipeline-api:pipeline-worker");
 
 import {updatePipelineStagePerformance, updatePipelineStageCounts} from "../data-model/pipelineStagePerformance";
 import {ISchedulerInterface} from "./schedulerHub";
-import performanceConfiguration from "../../config/performance.config"
+import performanceConfiguration from "../../options/performance.config"
 import {Projects, IProject} from "../data-model/project";
 import {PipelineStages, IPipelineStage} from "../data-model/pipelineStage";
 import {

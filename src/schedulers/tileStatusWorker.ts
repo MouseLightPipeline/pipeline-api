@@ -14,7 +14,7 @@ import {
     connectorForFile, generatePipelineStateDatabaseName, generateProjectRootTableName
 } from "../data-access/knexPiplineStageConnection";
 
-import performanceConfiguration from "../../config/performance.config"
+import performanceConfiguration from "../../options/performance.config"
 import {
     PipelineScheduler, DefaultPipelineIdKey, TilePipelineStatus
 } from "./pipelineScheduler";
