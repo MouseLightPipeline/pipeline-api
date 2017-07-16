@@ -1,13 +1,17 @@
-import {IConfiguration} from "./configuration";
+import SequelizeOptions from "./sequelizeOptions";
 
-interface IServerConfig {
+interface IServerOptions {
     port: number;
     graphQlEndpoint: string;
     graphiQlEndpoint: string;
     machineId: string;
 }
 
-const configurations: IConfiguration<IServerConfig> = {
+interface IServerEnvDefinitions {
+    production: IServerOptions;
+}
+
+const configurations: IServerEnvDefinitions = {
     production: {
         port: 3000,
         graphQlEndpoint: "/graphql",
@@ -16,8 +20,11 @@ const configurations: IConfiguration<IServerConfig> = {
     }
 };
 
-export default function (): IServerConfig {
+export default function (): IServerOptions {
     let env = process.env.NODE_ENV || "production";
 
     return configurations[env];
 }
+
+
+export const SequelizeDatabaseOptions = SequelizeOptions;

@@ -3,7 +3,7 @@ import * as bodyParser from "body-parser";
 
 const debug = require("debug")("mouselight:pipeline-api:server");
 
-import serverConfiguration from "../options/server.config";
+import serverConfiguration from "./options/serverOptions";
 
 import {graphQLMiddleware, graphiQLMiddleware} from "./graphql/common/graphQLMiddleware";
 import {SocketIoServer} from "./io/ioServer";

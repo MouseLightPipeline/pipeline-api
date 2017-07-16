@@ -1,5 +1,5 @@
 import {PipelineMapScheduler} from "./pipelineMapScheduler";
-import {PipelineStages} from "../data-model/pipelineStage";
+import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 
 const debug = require("debug")("mouselight:pipeline-api:pipeline-map-worker-process");
 
@@ -29,9 +29,9 @@ export async function startPipelineStageWorker(stageId) {
     let pipelineWorker = null;
 
     try {
-        let pipelineStagesManager = new PipelineStages();
+        let pipelineStagesManager = PersistentStorageManager.Instance().PipelineStages;
 
-        let stage = await pipelineStagesManager.get(stageId);
+        let stage = await pipelineStagesManager.findById(stageId);
 
         if (stage) {
             pipelineWorker = new PipelineMapScheduler(stage);

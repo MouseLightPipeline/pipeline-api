@@ -4,9 +4,11 @@ import "isomorphic-fetch";
 
 const debug = require("debug")("mouselight:pipeline-api:pipeline-worker-client");
 
-import {IPipelineWorker, PipelineWorkerStatus, PipelineWorkers} from "../../data-model/pipelineWorker";
 import {ITaskExecution} from "../../data-model/taskExecution";
-import {ITaskDefinition} from "../../data-model/taskDefinition";
+import {ITaskDefinition} from "../../data-model/sequelize/taskDefinition";
+import {IPipelineWorker, PipelineWorkerStatus} from "../../data-model/sequelize/pipelineWorker";
+import {PipelineServerContext} from "../pipelineServerContext";
+
 
 export class PipelineWorkerClient {
     private static _instance: PipelineWorkerClient = null;
@@ -58,11 +60,12 @@ export class PipelineWorkerClient {
                 variables: {
                     id: taskId
                 },
-                forceFetch: true
+                fetchPolicy: "network-only"
             });
 
             return response.data.taskDefinition;
         } catch (err) {
+            console.log(err);
             debug(`error querying task definition for worker ${worker.name}`);
         }
 
@@ -108,12 +111,15 @@ export class PipelineWorkerClient {
                 variables: {
                     id: executionId
                 },
-                forceFetch: true
+                fetchPolicy: "network-only"
             });
 
             return response.data.taskExecution;
         } catch (err) {
-            PipelineWorkers.setWorkerStatus(worker.id, PipelineWorkerStatus.Unavailable);
+            let serverContext = new PipelineServerContext();
+            const row = await serverContext.getPipelineWorker(worker.id);
+            row.status = PipelineWorkerStatus.Unavailable;
+
             debug(`error querying task status for worker ${worker.name}`);
         }
 
@@ -158,7 +164,10 @@ export class PipelineWorkerClient {
 
             return response.data.startTask;
         } catch (err) {
-            PipelineWorkers.setWorkerStatus(worker.id, PipelineWorkerStatus.Unavailable);
+            let serverContext = new PipelineServerContext();
+            const row = await serverContext.getPipelineWorker(worker.id);
+            row.status = PipelineWorkerStatus.Unavailable;
+
             debug(`error submitting task to worker ${worker.name}`);
         }
 

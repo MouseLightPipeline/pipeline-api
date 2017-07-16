@@ -1,3 +1,4 @@
+import {IKnexOptions} from "../options/knexOptions";
 const path = require("path");
 
 import * as Knex from "knex";
@@ -5,8 +6,6 @@ import * as Knex from "knex";
 const asyncUtils = require("async");
 
 const debug = require("debug")("mouselight:pipeline-api:knex-pipeline-connector");
-
-import {IDatabaseConfig} from "../../options/knexfile.config";
 
 const PipelineStageDatabaseFile = "pipeline-storage.sqlite3";
 
@@ -154,7 +153,7 @@ async function findConnection(name: string, requiredTable: string = null): Promi
 }
 
 async function createConnection(name: string, requiredTable: string): Promise<Knex> {
-    const configuration: IDatabaseConfig = {
+    const configuration: IKnexOptions = {
         client: "sqlite3",
         connection: {
             filename: name
@@ -162,7 +161,7 @@ async function createConnection(name: string, requiredTable: string): Promise<Kn
         acquireConnectionTimeout: 180000,
         useNullAsDefault: true,
         migrations: {
-            directory: "src/data-access/knex-migrations",
+            directory: "src/data-access/migrations",
             tableName: "knex_migrations"
         }
     };

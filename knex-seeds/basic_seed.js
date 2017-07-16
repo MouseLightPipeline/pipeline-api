@@ -1,7 +1,7 @@
 "use strict";
 let env = process.env.NODE_ENV || "development";
 env = process.env.KNEX_ENV || env;
-if (env === "production" || env === "staging") {
+if (env === "production") {
     console.log("seeding with production content");
     exports.seed = productionSeed();
 }

@@ -5,17 +5,19 @@ const debug = require("debug")("mouselight:pipeline-api:pipeline-worker");
 
 import {updatePipelineStagePerformance, updatePipelineStageCounts} from "../data-model/pipelineStagePerformance";
 import {ISchedulerInterface} from "./schedulerHub";
-import performanceConfiguration from "../../options/performance.config"
-import {Projects, IProject} from "../data-model/project";
-import {PipelineStages, IPipelineStage} from "../data-model/pipelineStage";
+import performanceConfiguration from "../options/performanceOptions"
 import {
     verifyTable, generatePipelineStageToProcessTableName,
     generatePipelineStageInProcessTableName, generatePipelineStateDatabaseName, connectorForFile,
     generatePipelineStageTableName, generateProjectRootTableName
 } from "../data-access/knexPiplineStageConnection";
-import {PipelineWorkers, IPipelineWorker} from "../data-model/pipelineWorker";
 import {PipelineWorkerClient} from "../graphql/client/pipelineWorkerClient";
 import * as Knex from "knex";
+import {PipelineServerContext} from "../graphql/pipelineServerContext";
+import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
+import {IProject} from "../data-model/sequelize/project";
+import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
+import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 
 const perfConf = performanceConfiguration();
 
@@ -172,9 +174,9 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         }).select();
 
         if (unscheduled.length > 0) {
-            let projects = Projects.defaultManager();
+            let projects = PersistentStorageManager.Instance().Projects;
 
-            let project: IProject = await projects.get(this._pipelineStage.project_id);
+            let project: IProject = await projects.findById(this._pipelineStage.project_id);
 
             unscheduled = unscheduled.filter(tile => {
                 if (project.region_x_min > -1 && tile.lat_x < project.region_x_min) {
@@ -240,7 +242,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
     protected async updateInProcessStatus() {
         let inProcess = await this.loadInProcess();
 
-        let workerManager = new PipelineWorkers();
+        let workerManager = new PipelineServerContext();
 
         if (inProcess.length > 0) {
             debug(`updating status of ${inProcess.length} in process tiles`);
@@ -255,8 +257,8 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         }
     }
 
-    private async updateOneExecutingTile(workerManager: PipelineWorkers, tile: IInProcessTile): Promise<void> {
-        let workerForTask = await workerManager.get(tile.worker_id);
+    private async updateOneExecutingTile(serverContext: PipelineServerContext, tile: IInProcessTile): Promise<void> {
+        let workerForTask = await serverContext.getPipelineWorker(tile.worker_id);
 
         let executionInfo = await PipelineWorkerClient.Instance().queryTaskExecution(workerForTask, tile.task_execution_id);
 
@@ -296,11 +298,11 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
     }
 
     protected async scheduleFromList() {
-        let pipelineStages = new PipelineStages();
+        let pipelineStages = PersistentStorageManager.Instance().PipelineStages;
 
-        let workerManager = new PipelineWorkers();
+        let workerManager = new PipelineServerContext();
 
-        let allWorkers = await workerManager.getAll();
+        let allWorkers = await workerManager.getPipelineWorkers();
 
         // Use cluster proxies as last resort when behind.
         let workers = allWorkers.filter(worker => worker.is_in_scheduler_pool).sort((a, b) => {
@@ -316,14 +318,14 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             return;
         }
 
-        let projects = Projects.defaultManager();
+        let projects = PersistentStorageManager.Instance().Projects;
 
-        let project: IProject = await projects.get(this._pipelineStage.project_id);
+        let project: IProject = await projects.findById(this._pipelineStage.project_id);
 
         let src_path = project.root_path;
 
         if (this._pipelineStage.previous_stage_id) {
-            let previousStage: IPipelineStage = await pipelineStages.get(this._pipelineStage.previous_stage_id);
+            let previousStage: IPipelineStage = await pipelineStages.findById(this._pipelineStage.previous_stage_id);
 
             src_path = previousStage.dst_path;
         }
@@ -334,7 +336,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         // The goal is to fill a worker completely before moving on to the next worker.
         await this.queue(workers, async(worker: IPipelineWorker) => {
 
-            let taskLoad = PipelineWorkers.getWorkerTaskLoad(worker.id);
+            let taskLoad = worker.task_load;
 
             if (taskLoad < 0) {
                 debug(`worker ${worker.name} skipped (unknown/unreported task load)`);
@@ -398,7 +400,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
                         taskLoad += taskExecution.work_units;
 
-                        PipelineWorkers.setWorkerTaskLoad(worker.id, taskLoad);
+                        worker.task_load = taskLoad;
 
                         pipelineTile.this_stage_status = TilePipelineStatus.Processing;
 
@@ -522,17 +524,17 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         let srcPath = "";
 
         if (this._pipelineStage.previous_stage_id) {
-            let pipelineManager = new PipelineStages();
+            let pipelineManager = PersistentStorageManager.Instance().PipelineStages;
 
-            let previousPipeline = await pipelineManager.get(this._pipelineStage.previous_stage_id);
+            let previousPipeline = await pipelineManager.findById(this._pipelineStage.previous_stage_id);
 
             this._inputTableName = generatePipelineStageTableName(this._pipelineStage.previous_stage_id);
 
             srcPath = previousPipeline.dst_path;
         } else {
-            let projectManager = Projects.defaultManager();
+            let projectManager = PersistentStorageManager.Instance().Projects;
 
-            let project = await projectManager.get(this._pipelineStage.project_id);
+            let project = await projectManager.findById(this._pipelineStage.project_id);
 
             this._inputTableName = generateProjectRootTableName(project.id);
 

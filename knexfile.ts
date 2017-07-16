@@ -1,3 +1,3 @@
-import {KnexDatabaseConfiguration} from "./options/knexfile.config";
+import {KnexDatabaseConfiguration} from "./src/options/knexOptions";
 
 export = KnexDatabaseConfiguration;

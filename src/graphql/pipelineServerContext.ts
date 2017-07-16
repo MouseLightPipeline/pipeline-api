@@ -1,15 +1,36 @@
 import * as path from "path";
 import * as fs from "fs";
 
-import {ITaskDefinition, TaskDefinitions} from "../data-model/taskDefinition";
-import {Projects, IProject, IProjectInput} from "../data-model/project";
-import {IPipelineStage, PipelineStages, PipelineStageMethod} from "../data-model/pipelineStage";
-import {IPipelineWorker, PipelineWorkers} from "../data-model/pipelineWorker";
 import {IPipelineStagePerformance, pipelineStagePerformanceInstance} from "../data-model/pipelineStagePerformance";
 import {SchedulerHub} from "../schedulers/schedulerHub";
-import {ITaskRepository, TaskRepositories} from "../data-model/taskRepository";
+import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
+import {ITaskDefinition} from "../data-model/sequelize/taskDefinition";
+import {ITaskRepository} from "../data-model/sequelize/taskRepository";
+import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
+import {IProject, IProjectInput, NO_BOUND, NO_SAMPLE} from "../data-model/sequelize/project";
+import {IPipelineStage, PipelineStageMethod} from "../data-model/sequelize/pipelineStage";
 
 const debug = require("debug")("mouselight:pipeline-api:context");
+
+export interface IProjectMutationOutput {
+    project: IProject;
+    error: string;
+}
+
+export interface IProjectDeleteOutput {
+    id: string;
+    error: string;
+}
+
+export interface IPipelineStageMutationOutput {
+    pipelineStage: IProject;
+    error: string;
+}
+
+export interface IPipelineStageDeleteOutput {
+    id: string;
+    error: string;
+}
 
 export interface ITaskRepositoryMutationOutput {
     taskRepository: ITaskRepository;
@@ -37,19 +58,20 @@ export interface IPipelineServerContext {
     setWorkerAvailability(id: string, shouldBeInSchedulerPool: boolean): Promise<IPipelineWorker>;
 
     getProject(id: string): Promise<IProject>;
-    getProjects(includeSoftDelete: boolean): Promise<IProject[]>;
-    createProject(project: IProjectInput): Promise<IProject>;
-    updateProject(project: IProjectInput): Promise<IProject>;
-    setProjectStatus(id: string, shouldBeActive: boolean): Promise<IProject>;
-    deleteProject(id: string): Promise<boolean>;
+    getProjects(): Promise<IProject[]>;
+    createProject(project: IProjectInput): Promise<IProjectMutationOutput>;
+    updateProject(project: IProjectInput): Promise<IProjectMutationOutput>;
+    setProjectStatus(id: string, shouldBeActive: boolean): Promise<IProjectMutationOutput>;
+    deleteProject(id: string): Promise<IProjectDeleteOutput>;
 
     getPipelineStage(id: string): Promise<IPipelineStage>;
     getPipelineStages(): Promise<IPipelineStage[]>;
     getPipelineStagesForProject(id: string): Promise<IPipelineStage[]>;
     getPipelineStagesForTaskDefinition(id: string): Promise<IPipelineStage[]>;
-    createPipelineStage(name: string, description: string, project_id: string, task_id: string, previous_stage_id: string, dst_path: string, function_type: number): Promise<IPipelineStage>;
-    setPipelineStageStatus(id: string, shouldBeActive: boolean): Promise<IPipelineStage>;
-    deletePipelineStage(id: string): Promise<boolean>;
+    createPipelineStage(name: string, description: string, project_id: string, task_id: string, previous_stage_id: string, dst_path: string, function_type: number): Promise<IPipelineStageMutationOutput>;
+    setPipelineStageStatus(id: string, shouldBeActive: boolean): Promise<IPipelineStageMutationOutput>;
+    updatePipelineStage(pipelineStage: IPipelineStage): Promise<IPipelineStageMutationOutput>;
+    deletePipelineStage(id: string): Promise<IPipelineStageDeleteOutput>;
 
     getTaskRepository(id: string): Promise<ITaskRepository>;
     getTaskRepositories(): Promise<ITaskRepository[]>;
@@ -74,92 +96,180 @@ export interface IPipelineServerContext {
 }
 
 export class PipelineServerContext implements IPipelineServerContext {
-    private _taskRepositories = new TaskRepositories();
-    private _taskDefinitions = new TaskDefinitions();
-    private _projects = Projects.defaultManager();
-    private _pipelineStages = new PipelineStages();
-    private _workers = new PipelineWorkers();
     private _pipelinePerformance = pipelineStagePerformanceInstance;
 
+    private _persistentStorageManager: PersistentStorageManager = PersistentStorageManager.Instance();
+
     public getPipelineWorker(id: string): Promise<IPipelineWorker> {
-        return this._workers.get(id);
+        return this._persistentStorageManager.PipelineWorkers.findById(id);
     }
 
     public getPipelineWorkers(): Promise<IPipelineWorker[]> {
-        return this._workers.getAll();
+        return this._persistentStorageManager.PipelineWorkers.findAll({});
     }
 
-    public setWorkerAvailability(id: string, shouldBeInSchedulerPool: boolean): Promise<IPipelineWorker> {
-        return this._workers.setShouldBeInSchedulerPool(id, shouldBeInSchedulerPool);
+    public async setWorkerAvailability(id: string, shouldBeInSchedulerPool: boolean): Promise<IPipelineWorker> {
+        // return this._workers.setShouldBeInSchedulerPool(id, shouldBeInSchedulerPool);
+        const worker = await this._persistentStorageManager.PipelineWorkers.findById(id);
+
+        await worker.update({is_in_scheduler_pool: shouldBeInSchedulerPool});
+
+        return this._persistentStorageManager.PipelineWorkers.findById(id);
     }
 
     public getProject(id: string): Promise<IProject> {
-        return this._projects.get(id);
+        return this._persistentStorageManager.Projects.findById(id);
     }
 
-    public getProjects(includeSoftDelete: boolean = false): Promise<IProject[]> {
-        return this._projects.getAll(includeSoftDelete);
+    public getProjects(): Promise<IProject[]> {
+        return this._persistentStorageManager.Projects.findAll({});
     }
 
-    public createProject(project: IProjectInput): Promise<IProject> {
-        return this._projects.create(project);
+    public async createProject(projectInput: IProjectInput): Promise<IProjectMutationOutput> {
+        try {
+            const region = projectInput.region_bounds || {
+                    x_min: NO_BOUND,
+                    x_max: NO_BOUND,
+                    y_min: NO_BOUND,
+                    y_max: NO_BOUND,
+                    z_min: NO_BOUND,
+                    z_max: NO_BOUND
+                };
+
+            const project = {
+                name: projectInput.name || "",
+                description: projectInput.description || "",
+                root_path: projectInput.root_path || "",
+                sample_number: projectInput.sample_number || NO_SAMPLE,
+                sample_x_min: NO_BOUND,
+                sample_x_max: NO_BOUND,
+                sample_y_min: NO_BOUND,
+                sample_y_max: NO_BOUND,
+                sample_z_min: NO_BOUND,
+                sample_z_max: NO_BOUND,
+                region_x_min: region.x_min,
+                region_x_max: region.x_max,
+                region_y_min: region.y_min,
+                region_y_max: region.y_max,
+                region_z_min: region.z_min,
+                region_z_max: region.z_max,
+                is_processing: false,
+                created_at: null,
+                updated_at: null,
+                deleted_at: null
+            };
+
+            const result = await this._persistentStorageManager.Projects.create(project);
+
+            return {project: result, error: ""};
+        } catch (err) {
+            return {project: null, error: err.message}
+        }
     }
 
-    public updateProject(project: IProjectInput): Promise<IProject> {
-        return this._projects.updateFromInputProject(project);
+    public async updateProject(project: IProjectInput): Promise<IProjectMutationOutput> {
+        try {
+            let row = await this._persistentStorageManager.Projects.findById(project.id);
+
+            await row.update(project);
+
+            row = await this._persistentStorageManager.Projects.findById(project.id);
+
+            return {project: row, error: ""};
+        } catch (err) {
+            return {project: null, error: err.message}
+        }
     }
 
-    public setProjectStatus(id: string, shouldBeActive: boolean): Promise<IProject> {
-        return this._projects.setProcessingStatus(id, shouldBeActive);
+    public async deleteProject(id: string): Promise<IProjectDeleteOutput> {
+        try {
+            const affectedRowCount = await this._persistentStorageManager.Projects.destroy({where: {id}});
+
+            if (affectedRowCount > 0) {
+                return {id, error: ""};
+            } else {
+                return {id: null, error: "Could not delete repository (no error message)"};
+            }
+        } catch (err) {
+            return {id: null, error: err.message}
+        }
     }
 
-    public deleteProject(id: string): Promise<boolean> {
-        return this._projects.softDelete(id);
+    public setProjectStatus(id: string, shouldBeActive: boolean): Promise<IProjectMutationOutput> {
+        return this.updateProject({id, is_processing: shouldBeActive});
     }
 
     public getPipelineStage(id: string): Promise<IPipelineStage> {
-        return this._pipelineStages.get(id);
+        return this._persistentStorageManager.PipelineStages.findById(id);
     }
 
     public getPipelineStages(): Promise<IPipelineStage[]> {
-        return this._pipelineStages.getAll();
+        return this._persistentStorageManager.PipelineStages.findAll({});
     }
 
     public getPipelineStagesForProject(id: string): Promise<IPipelineStage[]> {
-        return this._pipelineStages.getForProject(id);
+        return this._persistentStorageManager.PipelineStages.getForProject(id);
     }
 
     public getPipelineStagesForTaskDefinition(id: string): Promise<IPipelineStage[]> {
-        return this._pipelineStages.getForTask(id);
+        return this._persistentStorageManager.PipelineStages.getForTask(id);
     }
 
-    public createPipelineStage(name: string, description: string, project_id: string, task_id: string, previous_stage_id: string, dst_path: string, function_type: PipelineStageMethod): Promise<IPipelineStage> {
-        return this._pipelineStages.create(name, description, project_id, task_id, previous_stage_id, dst_path, function_type);
+    public createPipelineStage(name: string, description: string, project_id: string, task_id: string, previous_stage_id: string, dst_path: string, function_type: PipelineStageMethod): Promise<IPipelineStageMutationOutput> {
+        return this._persistentStorageManager.PipelineStages.createFromFields(name, description, project_id, task_id, previous_stage_id, dst_path, function_type);
     }
 
-    public setPipelineStageStatus(id: string, shouldBeActive: boolean): Promise<IPipelineStage> {
-        return this._pipelineStages.setProcessingStatus(id, shouldBeActive);
+    public async updatePipelineStage(pipelineStage: IPipelineStage): Promise<IPipelineStageMutationOutput> {
+        try {
+            let row = await this._persistentStorageManager.PipelineStages.findById(pipelineStage.id);
+
+            await row.update(pipelineStage);
+
+            row = await this._persistentStorageManager.PipelineStages.findById(pipelineStage.id);
+
+            return {pipelineStage: row, error: ""};
+        } catch (err) {
+            return {pipelineStage: null, error: err.message}
+        }
     }
 
-    public deletePipelineStage(id: string): Promise<boolean> {
-        return this._pipelineStages.softDelete(id);
+    public async deletePipelineStage(id: string): Promise<IPipelineStageDeleteOutput> {
+        try {
+            const affectedRowCount = await this._persistentStorageManager.PipelineStages.destroy({where: {id}});
+
+            if (affectedRowCount > 0) {
+                return {id, error: ""};
+            } else {
+                return {id: null, error: "Could not delete repository (no error message)"};
+            }
+        } catch (err) {
+            return {id: null, error: err.message}
+        }
+    }
+
+    public setPipelineStageStatus(id: string, shouldBeActive: boolean): Promise<IPipelineStageMutationOutput> {
+        return this.updatePipelineStage({id, is_processing: shouldBeActive});
     }
 
     public getTaskRepository(id: string): Promise<ITaskRepository> {
-        return this._taskRepositories.get(id);
+        return this._persistentStorageManager.TaskRepositories.findById(id);
     }
 
     public getTaskRepositories(): Promise<ITaskRepository[]> {
-        return this._taskRepositories.getAll();
+        return this._persistentStorageManager.TaskRepositories.findAll({});
     }
 
     public async getRepositoryTasks(id: string): Promise<ITaskDefinition[]> {
-        return this._taskDefinitions.getForRepository(id);
+        return this._persistentStorageManager.TaskDefinitions.findAll({where: {task_repository_id: id}});
     }
 
     public async createTaskRepository(taskRepository: ITaskRepository): Promise<ITaskRepositoryMutationOutput> {
         try {
-            return {taskRepository: await this._taskRepositories.create(taskRepository), error: ""};
+            const result = await this._persistentStorageManager.TaskRepositories.create(taskRepository);
+
+            return {taskRepository: result, error: ""};
+
+            // return {taskRepository: await this._taskRepositories.create(taskRepository), error: ""};
         } catch (err) {
             return {taskRepository: null, error: err.message}
         }
@@ -167,7 +277,14 @@ export class PipelineServerContext implements IPipelineServerContext {
 
     public async updateTaskRepository(taskRepository: ITaskRepository): Promise<ITaskRepositoryMutationOutput> {
         try {
-            return {taskRepository: await this._taskRepositories.updateRepository(taskRepository), error: ""};
+            // return {taskRepository: await this._taskRepositories.updateRepository(taskRepository), error: ""};
+            let row = await this._persistentStorageManager.TaskRepositories.findById(taskRepository.id);
+
+            await row.update(taskRepository);
+
+            row = await this._persistentStorageManager.TaskRepositories.findById(taskRepository.id);
+
+            return {taskRepository: row, error: ""};
         } catch (err) {
             return {taskRepository: null, error: err.message}
         }
@@ -175,9 +292,9 @@ export class PipelineServerContext implements IPipelineServerContext {
 
     public async deleteTaskRepository(taskRepository: ITaskRepository): Promise<ITaskRepositoryDeleteOutput> {
         try {
-            const result = await this._taskRepositories.softDelete(taskRepository.id);
+            const affectedRowCount = await this._persistentStorageManager.TaskRepositories.destroy({where: {id: taskRepository.id}});
 
-            if (result) {
+            if (affectedRowCount > 0) {
                 return {id: taskRepository.id, error: ""};
             } else {
                 return {id: null, error: "Could not delete repository (no error message)"};
@@ -187,9 +304,17 @@ export class PipelineServerContext implements IPipelineServerContext {
         }
     }
 
+    public getTaskDefinition(id: string): Promise<ITaskDefinition> {
+        return this._persistentStorageManager.TaskDefinitions.findById(id);
+    }
+
+    public getTaskDefinitions(): Promise<ITaskDefinition[]> {
+        return this._persistentStorageManager.TaskDefinitions.findAll({});
+    }
+
     public async createTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionMutationOutput> {
         try {
-            const result = await this._taskDefinitions.create(taskDefinition);
+            const result = await this._persistentStorageManager.TaskDefinitions.create(taskDefinition);
 
             return {taskDefinition: result, error: ""};
         } catch (err) {
@@ -199,7 +324,14 @@ export class PipelineServerContext implements IPipelineServerContext {
 
     public async updateTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionMutationOutput> {
         try {
-            return {taskDefinition: await this._taskDefinitions.updateTaskDefinition(taskDefinition), error: ""};
+            // return {taskDefinition: await this._taskDefinitions.updateTaskDefinition(taskDefinition), error: ""};
+            let row = await this._persistentStorageManager.TaskDefinitions.findById(taskDefinition.id);
+
+            await row.update(taskDefinition);
+
+            row = await this._persistentStorageManager.TaskDefinitions.findById(taskDefinition.id);
+
+            return {taskDefinition: row, error: ""};
         } catch (err) {
             return {taskDefinition: null, error: err.message}
         }
@@ -207,9 +339,9 @@ export class PipelineServerContext implements IPipelineServerContext {
 
     public async deleteTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionDeleteOutput> {
         try {
-            const result = await this._taskDefinitions.softDelete(taskDefinition.id);
+            const affectedRowCount = await this._persistentStorageManager.TaskDefinitions.destroy({where: {id: taskDefinition.id}});
 
-            if (result) {
+            if (affectedRowCount > 0) {
                 return {id: taskDefinition.id, error: ""};
             } else {
                 return {id: null, error: "Could not delete task definition (no error message)"};
@@ -219,28 +351,20 @@ export class PipelineServerContext implements IPipelineServerContext {
         }
     }
 
-    public getTaskDefinition(id: string): Promise<ITaskDefinition> {
-        return this._taskDefinitions.get(id);
-    }
-
-    public getTaskDefinitions(): Promise<ITaskDefinition[]> {
-        return this._taskDefinitions.getAll();
-    }
-
     public async getScriptStatusForTaskDefinition(taskDefinition: ITaskDefinition): Promise<boolean> {
-        const scriptPath = await this._getFullScriptPath(taskDefinition);
+        const scriptPath = await taskDefinition.getFullScriptPath();
 
         return fs.existsSync(scriptPath);
     }
 
     public async getScriptContents(taskDefinitionId: string): Promise<string> {
-        const taskDefinition = await this._taskDefinitions.get(taskDefinitionId);
+        const taskDefinition = await this.getTaskDefinition(taskDefinitionId);
 
         if (taskDefinition) {
             const haveScript = await this.getScriptStatusForTaskDefinition(taskDefinition);
 
             if (haveScript) {
-                const scriptPath = await this._getFullScriptPath(taskDefinition);
+                const scriptPath = await taskDefinition.getFullScriptPath();
 
                 return fs.readFileSync(scriptPath, "utf8");
             }
@@ -263,21 +387,5 @@ export class PipelineServerContext implements IPipelineServerContext {
 
     public getProjectPlaneTileStatus(project_id: string, plane: number): Promise<any> {
         return SchedulerHub.Instance.loadTileStatusForPlane(project_id, plane);
-    }
-
-    private async _getFullScriptPath(taskDefinition: ITaskDefinition): Promise<string> {
-        let scriptPath = taskDefinition.script;
-
-        if (taskDefinition.task_repository_id) {
-            const repo = await this._taskRepositories.get(taskDefinition.task_repository_id);
-
-            scriptPath = path.join(repo.location, scriptPath);
-        } else {
-            if (!path.isAbsolute(scriptPath)) {
-                scriptPath = path.join(process.cwd(), scriptPath);
-            }
-        }
-
-        return scriptPath;
     }
 }

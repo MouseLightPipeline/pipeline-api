@@ -4,8 +4,6 @@ const path = require("path");
 
 const debug = require("debug")("mouselight:pipeline-api:tile-status-worker");
 
-import {IProject, Projects} from "../data-model/project";
-
 const dashboardJsonFile = "dashboard.json";
 const tileStatusJsonFile = "pipeline-storage.json";
 const tileStatusLastJsonFile = tileStatusJsonFile + ".last";
@@ -14,10 +12,13 @@ import {
     connectorForFile, generatePipelineStateDatabaseName, generateProjectRootTableName
 } from "../data-access/knexPiplineStageConnection";
 
-import performanceConfiguration from "../../options/performance.config"
+import performanceConfiguration from "../options/performanceOptions"
 import {
     PipelineScheduler, DefaultPipelineIdKey, TilePipelineStatus
 } from "./pipelineScheduler";
+import {IProject} from "../data-model/sequelize/project";
+import {PipelineServerContext} from "../graphql/pipelineServerContext";
+import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 const perfConf = performanceConfiguration();
 
 interface IPosition {
@@ -39,16 +40,20 @@ interface IDashboardJsonTile {
 }
 
 export class TileStatusWorker extends PipelineScheduler {
-    private _project: IProject;
+    private _project_id: string;
 
-    public constructor(project: IProject) {
+    public constructor(project_id: string) {
         super(null);
 
         this.IsExitRequested = false;
 
         this.IsProcessingRequested = true;
 
-        this._project = project;
+        this._project_id = project_id;
+    }
+
+    private get project() {
+        return PersistentStorageManager.Instance().Projects.findById(this._project_id);
     }
 
     protected async createTables() {
@@ -57,8 +62,11 @@ export class TileStatusWorker extends PipelineScheduler {
             return;
         }
 
+        const project = await this.project;
+
         try {
-            fse.ensureDirSync(this._project.root_path);
+
+            fse.ensureDirSync(project.root_path);
         } catch (err) {
             // Most likely drive/share is not present or failed permissions.
             if (err && err.code === "EACCES") {
@@ -73,9 +81,9 @@ export class TileStatusWorker extends PipelineScheduler {
 
         this._inputKnexConnector = null;
 
-        this._outputTableName = generateProjectRootTableName(this._project.id);
+        this._outputTableName = generateProjectRootTableName(this._project_id);
 
-        this._outputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(this._project.root_path), this._outputTableName);
+        this._outputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(project.root_path), this._outputTableName);
 
         return !!this._outputKnexConnector;
     }
@@ -88,7 +96,9 @@ export class TileStatusWorker extends PipelineScheduler {
 
         if (this.IsProcessingRequested) {
             try {
-                debug(`dashboard update for project ${this._project.name}`);
+                const project = await this.project;
+
+                debug(`dashboard update for project ${project.name}`);
 
                 let knownInput = await this.performJsonUpdate();
 
@@ -173,21 +183,23 @@ export class TileStatusWorker extends PipelineScheduler {
 
     private async performJsonUpdate(): Promise<IDashboardJsonTile[]> {
         const projectUpdate: IProject = {
-            id: this._project.id
+            id: this._project_id
         };
 
         let tiles: IDashboardJsonTile[] = [];
 
-        let dataFile = path.join(this._project.root_path, dashboardJsonFile);
+        const project = await this.project;
+
+        let dataFile = path.join(project.root_path, dashboardJsonFile);
 
         if (!fse.existsSync(dataFile)) {
             debug(`\tthere is no dashboard.json file in the project root path ${dataFile}`);
             return;
         }
 
-        let outputFile = path.join(this._project.root_path, tileStatusJsonFile);
+        let outputFile = path.join(project.root_path, tileStatusJsonFile);
 
-        let backupFile = path.join(this._project.root_path, tileStatusLastJsonFile);
+        let backupFile = path.join(project.root_path, tileStatusLastJsonFile);
 
         if (fse.existsSync(outputFile)) {
             fse.copySync(outputFile, backupFile, {clobber: true});
@@ -205,7 +217,11 @@ export class TileStatusWorker extends PipelineScheduler {
             projectUpdate.sample_z_min = jsonContent.monitor.extents.minimumZ;
             projectUpdate.sample_z_max = jsonContent.monitor.extents.maximumZ;
 
-            this._project = await Projects.defaultManager().update(projectUpdate);
+            //const context = new PipelineServerContext();
+
+            //this._project = await context.updateProject(projectUpdate);
+
+            await project.update(projectUpdate);
         }
 
         for (let prop in jsonContent.tileMap) {

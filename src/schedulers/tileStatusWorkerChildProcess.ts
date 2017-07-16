@@ -1,5 +1,5 @@
 import {TileStatusWorker} from "./tileStatusWorker";
-import {Projects} from "../data-model/project";
+import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 
 const debug = require("debug")("mouselight:pipeline-api:tile-status-worker-process");
 
@@ -30,13 +30,13 @@ async function startWorkerForProcess(projectId) {
 export async function startTileStatusFileWorker(projectId: string) {
     let tileStatusWorker = null;
 
-    let project = await Projects.defaultManager().get(projectId);
+    // let project = await PersistentStorageManager.Instance().Projects.findById(projectId);
 
-    if (project) {
-        tileStatusWorker = new TileStatusWorker(project);
+    // if (project) {
+        tileStatusWorker = new TileStatusWorker(projectId);
 
         tileStatusWorker.run();
-    }
+   //  }
 
     return tileStatusWorker;
 }

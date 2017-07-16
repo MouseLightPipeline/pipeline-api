@@ -15,6 +15,8 @@ exports.up = function (knex, Promise) {
             table.float("free_memory");
             table.float("load_average");
             table.float("work_unit_capacity");
+            table.boolean("is_in_scheduler_pool");
+            table.boolean('is_cluster_proxy');
             table.timestamp("last_seen");
             table.timestamp("deleted_at");
             table.timestamps();
@@ -55,6 +57,13 @@ exports.up = function (knex, Promise) {
             table.uuid("previous_stage_id");
             table.foreign("previous_stage_id").references("PipelineStage.id");
             table.timestamps();
+        }).createTable("TaskRepository", (table) => {
+            table.uuid("id").primary().unique();
+            table.string("name");
+            table.string("description");
+            table.string("location");
+            table.timestamp("deleted_at");
+            table.timestamps();
         }).createTable("TaskDefinition", (table) => {
             table.uuid("id").primary().unique();
             table.string("name");
@@ -63,6 +72,8 @@ exports.up = function (knex, Promise) {
             table.string("interpreter");
             table.string("args");
             table.float("work_units");
+            table.uuid("task_repository_id");
+            table.foreign("task_repository_id").references("TaskRepository.id");
             table.timestamp("deleted_at");
             table.timestamps();
         }).createTable("PipelineStagePerformance", (table) => {
@@ -99,6 +110,7 @@ exports.down = function (knex, Promise) {
         .dropTable("Project")
         .dropTable("PipelineStage")
         .dropTable("TaskDefinition")
+        .dropTable("TaskRepository")
         .dropTable("PipelineStagePerformance")
         .dropTable("PipelineStageFunction");
 };

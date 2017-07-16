@@ -34,7 +34,7 @@ tmp
 .editorconfig
 
 # js in ts folders
-options/**/*.js
+src/options/**/*.js
 src/**/*.js
 knex-seeds/**/*.js
 graphql/**/.js

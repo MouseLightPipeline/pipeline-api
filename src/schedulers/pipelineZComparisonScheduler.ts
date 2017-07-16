@@ -1,6 +1,6 @@
 import {PipelineScheduler, TilePipelineStatus, DefaultPipelineIdKey, IPipelineTile} from "./pipelineScheduler";
-import {IPipelineStage} from "../data-model/pipelineStage";
 import {verifyTable, generatePipelineCustomTableName} from "../data-access/knexPiplineStageConnection";
+import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 
 export class PipelineZComparisonScheduler extends PipelineScheduler {
 

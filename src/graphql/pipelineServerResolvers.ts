@@ -1,15 +1,17 @@
+import {ITaskRepository} from "../data-model/sequelize/taskRepository";
 const debug = require("debug")("mouselight:pipeline-api:resolvers");
 
-import {ITaskDefinition} from "../data-model/taskDefinition";
-import {IPipelineStage} from "../data-model/pipelineStage";
-import {IProject, IProjectInput} from "../data-model/project";
-import {IPipelineWorker} from "../data-model/pipelineWorker";
 import {IPipelineStagePerformance} from "../data-model/pipelineStagePerformance";
-import {ITaskRepository} from "../data-model/taskRepository";
 import {
-    IPipelineServerContext, ITaskDefinitionDeleteOutput, ITaskDefinitionMutationOutput, ITaskRepositoryDeleteOutput,
+    IPipelineServerContext, IPipelineStageDeleteOutput, IPipelineStageMutationOutput, IProjectDeleteOutput, IProjectMutationOutput, ITaskDefinitionDeleteOutput,
+    ITaskDefinitionMutationOutput,
+    ITaskRepositoryDeleteOutput,
     ITaskRepositoryMutationOutput
 } from "./pipelineServerContext";
+import {ITaskDefinition} from "../data-model/sequelize/taskDefinition";
+import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
+import {IProject, IProjectInput} from "../data-model/sequelize/project";
+import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 
 interface IIdOnlyArgument {
     id: string;
@@ -17,9 +19,6 @@ interface IIdOnlyArgument {
 
 interface ITaskDefinitionIdArguments {
     task_definition_id: string;
-}
-interface IIncludeSoftDeleteArgument {
-    includeDeleted: boolean;
 }
 
 interface ICreatePipelineStageArguments {
@@ -39,6 +38,10 @@ interface ICreateProjectArguments {
 
 interface IUpdateProjectArguments {
     project: IProjectInput;
+}
+
+interface IUpdatePipelineStageArguments {
+    pipelineStage: IPipelineStage;
 }
 
 interface IMutateRepositoryArguments {
@@ -75,8 +78,8 @@ let resolvers = {
         project(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IProject> {
             return context.getProject(args.id);
         },
-        projects(_, args: IIncludeSoftDeleteArgument, context: IPipelineServerContext): Promise<IProject[]> {
-            return context.getProjects(args.includeDeleted);
+        projects(_, __, context: IPipelineServerContext): Promise<IProject[]> {
+            return context.getProjects();
         },
         pipelineStage(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IPipelineStage> {
             return context.getPipelineStage(args.id);
@@ -113,27 +116,30 @@ let resolvers = {
         }
     },
     Mutation: {
-        createProject(_, args: ICreateProjectArguments, context: IPipelineServerContext): Promise<IProject> {
+        createProject(_, args: ICreateProjectArguments, context: IPipelineServerContext): Promise<IProjectMutationOutput> {
             debug(`resolve create project ${args.project.name}`);
             return context.createProject(args.project);
         },
-        updateProject(_, args: IUpdateProjectArguments, context: IPipelineServerContext): Promise<IProject> {
+        updateProject(_, args: IUpdateProjectArguments, context: IPipelineServerContext): Promise<IProjectMutationOutput> {
             return context.updateProject(args.project);
         },
-        setProjectStatus(_, args: ISetActiveStatusArguments, context: IPipelineServerContext) {
-            return context.setProjectStatus(args.id, args.shouldBeActive);
-        },
-        deleteProject(_, args: IIdOnlyArgument, context: IPipelineServerContext) {
+        deleteProject(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IProjectDeleteOutput> {
             return context.deleteProject(args.id);
         },
-        createPipelineStage(_, args: ICreatePipelineStageArguments, context: IPipelineServerContext): Promise<IPipelineStage> {
+        setProjectStatus(_, args: ISetActiveStatusArguments, context: IPipelineServerContext): Promise<IProjectMutationOutput> {
+            return context.setProjectStatus(args.id, args.shouldBeActive);
+        },
+        createPipelineStage(_, args: ICreatePipelineStageArguments, context: IPipelineServerContext): Promise<IPipelineStageMutationOutput> {
             debug(`resolve create pipeline stage for project ${args.project_id}`);
             return context.createPipelineStage(args.name, args.description, args.project_id, args.task_id, args.previous_stage_id, args.dst_path, args.function_type);
         },
-        setPipelineStageStatus(_, args: ISetActiveStatusArguments, context: IPipelineServerContext) {
+        updatePipelineStage(_, args: IUpdatePipelineStageArguments, context: IPipelineServerContext): Promise<IPipelineStageMutationOutput> {
+            return context.updatePipelineStage(args.pipelineStage);
+        },
+        setPipelineStageStatus(_, args: ISetActiveStatusArguments, context: IPipelineServerContext): Promise<IPipelineStageMutationOutput> {
             return context.setPipelineStageStatus(args.id, args.shouldBeActive);
         },
-        deletePipelineStage(_, args: IIdOnlyArgument, context: IPipelineServerContext) {
+        deletePipelineStage(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IPipelineStageDeleteOutput> {
             return context.deletePipelineStage(args.id);
         },
         createTaskRepository(_, args: IMutateRepositoryArguments, context: IPipelineServerContext): Promise<ITaskRepositoryMutationOutput> {

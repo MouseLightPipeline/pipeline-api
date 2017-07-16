@@ -1,4 +1,4 @@
 "use strict";
-const knexfile_config_1 = require("./options/knexfile.config");
-module.exports = knexfile_config_1.KnexDatabaseConfiguration;
+const knexOptions_1 = require("./src/options/knexOptions");
+module.exports = knexOptions_1.KnexDatabaseConfiguration;
 //# sourceMappingURL=knexfile.js.map

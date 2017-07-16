@@ -141,6 +141,26 @@ type TilePlane {
   tiles: [TileStatus]
 }
 
+type MutateProjectOutput {
+    project: Project
+    error: String
+}
+
+type DeleteProjectOutput {
+    id: String
+    error: String
+}
+
+type MutatePipelineStageOutput {
+    pipelineStage: PipelineStage
+    error: String
+}
+
+type DeletePipelineStageOutput {
+    id: String
+    error: String
+}
+
 type MutateTaskRepositoryOutput {
     taskRepository: TaskRepository
     error: String
@@ -176,7 +196,22 @@ input ProjectInput {
   description: String
   root_path: String
   sample_number: Int
+  is_processing: Boolean
   region_bounds: RegionInput
+}
+
+input PipelineStageInput {
+  id: String!
+  name: String
+  description: String
+  function_type: Int
+  execution_order: Int
+  dst_path: String
+  depth: Int
+  is_processing: Boolean
+  project_id: String
+  task_id: String
+  previous_stage_id: String
 }
 
 input TaskRepositoryInput {
@@ -202,7 +237,7 @@ type Query {
   pipelineWorker(id: String!): PipelineWorker
   pipelineWorkers: [PipelineWorker!]!
   project(id: String!): Project
-  projects(includeDeleted: Boolean = false): [Project!]!
+  projects: [Project!]!
   pipelineStage(id: String!): PipelineStage
   pipelineStages: [PipelineStage!]!
   pipelineStagesForProject(id: String!): [PipelineStage!]!
@@ -217,14 +252,15 @@ type Query {
 }
 
 type Mutation {
-  createProject(project: ProjectInput): Project
-  updateProject(project: ProjectInput): Project
-  setProjectStatus(id: String, shouldBeActive: Boolean): Project
-  deleteProject(id: String!): Boolean
+  createProject(project: ProjectInput): MutateProjectOutput
+  updateProject(project: ProjectInput): MutateProjectOutput
+  setProjectStatus(id: String, shouldBeActive: Boolean): MutateProjectOutput
+  deleteProject(id: String!): DeleteProjectOutput
   
-  createPipelineStage(name: String, description: String, project_id: String, task_id: String, previous_stage_id: String, dst_path: String, function_type: Int): PipelineStage
-  setPipelineStageStatus(id: String, shouldBeActive: Boolean): PipelineStage
-  deletePipelineStage(id: String!): Boolean
+  createPipelineStage(name: String, description: String, project_id: String, task_id: String, previous_stage_id: String, dst_path: String, function_type: Int): MutatePipelineStageOutput
+  updatePipelineStage(pipelineStage: PipelineStageInput): MutatePipelineStageOutput
+  setPipelineStageStatus(id: String, shouldBeActive: Boolean): MutatePipelineStageOutput
+  deletePipelineStage(id: String!): DeletePipelineStageOutput
   
   createTaskRepository(taskRepository: TaskRepositoryInput): MutateTaskRepositoryOutput
   updateTaskRepository(taskRepository: TaskRepositoryInput): MutateTaskRepositoryOutput

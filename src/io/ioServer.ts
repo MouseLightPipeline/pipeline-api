@@ -1,9 +1,9 @@
 import * as socket_io from "socket.io";
 import * as http from "http";
+import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
+import {IPipelineWorker, PipelineWorkerStatus} from "../data-model/sequelize/pipelineWorker";
 
 const debug = require("debug")("mouselight:pipeline-api:socket.io");
-
-import {PipelineWorkers, PipelineWorkerStatus} from "../data-model/pipelineWorker";
 
 export class SocketIoServer {
     private static _ioServer = null;
@@ -42,9 +42,10 @@ export class SocketIoServer {
 
     private async onWorkerApiService(client, workerInformation) {
         // Update worker for last seen.
-        let workerManager = new PipelineWorkers();
 
-        let worker = await workerManager.getForMachineId(workerInformation.worker.id);
+        let row = await PersistentStorageManager.Instance().PipelineWorkers.getForMachineId(workerInformation.worker.id);
+
+        const worker: IPipelineWorker = {};
 
         worker.machine_id = workerInformation.worker.id;
         worker.work_unit_capacity = workerInformation.worker.work_capacity;
@@ -61,22 +62,22 @@ export class SocketIoServer {
         worker.total_memory = workerInformation.service.machineProperties.totalMemory;
         worker.last_seen = new Date();
 
-        await workerManager.save(worker);
+        await row.update(worker);
     }
 
     private async onHeartbeat(client, heartbeatData) {
         // Update worker for last seen.
-        let workerManager = new PipelineWorkers();
 
-        let worker = await workerManager.getForMachineId(heartbeatData.worker.id);
+        let row = await PersistentStorageManager.Instance().PipelineWorkers.getForMachineId(heartbeatData.worker.id);
+
+        const worker: IPipelineWorker = {};
 
         worker.is_cluster_proxy = heartbeatData.worker.is_cluster_proxy;
         worker.work_unit_capacity = heartbeatData.worker.work_capacity;
         worker.last_seen = new Date();
+        worker.task_load = heartbeatData.taskLoad;
 
-        worker = await workerManager.save(worker);
-
-        PipelineWorkers.setWorkerTaskLoad(worker.id, heartbeatData.taskLoad);
+        await row.update(worker);
 
         let status = PipelineWorkerStatus.Unavailable;
 
@@ -92,6 +93,6 @@ export class SocketIoServer {
         }
 
         // Update non-persistent worker status
-        PipelineWorkers.setWorkerStatus(worker.id, status);
+        await row.update({status});
     }
 }

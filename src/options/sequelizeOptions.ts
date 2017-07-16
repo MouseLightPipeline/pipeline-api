@@ -19,4 +19,6 @@ function loadDatabaseOptions() {
     return Object.assign(databaseOptions.production, {host, port, password, username});
 }
 
-export = loadDatabaseOptions();
+const SequelizeOptions = loadDatabaseOptions();
+
+export default SequelizeOptions;
