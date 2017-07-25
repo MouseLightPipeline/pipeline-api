@@ -1,15 +1,19 @@
 {
-  "name": "mlpipelineapi",
-  "version": "0.1.0",
+  "name": "pipeline-api",
+  "version": "1.0.5",
   "description": "",
   "main": "src/pipelineApiApp.js",
+  "licenses": [
+    "Janelia"
+  ],
+  "dockerRepository": "mouselightpipeline",
   "scripts": {
     "dev": "DEBUG=mouselight* node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
-    "devknex": "DEBUG=mouselight*,knex:query,knex:client,knex:pool node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
     "start": "node src/pipelineApiApp.js",
     "deploy-dev": "nohup DEBUG=mouselight* node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
     "deploy-run": "nohup node src/pipelineApiApp.js > /dev/null 2>&1",
-    "docker-build": "docker build -t leapsci/mlpipelineapi ."
+    "docker-build": "gulp docker-build",
+    "release": "gulp release"
   },
   "author": "Patrick Edson <pedson@leapscientific.com> (http://github.com/pedson)",
   "license": "Janelia",
@@ -48,6 +52,8 @@
     "@types/sequelize": "^4.0.65",
     "@types/serve-static": "^1.7.31",
     "@types/socket.io": "^1.4.29",
-    "@types/uuid": "^3.0.0"
+    "@types/uuid": "^3.0.0",
+    "gulp": "^3.9.1",
+    "gulp-shell": "^0.6.3"
   }
 }

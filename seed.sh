@@ -7,7 +7,12 @@ fi
 
 if [ ! -z "$2" ]
   then
-    export PIPELINE_SEED_ENV=$2
+    export PIPELINE_DATABASE_PORT=$2
+fi
+
+if [ ! -z "$3" ]
+  then
+    export PIPELINE_SEED_ENV=$3
 fi
 
 echo "Seed for all databases."

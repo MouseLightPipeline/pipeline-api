@@ -5,6 +5,11 @@ if [ ! -z "$1" ]
     export PIPELINE_DATABASE_HOST=$1
 fi
 
+if [ ! -z "$2" ]
+  then
+    export PIPELINE_DATABASE_PORT=$2
+fi
+
 echo "Migrate for all databases."
 
 echo "Migrate postgres service"

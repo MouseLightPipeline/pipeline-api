@@ -1,4 +1,5 @@
 import * as path from "path";
+
 export interface ITaskDefinition {
     id: string;
     name: string;
