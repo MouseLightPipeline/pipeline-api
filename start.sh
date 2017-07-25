@@ -14,6 +14,8 @@ fi
 
 ./migrate.sh ${PIPELINE_DATABASE_HOST} ${PIPELINE_DATABASE_PORT}
 
-npm run dev &
+npm run dev
 
-NODE_ENV=${LAST_NODE_ENV}
+export NODE_ENV=${LAST_NODE_ENV}
+
+sleep infinity

@@ -10,6 +10,6 @@ RUN yarn install
 
 RUN tsc
 
-CMD ["npm", "run", "start"]
+CMD ["./start.sh"]
 
 EXPOSE  3000

@@ -70,9 +70,9 @@ export function sequelizeImport(sequelize, DataTypes) {
         let scriptPath = this.script;
 
         if (this.task_repository_id) {
-            const repo = await TaskRepositories(this.task_repository_id);
+            const repo = await TaskRepositories.findById(this.task_repository_id);
 
-            scriptPath = path.join(repo.location, scriptPath);
+            scriptPath = path.resolve(path.join(repo.location, scriptPath));
         } else {
             if (!path.isAbsolute(scriptPath)) {
                 scriptPath = path.join(process.cwd(), scriptPath);

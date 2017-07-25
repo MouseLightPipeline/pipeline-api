@@ -6,6 +6,7 @@ export = {
     up: async (queryInterface, Sequelize) => {
         const when = new Date();
 
+        await queryInterface.bulkInsert("TaskRepositories", createTaskRepositories(when), {});
         await queryInterface.bulkInsert("TaskDefinitions", createTaskDefinitions(when), {});
         await queryInterface.bulkInsert("Projects", createProjects(when), {});
         await queryInterface.bulkInsert("PipelineStages", createPipelineStages(when), {});
@@ -17,54 +18,85 @@ export = {
         await queryInterface.bulkDelete("PipelineStages", null, {});
         await queryInterface.bulkDelete("Projects", null, {});
         await queryInterface.bulkDelete("TaskDefinitions", null, {});
+        await queryInterface.bulkDelete("askRepositories", null, {});
     }
 };
+
+function createTaskRepositories(when: Date) {
+    if (isProduction) {
+        return [{
+            id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
+            name: "Default",
+            description: "Default task repository.",
+            location: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/taskdefinitions/default",
+            created_at: when
+        }];
+    } else {
+        return [{
+            id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
+            name: "Default",
+            description: "Default task repository.",
+            location: "../taskdefinitions/default",
+            created_at: when
+        }];
+    }
+}
 
 function createTaskDefinitions(when: Date) {
     if (isProduction) {
         return [{
-            id: "1161f8e6-29d5-44b0-b6a9-8d3e54d23292",
-            name: "Axon UInt16",
-            description: "Axon UInt16",
-            script: "tasks/axon-uint16.sh",
-            interpreter: "none",
-            args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps",
-            work_units: 4,
-            task_repository_id: null,
-            created_at: when
-        }, {
-            id: "a9f21399-07c0-425c-86f6-6e4f45bb06b9",
-            name: "dogDescriptor",
-            description: "",
-            script: "tasks/dogDescriptor.sh",
-            interpreter: "none",
-            args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps",
-            work_units: 2,
-            task_repository_id: null,
-            created_at: when
-        }, {
-            id: "3ba41d1c-13d0-4def-9b5b-54d940a0fa08",
-            name: "getDescriptorsForTile",
-            description: "",
-            script: "tasks/getDescriptorsForTile.sh",
-            interpreter: "none",
-            args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps",
-            work_units: 1,
-            task_repository_id: null,
-            created_at: when
-        }, {
             id: "04b8313e-0e96-4194-9c06-22771acd3986",
             name: "Echo",
             description: "Simple command to test shell worker execution.  Will echo the passed arguments.",
-            script: "task/echo.sh",
+            script: "tasks/echo.sh",
             interpreter: "none",
             args: "",
             work_units: 0,
             task_repository_id: null,
             created_at: when
+        }, {
+            id: "1161f8e6-29d5-44b0-b6a9-8d3e54d23292",
+            name: "Axon UInt16",
+            description: "Axon UInt16",
+            script: "axon-uint16.sh",
+            interpreter: "none",
+            args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps",
+            work_units: 4,
+            task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
+            created_at: when
+        }, {
+            id: "a9f21399-07c0-425c-86f6-6e4f45bb06b9",
+            name: "dogDescriptor",
+            description: "",
+            script: "dogDescriptor.sh",
+            interpreter: "none",
+            args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps",
+            work_units: 2,
+            task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
+            created_at: when
+        }, {
+            id: "3ba41d1c-13d0-4def-9b5b-54d940a0fa08",
+            name: "getDescriptorPerTile",
+            description: "",
+            script: "getDescriptorPerTile.sh",
+            interpreter: "none",
+            args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps",
+            work_units: 1,
+            task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
+            created_at: when
         }];
     } else {
         return [{
+            id: "04b8313e-0e96-4194-9c06-22771acd3986",
+            name: "Echo",
+            description: "Simple command to test shell worker execution.  Will echo all arguments.",
+            script: "tasks/echo.sh",
+            interpreter: "none",
+            args: `"custom arg 1" "custom arg 2"`,
+            work_units: 0,
+            task_repository_id: null,
+            created_at: when
+        }, {
             id: "1ec76026-4ecc-4d25-9c6e-cdf992a05da3",
             name: "ilastik Pixel Classifier Test",
             description: "Calls ilastik with test project.",
@@ -78,31 +110,21 @@ function createTaskDefinitions(when: Date) {
             id: "a9f21399-07c0-425c-86f6-6e4f45bb06b9",
             name: "dogDescriptor",
             description: "",
-            script: "tasks/dogDescriptor.sh",
+            script: "dogDescriptor.sh",
             interpreter: "none",
             args: "/Volumes/Spare/Projects/MouseLight/Apps/Pipeline/dogDescriptor /groups/mousebrainmicro/mousebrainmicro/Software/mcr/v90",
             work_units: 2,
-            task_repository_id: null,
+            task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }, {
             id: "3ba41d1c-13d0-4def-9b5b-54d940a0fa08",
-            name: "getDescriptorsForTile",
+            name: "getDescriptorPerTile",
             description: "",
-            script: "tasks/getDescriptorsForTile.sh",
+            script: "getDescriptorPerTile.sh",
             interpreter: "none",
             args: "/Volumes/Spare/Projects/MouseLight/Apps/Pipeline/dogDescriptor/getDescriptorPerTile /groups/mousebrainmicro/mousebrainmicro/Software/mcr/v90",
             work_units: 1,
-            task_repository_id: null,
-            created_at: when
-        }, {
-            id: "04b8313e-0e96-4194-9c06-22771acd3986",
-            name: "Echo",
-            description: "Simple command to test shell worker execution.  Will echo all arguments.",
-            script: "tasks/echo.sh",
-            interpreter: "none",
-            args: `"custom arg 1" "custom arg 2"`,
-            work_units: 0,
-            task_repository_id: null,
+            task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }];
     }
