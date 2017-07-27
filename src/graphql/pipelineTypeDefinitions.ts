@@ -55,6 +55,7 @@ type Project {
   name: String
   description: String
   root_path: String
+  dashboard_json_status: Boolean
   sample_number: Int
   sample_x_min: Int
   sample_x_max: Int
@@ -254,7 +255,6 @@ type Query {
 type Mutation {
   createProject(project: ProjectInput): MutateProjectOutput
   updateProject(project: ProjectInput): MutateProjectOutput
-  setProjectStatus(id: String, shouldBeActive: Boolean): MutateProjectOutput
   deleteProject(id: String!): DeleteProjectOutput
   
   createPipelineStage(name: String, description: String, project_id: String, task_id: String, previous_stage_id: String, dst_path: String, function_type: Int): MutatePipelineStageOutput

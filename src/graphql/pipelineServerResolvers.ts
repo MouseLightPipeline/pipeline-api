@@ -126,9 +126,6 @@ let resolvers = {
         deleteProject(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IProjectDeleteOutput> {
             return context.deleteProject(args.id);
         },
-        setProjectStatus(_, args: ISetActiveStatusArguments, context: IPipelineServerContext): Promise<IProjectMutationOutput> {
-            return context.setProjectStatus(args.id, args.shouldBeActive);
-        },
         createPipelineStage(_, args: ICreatePipelineStageArguments, context: IPipelineServerContext): Promise<IPipelineStageMutationOutput> {
             debug(`resolve create pipeline stage for project ${args.project_id}`);
             return context.createPipelineStage(args.name, args.description, args.project_id, args.task_id, args.previous_stage_id, args.dst_path, args.function_type);
@@ -167,6 +164,9 @@ let resolvers = {
     Project: {
         stages(project, _, context: IPipelineServerContext): any {
             return context.getPipelineStagesForProject(project.id);
+        },
+        dashboard_json_status(project: IProject, _, context: IPipelineServerContext): boolean {
+            return context.getDashboardJsonStatusForProject(project);
         }
     },
     PipelineStage: {
