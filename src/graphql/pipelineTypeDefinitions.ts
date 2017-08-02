@@ -115,6 +115,7 @@ type PipelineStage {
   task: TaskDefinition
   performance: PipelineStagePerformance
   previous_stage: PipelineStage
+  child_stages: [PipelineStage]
   created_at: String
   updated_at: String
   deleted_at: String
@@ -202,7 +203,7 @@ input ProjectInput {
 }
 
 input PipelineStageInput {
-  id: String!
+  id: String
   name: String
   description: String
   function_type: Int
@@ -211,8 +212,8 @@ input PipelineStageInput {
   depth: Int
   is_processing: Boolean
   project_id: String
-  task_id: String
   previous_stage_id: String
+  task_id: String
 }
 
 input TaskRepositoryInput {
@@ -257,9 +258,8 @@ type Mutation {
   updateProject(project: ProjectInput): MutateProjectOutput
   deleteProject(id: String!): DeleteProjectOutput
   
-  createPipelineStage(name: String, description: String, project_id: String, task_id: String, previous_stage_id: String, dst_path: String, function_type: Int): MutatePipelineStageOutput
+  createPipelineStage(pipelineStage: PipelineStageInput): MutatePipelineStageOutput
   updatePipelineStage(pipelineStage: PipelineStageInput): MutatePipelineStageOutput
-  setPipelineStageStatus(id: String, shouldBeActive: Boolean): MutatePipelineStageOutput
   deletePipelineStage(id: String!): DeletePipelineStageOutput
   
   createTaskRepository(taskRepository: TaskRepositoryInput): MutateTaskRepositoryOutput

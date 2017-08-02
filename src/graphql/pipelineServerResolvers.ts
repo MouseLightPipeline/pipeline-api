@@ -1,4 +1,5 @@
 import {ITaskRepository} from "../data-model/sequelize/taskRepository";
+
 const debug = require("debug")("mouselight:pipeline-api:resolvers");
 
 import {IPipelineStagePerformance} from "../data-model/pipelineStagePerformance";
@@ -21,16 +22,6 @@ interface ITaskDefinitionIdArguments {
     task_definition_id: string;
 }
 
-interface ICreatePipelineStageArguments {
-    name: string;
-    description: string;
-    project_id: string;
-    task_id: string;
-    previous_stage_id: string;
-    dst_path: string;
-    function_type: number;
-}
-
 interface ICreateProjectArguments {
     project: IProjectInput;
 
@@ -38,6 +29,10 @@ interface ICreateProjectArguments {
 
 interface IUpdateProjectArguments {
     project: IProjectInput;
+}
+
+interface ICreatePipelineStageArguments {
+    pipelineStage: IPipelineStage;
 }
 
 interface IUpdatePipelineStageArguments {
@@ -50,11 +45,6 @@ interface IMutateRepositoryArguments {
 
 interface IMutateTaskDefinitionArguments {
     taskDefinition: ITaskDefinition;
-}
-
-interface ISetActiveStatusArguments {
-    id: string;
-    shouldBeActive: boolean;
 }
 
 interface IPipelinePlaneStatusArguments {
@@ -117,7 +107,6 @@ let resolvers = {
     },
     Mutation: {
         createProject(_, args: ICreateProjectArguments, context: IPipelineServerContext): Promise<IProjectMutationOutput> {
-            debug(`resolve create project ${args.project.name}`);
             return context.createProject(args.project);
         },
         updateProject(_, args: IUpdateProjectArguments, context: IPipelineServerContext): Promise<IProjectMutationOutput> {
@@ -127,14 +116,10 @@ let resolvers = {
             return context.deleteProject(args.id);
         },
         createPipelineStage(_, args: ICreatePipelineStageArguments, context: IPipelineServerContext): Promise<IPipelineStageMutationOutput> {
-            debug(`resolve create pipeline stage for project ${args.project_id}`);
-            return context.createPipelineStage(args.name, args.description, args.project_id, args.task_id, args.previous_stage_id, args.dst_path, args.function_type);
+            return context.createPipelineStage(args.pipelineStage);
         },
         updatePipelineStage(_, args: IUpdatePipelineStageArguments, context: IPipelineServerContext): Promise<IPipelineStageMutationOutput> {
             return context.updatePipelineStage(args.pipelineStage);
-        },
-        setPipelineStageStatus(_, args: ISetActiveStatusArguments, context: IPipelineServerContext): Promise<IPipelineStageMutationOutput> {
-            return context.setPipelineStageStatus(args.id, args.shouldBeActive);
         },
         deletePipelineStage(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IPipelineStageDeleteOutput> {
             return context.deletePipelineStage(args.id);
@@ -179,8 +164,11 @@ let resolvers = {
         project(stage, _, context: IPipelineServerContext): any {
             return context.getProject(stage.project_id);
         },
-        previous_stage(stage, _, context: IPipelineServerContext): any {
+        previous_stage(stage, _, context: IPipelineServerContext): Promise<IPipelineStage> {
             return context.getPipelineStage(stage.previous_stage_id);
+        },
+        child_stages(stage, _, context: IPipelineServerContext): Promise<IPipelineStage[]> {
+            return context.getPipelineStageChildren(stage.id);
         }
     },
     TaskRepository: {
@@ -197,7 +185,7 @@ let resolvers = {
             return null;
         },
         pipeline_stages(taskDefinition: ITaskDefinition, _, context: IPipelineServerContext): any {
-          return context.getPipelineStagesForTaskDefinition(taskDefinition.id);
+            return context.getPipelineStagesForTaskDefinition(taskDefinition.id);
         },
         script_status(taskDefinition: ITaskDefinition, _, context: IPipelineServerContext): any {
             return context.getScriptStatusForTaskDefinition(taskDefinition);
