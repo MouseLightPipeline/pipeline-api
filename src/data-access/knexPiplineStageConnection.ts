@@ -166,10 +166,10 @@ async function createConnection(name: string, requiredTable: string): Promise<Kn
         }
     };
 
-    let knex = Knex(configuration);
+    const knex = Knex(configuration);
 
     try {
-        await knex.migrate.latest(configuration);
+        await knex.migrate.latest(configuration.migrations);
     } catch (err) {
         debug(err);
         return null;
