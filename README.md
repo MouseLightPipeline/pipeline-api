@@ -26,9 +26,13 @@ For production the postgres user/pass should of course be changed.
 As a standalone service it requires minimum node version 7.10. 
 
 Outside of a container the service can be started in a number of ways
-* `start.sh` ensures that all migrations are up to date and launches the node process
+* `start.sh` ensures that all migrations are up to date and launches the node process and sleeps
 * `bg_start.sh` ensures that all migrations are up to date and uses nohup to facilitate disconnecting from the session
 * `npm run start` or `npm run dev` for production or development mode (node debugger attachment and debug messages) without migration checks
+
+`start.sh` is useful for running in a container where nohup is not necessary the sleep is required to keep the container active.
+
+`bg_start.sh` is useful for starting from an interactive session.
 
 #### Container
 
@@ -60,12 +64,12 @@ the `PIPELINE_SEED_ENV` environment variable directly.
 
 ### Example Installations
 
-**Container with Docker Compose**
+####Container with Docker Compose
 
 **Local Development**
 1. Start the pipeline database.  The simplest method is via the server-prod repo and the `up.sh` script to start all background
 services and data volumes via Docker Compose.  Alternatively, run a postgres server anywhere/way that contains a pipeline_production database.
-2. If using the Docker Compose configuration, stop the container service via `docker stop <container_id>` 
+2. If using the Docker Compose configuration, stop this api service container via `docker stop <container_id>` 
 3. If this is the first launch, or if a new migration has been added, use the `migrate.sh` script as `./migrate.sh localhost 4432`.
 4. If this is the first launch, optionally seed the database to get up and running quickly using `./seed.sh localhost 4432`
 5. Launch using `npm run dev` 
