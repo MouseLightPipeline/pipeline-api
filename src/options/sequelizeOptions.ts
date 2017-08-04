@@ -1,11 +1,11 @@
 const databaseOptions = {
     production: {
-        database: "pipeline_production",
-        username: "postgres",
-        password: "pgsecret",
         host: "pipeline-db",
         port: 5432,
         dialect: "postgres",
+        database: "pipeline_production",
+        username: "postgres",
+        password: "pgsecret",
         logging: null
     }
 };

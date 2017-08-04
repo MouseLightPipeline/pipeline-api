@@ -21,9 +21,7 @@ const configurations: IServerEnvDefinitions = {
 };
 
 export default function (): IServerOptions {
-    let env = process.env.NODE_ENV || "production";
-
-    return configurations[env];
+    return configurations.production;
 }
 
 

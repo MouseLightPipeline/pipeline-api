@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 
-LAST_NODE_ENV=${NODE_ENV}
-
-export NODE_ENV=production
-
 if [ -z "$PIPELINE_DATABASE_HOST" ]; then
     export PIPELINE_DATABASE_HOST="localhost"
 fi
@@ -15,5 +11,3 @@ fi
 ./migrate.sh ${PIPELINE_DATABASE_HOST} ${PIPELINE_DATABASE_PORT}
 
 nohup npm run dev &
-
-export NODE_ENV=${LAST_NODE_ENV}

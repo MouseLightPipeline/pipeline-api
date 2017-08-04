@@ -15,7 +15,13 @@ if [ ! -z "$3" ]
     export PIPELINE_SEED_ENV=$3
 fi
 
+LAST_NODE_ENV=${NODE_ENV}
+
+export NODE_ENV=production
+
 echo "Seed for all databases."
 
 echo "Seed postgres service"
 sequelize db:seed:all
+
+export NODE_ENV=${LAST_NODE_ENV}

@@ -15,7 +15,5 @@ const configurations: IPerformanceEnvDefinitions = {
 };
 
 export default function (): IPerformanceOptions {
-    let env = process.env.NODE_ENV || "production";
-
-    return configurations[env];
+    return configurations.production;
 }
