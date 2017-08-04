@@ -54,42 +54,69 @@ export interface ITaskDefinitionDeleteOutput {
 
 export interface IPipelineServerContext {
     getPipelineWorker(id: string): Promise<IPipelineWorker>;
+
     getPipelineWorkers(): Promise<IPipelineWorker[]>;
+
     setWorkerAvailability(id: string, shouldBeInSchedulerPool: boolean): Promise<IPipelineWorker>;
 
     getProject(id: string): Promise<IProject>;
+
     getProjects(): Promise<IProject[]>;
+
     getDashboardJsonStatusForProject(project: IProject): boolean;
+
     createProject(project: IProjectInput): Promise<IProjectMutationOutput>;
+
     updateProject(project: IProjectInput): Promise<IProjectMutationOutput>;
+
     deleteProject(id: string): Promise<IProjectDeleteOutput>;
 
     getPipelineStage(id: string): Promise<IPipelineStage>;
+
     getPipelineStages(): Promise<IPipelineStage[]>;
+
     getPipelineStagesForProject(id: string): Promise<IPipelineStage[]>;
+
     getPipelineStagesForTaskDefinition(id: string): Promise<IPipelineStage[]>;
+
     getPipelineStageChildren(id: string): Promise<IPipelineStage[]>
+
     createPipelineStage(pipelineStage: IPipelineStage): Promise<IPipelineStageMutationOutput>;
+
     updatePipelineStage(pipelineStage: IPipelineStage): Promise<IPipelineStageMutationOutput>;
+
     deletePipelineStage(id: string): Promise<IPipelineStageDeleteOutput>;
 
     getTaskRepository(id: string): Promise<ITaskRepository>;
+
     getTaskRepositories(): Promise<ITaskRepository[]>;
+
     getRepositoryTasks(id: string): Promise<ITaskDefinition[]>;
+
     createTaskRepository(taskRepository: ITaskRepository): Promise<ITaskRepositoryMutationOutput>;
+
     updateTaskRepository(taskRepository: ITaskRepository): Promise<ITaskRepositoryMutationOutput>;
+
     deleteTaskRepository(taskRepository: ITaskRepository): Promise<ITaskRepositoryDeleteOutput>;
 
     getTaskDefinition(id: string): Promise<ITaskDefinition>;
+
     getTaskDefinitions(): Promise<ITaskDefinition[]>;
+
     getScriptStatusForTaskDefinition(taskDefinition: ITaskDefinition): Promise<boolean>;
+
     getScriptContents(taskDefinitionId: string): Promise<string>;
+
     createTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionMutationOutput>;
+
     updateTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionMutationOutput>;
+
     deleteTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionDeleteOutput>;
 
     getPipelineStagePerformance(id: string): Promise<IPipelineStagePerformance>;
+
     getPipelineStagePerformances(): Promise<IPipelineStagePerformance[]>;
+
     getForStage(pipeline_stage_id: string): Promise<IPipelineStagePerformance>
 
     getProjectPlaneTileStatus(project_id: string, plane: number): Promise<any>;
@@ -109,7 +136,6 @@ export class PipelineServerContext implements IPipelineServerContext {
     }
 
     public async setWorkerAvailability(id: string, shouldBeInSchedulerPool: boolean): Promise<IPipelineWorker> {
-        // return this._workers.setShouldBeInSchedulerPool(id, shouldBeInSchedulerPool);
         const worker = await this._persistentStorageManager.PipelineWorkers.findById(id);
 
         await worker.update({is_in_scheduler_pool: shouldBeInSchedulerPool});

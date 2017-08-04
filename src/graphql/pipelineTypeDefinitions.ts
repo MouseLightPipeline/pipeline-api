@@ -12,14 +12,14 @@ type PipelineWorker {
   free_memory: Float
   load_average: Float
   work_unit_capacity: Float
-  last_seen: String
+  last_seen: Float
   task_load: Float
   status: Int
   is_in_scheduler_pool: Boolean
   is_cluster_proxy: Boolean
-  created_at: String
-  updated_at: String
-  deleted_at: String
+  created_at: Float
+  updated_at: Float
+  deleted_at: Float
 }
 
 type TaskRepository {
@@ -28,9 +28,9 @@ type TaskRepository {
   description: String!
   location: String!
   task_definitions: [TaskDefinition!]!
-  created_at: String
-  updated_at: String
-  deleted_at: String
+  created_at: Float
+  updated_at: Float
+  deleted_at: Float
 }
 
 type TaskDefinition {
@@ -45,9 +45,9 @@ type TaskDefinition {
   task_repository: TaskRepository
   pipeline_stages: [PipelineStage!]!
   script_status: Boolean
-  created_at: String
-  updated_at: String
-  deleted_at: String
+  created_at: Float
+  updated_at: Float
+  deleted_at: Float
 }
 
 type Project {
@@ -70,9 +70,9 @@ type Project {
   region_z_min: Int
   region_z_max: Int
   is_processing: Boolean
-  created_at: String
-  updated_at: String
-  deleted_at: String
+  created_at: Float
+  updated_at: Float
+  deleted_at: Float
   stages: [PipelineStage]
 }
 
@@ -116,9 +116,9 @@ type PipelineStage {
   performance: PipelineStagePerformance
   previous_stage: PipelineStage
   child_stages: [PipelineStage]
-  created_at: String
-  updated_at: String
-  deleted_at: String
+  created_at: Float
+  updated_at: Float
+  deleted_at: Float
 }
 
 type TileStageStatus {
