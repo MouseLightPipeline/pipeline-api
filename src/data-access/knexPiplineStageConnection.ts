@@ -5,7 +5,7 @@ import * as Knex from "knex";
 
 const asyncUtils = require("async");
 
-const debug = require("debug")("mouselight:pipeline-api:knex-pipeline-connector");
+const debug = require("debug")("pipeline:coordinator-api:knex-pipeline-connector");
 
 const PipelineStageDatabaseFile = "pipeline-storage.sqlite3";
 

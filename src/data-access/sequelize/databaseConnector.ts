@@ -1,7 +1,7 @@
 import * as path from "path";
 const Sequelize = require("sequelize");
 
-const debug = require("debug")("ndb:swc-api:database-connector");
+const debug = require("debug")("pipeline:coordinator-api:database-connector");
 
 import {loadModels} from "./modelLoader";
 import {SequelizeDatabaseOptions} from "../../options/serverOptions";

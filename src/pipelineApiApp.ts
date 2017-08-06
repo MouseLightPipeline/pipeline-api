@@ -1,7 +1,7 @@
 import * as express from "express";
 import * as bodyParser from "body-parser";
 
-const debug = require("debug")("mouselight:pipeline-api:server");
+const debug = require("debug")("pipeline:coordinator-api:server");
 
 import serverConfiguration from "./options/serverOptions";
 

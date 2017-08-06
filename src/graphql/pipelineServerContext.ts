@@ -9,8 +9,14 @@ import {ITaskRepository} from "../data-model/sequelize/taskRepository";
 import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {IProject, IProjectInput, NO_BOUND, NO_SAMPLE} from "../data-model/sequelize/project";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
+import {PipelineWorkerClient} from "./client/pipelineWorkerClient";
 
-const debug = require("debug")("mouselight:pipeline-api:context");
+const debug = require("debug")("pipeline:coordinator-api:context");
+
+export interface IWorkerMutationOutput {
+    worker: IPipelineWorker;
+    error: string;
+}
 
 export interface IProjectMutationOutput {
     project: IProject;
@@ -56,6 +62,8 @@ export interface IPipelineServerContext {
     getPipelineWorker(id: string): Promise<IPipelineWorker>;
 
     getPipelineWorkers(): Promise<IPipelineWorker[]>;
+
+    updateWorker(workerInput: IPipelineWorker): Promise<IWorkerMutationOutput>;
 
     setWorkerAvailability(id: string, shouldBeInSchedulerPool: boolean): Promise<IPipelineWorker>;
 
@@ -133,6 +141,31 @@ export class PipelineServerContext implements IPipelineServerContext {
 
     public getPipelineWorkers(): Promise<IPipelineWorker[]> {
         return this._persistentStorageManager.PipelineWorkers.findAll({});
+    }
+
+    public async updateWorker(workerInput: IPipelineWorker): Promise<IWorkerMutationOutput> {
+        try {
+            let row = await this._persistentStorageManager.PipelineWorkers.findById(workerInput.id);
+
+            let output = await PipelineWorkerClient.Instance().updateWorker(Object.assign({}, {
+                id: workerInput.id,
+                work_unit_capacity: workerInput.work_unit_capacity
+            }, {
+                name: row.name,
+                address: row.address,
+                port: row.port
+            }));
+
+            if (output.error !== null) {
+                return output;
+            }
+
+            row = await this._persistentStorageManager.PipelineWorkers.findById(workerInput.id);
+
+            return {worker: row, error: ""};
+        } catch (err) {
+            return {worker: null, error: err.message}
+        }
     }
 
     public async setWorkerAvailability(id: string, shouldBeInSchedulerPool: boolean): Promise<IPipelineWorker> {

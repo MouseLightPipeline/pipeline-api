@@ -2,7 +2,7 @@ import Timer = NodeJS.Timer;
 const path = require("path");
 const child_process = require("child_process");
 
-const debug = require("debug")("mouselight:pipeline-api:scheduler-hub");
+const debug = require("debug")("pipeline:coordinator-api:scheduler-hub");
 
 import {startTileStatusFileWorker} from "./tileStatusWorkerChildProcess";
 import {startPipelineStageWorker} from "./pipelineMapSchedulerChildProcess";

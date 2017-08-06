@@ -3,7 +3,7 @@ import * as http from "http";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {IPipelineWorker, PipelineWorkerStatus} from "../data-model/sequelize/pipelineWorker";
 
-const debug = require("debug")("mouselight:pipeline-api:socket.io");
+const debug = require("debug")("pipeline:coordinator-api:socket.io");
 
 export class SocketIoServer {
     private static _ioServer = null;
@@ -23,11 +23,11 @@ export class SocketIoServer {
 
         io.on("connection", client => this.onConnect(client));
 
-        debug("interface listening for clients");
+        debug("interface listening for workers");
     }
 
     private onConnect(client) {
-        debug("accepted client connection");
+        debug("accepted worker connection");
 
         client.on("workerApiService", workerInformation => this.onWorkerApiService(client, workerInformation));
 
@@ -37,7 +37,7 @@ export class SocketIoServer {
     }
 
     private onDisconnect(client) {
-        debug("client disconnected");
+        debug("worker disconnected");
     }
 
     private async onWorkerApiService(client, workerInformation) {

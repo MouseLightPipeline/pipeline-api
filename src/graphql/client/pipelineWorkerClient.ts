@@ -2,12 +2,12 @@ import ApolloClient, {createNetworkInterface} from "apollo-client";
 import gql from "graphql-tag";
 import "isomorphic-fetch";
 
-const debug = require("debug")("mouselight:pipeline-api:pipeline-worker-client");
+const debug = require("debug")("pipeline:coordinator-api:pipeline-worker-client");
 
 import {ITaskExecution} from "../../data-model/taskExecution";
 import {ITaskDefinition} from "../../data-model/sequelize/taskDefinition";
 import {IPipelineWorker, PipelineWorkerStatus} from "../../data-model/sequelize/pipelineWorker";
-import {PipelineServerContext} from "../pipelineServerContext";
+import {IWorkerMutationOutput, PipelineServerContext} from "../pipelineServerContext";
 
 
 export class PipelineWorkerClient {
@@ -23,28 +23,54 @@ export class PipelineWorkerClient {
 
     private _idClientMap = new Map<string, ApolloClient>();
 
-    public async queryTaskDefinition(worker: IPipelineWorker, taskId: string): Promise<ITaskDefinition> {
+    private getClient(worker: IPipelineWorker): ApolloClient {
         if (worker === null) {
             return null;
         }
 
         let client = this._idClientMap[worker.id];
 
+        let uri = null;
+
         if (client == null) {
-            const uri = `http://${worker.address}:${worker.port}/graphql`;
+            try {
+                uri = `http://${worker.address}:${worker.port}/graphql`;
 
-            debug(`creating apollo client during query tasks with uri ${uri}`);
-            const networkInterface = createNetworkInterface({uri: uri});
+                debug(`creating apollo client with uri ${uri}`);
+                const networkInterface = createNetworkInterface({uri});
 
-            client = new ApolloClient({
-                networkInterface
-            });
+                client = new ApolloClient({
+                    networkInterface
+                });
 
-            this._idClientMap[worker.id] = client;
+                this._idClientMap[worker.id] = client;
+            } catch (err) {
+                debug(`failed to create apollo client with uri ${uri}`);
+
+                client = null;
+            }
+        }
+
+        return client;
+    }
+
+    private async markWorkerUnavailable(worker: IPipelineWorker): Promise<void> {
+        let serverContext = new PipelineServerContext();
+
+        const row = await serverContext.getPipelineWorker(worker.id);
+
+        row.status = PipelineWorkerStatus.Unavailable;
+    }
+
+    public async queryTaskDefinition(worker: IPipelineWorker, taskId: string): Promise<ITaskDefinition> {
+        const client = this.getClient(worker);
+
+        if (client === null) {
+            return null;
         }
 
         try {
-            let response = await client.query({
+            let response: any = await client.query({
                 query: gql`
                 query($id: String!) {
                     taskDefinition(id: $id) {
@@ -73,27 +99,14 @@ export class PipelineWorkerClient {
     }
 
     public async queryTaskExecution(worker: IPipelineWorker, executionId: string): Promise<ITaskExecution> {
-        if (worker === null) {
+        const client = this.getClient(worker);
+
+        if (client === null) {
             return null;
         }
 
-        let client = this._idClientMap[worker.id];
-
-        if (client == null) {
-            const uri = `http://${worker.address}:${worker.port}/graphql`;
-
-            debug(`creating apollo client during query tasks with uri ${uri}`);
-            const networkInterface = createNetworkInterface({uri: uri});
-
-            client = new ApolloClient({
-                networkInterface
-            });
-
-            this._idClientMap[worker.id] = client;
-        }
-
         try {
-            let response = await client.query({
+            let response: any = await client.query({
                 query: gql`
                 query($id: String!) {
                     taskExecution(id: $id) {
@@ -116,10 +129,7 @@ export class PipelineWorkerClient {
 
             return response.data.taskExecution;
         } catch (err) {
-            let serverContext = new PipelineServerContext();
-            const row = await serverContext.getPipelineWorker(worker.id);
-            row.status = PipelineWorkerStatus.Unavailable;
-
+            await this.markWorkerUnavailable(worker);
             debug(`error querying task status for worker ${worker.name}`);
         }
 
@@ -127,19 +137,10 @@ export class PipelineWorkerClient {
     }
 
     public async startTaskExecution(worker: IPipelineWorker, taskId: string, baseArgs: string[] = []): Promise<ITaskExecution> {
-        let client = this._idClientMap[worker.id];
+        const client = this.getClient(worker);
 
-        if (client == null) {
-            const uri = `http://${worker.address}:${worker.port}/graphql`;
-
-            debug(`creating apollo client during start task with uri ${uri}`);
-            const networkInterface = createNetworkInterface({uri: uri});
-
-            client = new ApolloClient({
-                networkInterface
-            });
-
-            this._idClientMap[worker.id] = client;
+        if (client === null) {
+            return null;
         }
 
         try {
@@ -164,13 +165,39 @@ export class PipelineWorkerClient {
 
             return response.data.startTask;
         } catch (err) {
-            let serverContext = new PipelineServerContext();
-            const row = await serverContext.getPipelineWorker(worker.id);
-            row.status = PipelineWorkerStatus.Unavailable;
-
+            await this.markWorkerUnavailable(worker);
             debug(`error submitting task to worker ${worker.name}`);
         }
 
         return null;
+    }
+
+    public async updateWorker(worker: IPipelineWorker): Promise<IWorkerMutationOutput> {
+        const client = this.getClient(worker);
+
+        if (client === null) {
+            return {worker: null, error: "Could not connect to worker"};
+        }
+
+        try {
+            let response = await client.mutate({
+                mutation: gql`
+                mutation UpdateWorkerMutation($worker: WorkerInput) {
+                    updateWorker(worker: $worker) {
+                        id
+                    }
+                }`,
+                variables: {
+                    worker: Object.assign({}, {id: worker.id, work_capacity: worker.work_unit_capacity})
+                }
+            });
+
+            return {worker: response.data.updateWorker, error: null};
+        } catch (err) {
+            await this.markWorkerUnavailable(worker);
+            debug(`error submitting update to worker ${worker.name}`);
+
+            return {worker: null, error: err};
+        }
     }
 }

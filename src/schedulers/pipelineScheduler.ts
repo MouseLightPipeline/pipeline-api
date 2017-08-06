@@ -1,7 +1,7 @@
 import {ExecutionStatusCode, CompletionStatusCode} from "../data-model/taskExecution";
 const path = require("path");
 const fse = require("fs-extra");
-const debug = require("debug")("mouselight:pipeline-api:pipeline-worker");
+const debug = require("debug")("pipeline:coordinator-api:pipeline-worker");
 
 import {updatePipelineStagePerformance, updatePipelineStageCounts} from "../data-model/pipelineStagePerformance";
 import {ISchedulerInterface} from "./schedulerHub";

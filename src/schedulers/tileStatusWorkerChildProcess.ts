@@ -1,7 +1,7 @@
 import {TileStatusWorker} from "./tileStatusWorker";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 
-const debug = require("debug")("mouselight:pipeline-api:tile-status-worker-process");
+const debug = require("debug")("pipeline:coordinator-api:tile-status-worker-process");
 
 let projectId = process.argv.length > 2 ? process.argv[2] : null;
 

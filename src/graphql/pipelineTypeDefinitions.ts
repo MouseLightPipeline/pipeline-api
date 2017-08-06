@@ -183,6 +183,11 @@ type DeleteTaskDefinitionOutput {
     error: String
 }
 
+type MutatePipelineWorkerOutput {
+    worker: PipelineWorker
+    error: String
+}
+
 input RegionInput {
   x_min: Int
   x_max: Int
@@ -234,6 +239,10 @@ input TaskDefinitionInput {
   work_units: Float
 }
 
+input PipelineWorkerInput {
+  id: String
+  work_unit_capacity: Float
+}
 
 type Query {
   pipelineWorker(id: String!): PipelineWorker
@@ -271,6 +280,8 @@ type Mutation {
   deleteTaskDefinition(taskDefinition: TaskDefinitionInput): DeleteTaskDefinitionOutput
 
   setWorkerAvailability(id: String!, shouldBeInSchedulerPool: Boolean!): PipelineWorker
+  
+  updateWorker(worker: PipelineWorkerInput): MutatePipelineWorkerOutput
 }
 
 schema {

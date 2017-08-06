@@ -1,13 +1,14 @@
 import {ITaskRepository} from "../data-model/sequelize/taskRepository";
 
-const debug = require("debug")("mouselight:pipeline-api:resolvers");
+const debug = require("debug")("pipeline:coordinator-api:resolvers");
 
 import {IPipelineStagePerformance} from "../data-model/pipelineStagePerformance";
 import {
-    IPipelineServerContext, IPipelineStageDeleteOutput, IPipelineStageMutationOutput, IProjectDeleteOutput, IProjectMutationOutput, ITaskDefinitionDeleteOutput,
+    IPipelineServerContext, IPipelineStageDeleteOutput, IPipelineStageMutationOutput, IProjectDeleteOutput,
+    IProjectMutationOutput, ITaskDefinitionDeleteOutput,
     ITaskDefinitionMutationOutput,
     ITaskRepositoryDeleteOutput,
-    ITaskRepositoryMutationOutput
+    ITaskRepositoryMutationOutput, IWorkerMutationOutput
 } from "./pipelineServerContext";
 import {ITaskDefinition} from "../data-model/sequelize/taskDefinition";
 import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
@@ -16,6 +17,10 @@ import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 
 interface IIdOnlyArgument {
     id: string;
+}
+
+interface IUpdateWorkerArguments {
+    worker: IPipelineWorker;
 }
 
 interface ITaskDefinitionIdArguments {
@@ -141,6 +146,9 @@ let resolvers = {
         },
         deleteTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: IPipelineServerContext): Promise<ITaskDefinitionDeleteOutput> {
             return context.deleteTaskDefinition(args.taskDefinition);
+        },
+        updateWorker(_, args: IUpdateWorkerArguments, context: IPipelineServerContext): Promise<IWorkerMutationOutput> {
+            return context.updateWorker(args.worker);
         },
         setWorkerAvailability(_, args: IActiveWorkerArguments, context: IPipelineServerContext) {
             return context.setWorkerAvailability(args.id, args.shouldBeInSchedulerPool);

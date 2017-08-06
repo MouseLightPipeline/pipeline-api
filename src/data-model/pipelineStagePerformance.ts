@@ -1,7 +1,7 @@
 import {v4} from "uuid";
 const AsyncLock = require("async");
 
-const debug = require("debug")("mouselight:pipeline-api:pipeline-stage-performance");
+const debug = require("debug")("pipeline:coordinator-api:pipeline-stage-performance");
 
 import {knex} from "../data-access/knexConnector";
 

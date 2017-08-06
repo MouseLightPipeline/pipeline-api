@@ -8,9 +8,9 @@
   ],
   "dockerRepository": "mouselightpipeline",
   "scripts": {
-    "dev": "DEBUG=mouselight* node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
+    "dev": "DEBUG=pipeline* node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
     "start": "node src/pipelineApiApp.js",
-    "deploy-dev": "nohup DEBUG=mouselight* node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
+    "deploy-dev": "nohup DEBUG=pipeline* node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
     "deploy-run": "nohup node src/pipelineApiApp.js > /dev/null 2>&1",
     "docker-build": "gulp docker-build",
     "release": "gulp release"
@@ -31,7 +31,7 @@
     "knex": "^0.12.9",
     "mime": "^1.3.6",
     "pg": "^6.4.0",
-    "sequelize": "^4.3.2",
+    "sequelize": "^4.4.2",
     "serve-static": "^1.12.3",
     "socket.io": "^1.7.4",
     "sqlite3": "^3.1.8",

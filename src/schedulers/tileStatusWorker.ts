@@ -2,7 +2,7 @@ import Timer = NodeJS.Timer;
 const fse = require("fs-extra");
 const path = require("path");
 
-const debug = require("debug")("mouselight:pipeline-api:tile-status-worker");
+const debug = require("debug")("pipeline:coordinator-api:tile-status-worker");
 
 const dashboardJsonFile = "dashboard.json";
 const tileStatusJsonFile = "pipeline-storage.json";
