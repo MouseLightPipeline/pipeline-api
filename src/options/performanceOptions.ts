@@ -9,7 +9,7 @@ interface IPerformanceEnvDefinitions {
 
 const configurations: IPerformanceEnvDefinitions = {
     production: {
-        pipelineSchedulerIntervalSeconds: 60,
+        pipelineSchedulerIntervalSeconds: 30,
         regenTileStatusSqliteChunkSize: 50
     }
 };

@@ -38,6 +38,11 @@ function createTaskRepositories(when: Date) {
             description: "Default task repository.",
             location: "../taskdefinitions/default",
             created_at: when
+        }, {
+            id: "f22c6e43-782c-4e0e-b0ca-b34fcec3340a",
+            description: "Development task repository.",
+            location: "../taskdefinitions/development",
+            created_at: when
         }];
     }
 }
@@ -154,12 +159,12 @@ function createProjects(when: Date) {
             description: "Small dashboard.json test project",
             root_path: "/Volumes/Spare/Projects/MouseLight/Dashboard Output/small",
             sample_number: 99998,
-            region_x_min: -1,
-            region_x_max: -1,
-            region_y_min: -1,
-            region_y_max: -1,
-            region_z_min: -1,
-            region_z_max: -1,
+            region_x_min: null,
+            region_x_max: null,
+            region_y_min: null,
+            region_y_max: null,
+            region_z_min: null,
+            region_z_max: null,
             is_processing: false,
             created_at: when
         }, {
@@ -173,7 +178,7 @@ function createProjects(when: Date) {
             region_y_min: 0,
             region_y_max: 3,
             region_z_min: 2,
-            region_z_max: -1,
+            region_z_max: null,
             is_processing: false,
             created_at: when
         }, {
@@ -182,12 +187,12 @@ function createProjects(when: Date) {
             description: "Large dashboard.json test project",
             root_path: "/Volumes/Spare/Projects/MouseLight/Dashboard Output/large",
             sample_number: 99999,
-            region_x_min: -1,
-            region_x_max: -1,
-            region_y_min: -1,
-            region_y_max: -1,
-            region_z_min: -1,
-            region_z_max: -1,
+            region_x_min: null,
+            region_x_max: null,
+            region_y_min: null,
+            region_y_max: null,
+            region_z_min: null,
+            region_z_max: null,
             is_processing: false,
             created_at: when
         }];

@@ -1,4 +1,5 @@
 import {ExecutionStatusCode, CompletionStatusCode} from "../data-model/taskExecution";
+
 const path = require("path");
 const fse = require("fs-extra");
 const debug = require("debug")("pipeline:coordinator-api:pipeline-worker");
@@ -18,6 +19,7 @@ import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {IProject} from "../data-model/sequelize/project";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
+import {isNullOrUndefined} from "util";
 
 const perfConf = performanceConfiguration();
 
@@ -173,34 +175,38 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             this_stage_status: TilePipelineStatus.Incomplete,
         }).select();
 
+        debug(`found ${unscheduled.length} unscheduled`);
+
         if (unscheduled.length > 0) {
             let projects = PersistentStorageManager.Instance().Projects;
 
             let project: IProject = await projects.findById(this._pipelineStage.project_id);
 
             unscheduled = unscheduled.filter(tile => {
-                if (project.region_x_min > -1 && tile.lat_x < project.region_x_min) {
+                if (!isNullOrUndefined(project.region_x_min) && tile.lat_x < project.region_x_min) {
                     return false;
                 }
 
-                if (project.region_x_max > -1 && tile.lat_x > project.region_x_max) {
+                if (!isNullOrUndefined(project.region_x_max) && tile.lat_x > project.region_x_max) {
                     return false;
                 }
 
-                if (project.region_y_min > -1 && tile.lat_y < project.region_y_min) {
+                if (!isNullOrUndefined(project.region_y_min) && tile.lat_y < project.region_y_min) {
                     return false;
                 }
 
-                if (project.region_y_max > -1 && tile.lat_y > project.region_y_max) {
+                if (!isNullOrUndefined(project.region_y_max) && tile.lat_y > project.region_y_max) {
                     return false;
                 }
 
-                if (project.region_z_min > -1 && tile.lat_z < project.region_z_min) {
+                if (!isNullOrUndefined(project.region_z_min) && tile.lat_z < project.region_z_min) {
                     return false;
                 }
 
-                return !(project.region_z_max > -1 && tile.lat_z > project.region_z_max);
+                return !(!isNullOrUndefined(project.region_z_max) && tile.lat_z > project.region_z_max);
             });
+
+            debug(`have ${unscheduled.length} unscheduled after region filtering`);
 
             unscheduled = unscheduled.map(obj => {
                 obj.this_stage_status = TilePipelineStatus.Queued;
@@ -334,7 +340,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         // promise chain and not complete the list.
         //
         // The goal is to fill a worker completely before moving on to the next worker.
-        await this.queue(workers, async(worker: IPipelineWorker) => {
+        await this.queue(workers, async (worker: IPipelineWorker) => {
 
             let taskLoad = worker.task_load;
 
@@ -368,7 +374,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             debug(`scheduling worker from available ${waitingToProcess.length} pending`);
 
             // Will continue through all tiles until the worker reaches full capacity
-            let stillLookingForTilesForWorker = await this.queue(waitingToProcess, async(toProcessTile: IToProcessTile) => {
+            let stillLookingForTilesForWorker = await this.queue(waitingToProcess, async (toProcessTile: IToProcessTile) => {
                 // Return true to continue searching for an available worker and false if the task is launched.
                 try {
                     let pipelineTile = (await this.outputTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]))[0];
