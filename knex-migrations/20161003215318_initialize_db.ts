@@ -16,7 +16,7 @@ exports.up = function (knex, Promise) {
             table.float("load_average");
             table.float("work_unit_capacity");
             table.boolean("is_in_scheduler_pool");
-            table.boolean('is_cluster_proxy');
+            table.boolean("is_cluster_proxy");
             table.timestamp("last_seen");
             table.timestamp("deleted_at");
             table.timestamps();
