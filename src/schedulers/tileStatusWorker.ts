@@ -56,6 +56,10 @@ export class TileStatusWorker extends PipelineScheduler {
         return PersistentStorageManager.Instance().Projects.findById(this._project_id);
     }
 
+    protected get stageId() {
+        return this._project_id;
+    }
+
     protected async createTables() {
         if (this.IsExitRequested) {
             debug("cancel request - early return");

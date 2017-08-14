@@ -10,6 +10,7 @@ import {startMapPipelineStageWorker} from "./pipelineMapSchedulerChildProcess";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {IProject} from "../data-model/sequelize/project";
 import {IPipelineStage, PipelineStageMethod} from "../data-model/sequelize/pipelineStage";
+import {isNullOrUndefined} from "util";
 
 export interface ISchedulerInterface {
     IsExitRequested: boolean;
@@ -75,14 +76,20 @@ export class SchedulerHub {
 
             const maxDepth = stages.reduce((current, stage) => Math.max(current, stage.depth), 0);
 
-            const workers = stages.map(stage => this._pipelineStageWorkers.get(stage.id)).filter(worker => worker != null);
+            const stageWorkers = stages.map(stage => this._pipelineStageWorkers.get(stage.id)).filter(worker => worker != null);
 
-            if (workers.length === 0) {
+            const projectTileWorker = this._pipelineStageWorkers.get(project.id);
+
+            if (!isNullOrUndefined((projectTileWorker))) {
+                stageWorkers.unshift(projectTileWorker);
+            }
+
+            if (stageWorkers.length === 0) {
                 debug("project not running");
                 return kEmptyTileMap;
             }
 
-            const promises = workers.map(worker => {
+            const promises = stageWorkers.map(worker => {
                 return worker.loadTileStatusForPlane(plane);
             });
 
@@ -118,7 +125,7 @@ export class SchedulerHub {
                 }
 
                 // Duplicate tiles exist.  Use whatever is further along (i.e., a repeat of an incomplete that is complete
-                // and processing supercedes.
+                // and processing supersedes.
 
                 const existing = t.stages.filter(s => s.depth === tile.depth);
 

@@ -23,6 +23,8 @@ import {isNullOrUndefined} from "util";
 
 const perfConf = performanceConfiguration();
 
+const MAX_KNOWN_INPUT_SKIP_COUNT = 10;
+
 export const DefaultPipelineIdKey = "relative_path";
 
 /**
@@ -92,6 +94,8 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
     private _isInitialized: boolean = false;
 
+    private _knownInputSkipCheckCount: number = 0;
+
     protected constructor(pipelineStage: IPipelineStage) {
         this.IsExitRequested = false;
 
@@ -132,13 +136,17 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         let tiles = await this.outputTable.where("lat_z", zIndex).select("relative_path", "this_stage_status", "lat_x", "lat_y");
 
         tiles = tiles.map(tile => {
-            tile["stage_id"] = this._pipelineStage.id;
-            tile["depth"] = this._pipelineStage.depth;
+            tile["stage_id"] = this.stageId;
+            tile["depth"] = this._pipelineStage ? this._pipelineStage.depth : 0;
 
             return tile;
         });
 
         return tiles;
+    }
+
+    protected get stageId() {
+        return this._pipelineStage.id;
     }
 
     protected get inputTable() {
@@ -476,9 +484,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             let available = await this.loadToProcess();
 
             //   If not, search database for newly available to-process and put in to-process queue
-            if (available.length === 0) {
-                debug(`no known tiles ready for processing`);
-
+            if (available.length === 0 || this._knownInputSkipCheckCount >= MAX_KNOWN_INPUT_SKIP_COUNT) {
                 // Update the database with the completion status of tiles from the previous stage.  This essentially converts
                 // this_stage_status from the previous stage id table to prev_stage_status for this stage.
                 let knownInput = await this.inputTable.select();
@@ -497,13 +503,14 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                     debug("no input from previous stage yet");
                 }
 
-                debug(`updating to process queue`);
-
                 available = await this.updateToProcessQueue();
 
                 debug(`${available.length} newly added available to process`);
+
+                this._knownInputSkipCheckCount = 0;
             } else {
-                debug(`skipping input and available update with ${available.length} available to process`);
+                debug(`skipping new to queue check with ${available.length} available to process (skip count ${this._knownInputSkipCheckCount} of ${MAX_KNOWN_INPUT_SKIP_COUNT})`);
+                this._knownInputSkipCheckCount++;
             }
 
             // If there is any to-process, try to fill worker capacity
