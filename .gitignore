@@ -23,21 +23,11 @@ node_modules
 # JetBrains IDE 
 .idea
 
+*.js
 *.js.map
 
 # Build directories
 dist
-
-# Temporary directories
-tmp
-
-.editorconfig
-
-# js in ts folders
-src/options/**/*.js
-src/**/*.js
-knex-seeds/**/*.js
-graphql/**/.js
 
 # Development databases
 *.sqlite3

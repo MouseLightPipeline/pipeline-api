@@ -23,7 +23,7 @@ const pushLatestCommand = `docker push ${imageAsLatest}`;
 
 gulp.task("default", ["docker-build"]);
 
-gulp.task("release", ["docker-push"]);
+gulp.task("docker-release", ["docker-push"]);
 
 gulp.task("docker-build", shell.task([
         buildCommand,

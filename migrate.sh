@@ -14,12 +14,50 @@ LAST_NODE_ENV=${NODE_ENV}
 
 export NODE_ENV=production
 
+migratePipelineDatabaseService()
+{
+    SUCCESS=1
+
+    while [ ${SUCCESS} -ne 0 ]; do
+        echo "Migrate postgres service"
+
+        sequelize db:migrate
+        SUCCESS=$?
+
+        if [ ${SUCCESS} -ne 0 ]; then
+            echo "Migration failed - waiting 5 seconds"
+            sleep 5s
+        fi
+    done
+
+    echo "Migrate postgres service complete"
+}
+
+migrateLocalCache()
+{
+    SUCCESS=1
+
+    while [ ${SUCCESS} -ne 0 ]; do
+        echo "Migrate local SQLITE cache"
+
+        knex migrate:latest
+        SUCCESS=$?
+
+        if [ ${SUCCESS} -ne 0 ]; then
+            echo "Migration failed - waiting 5 seconds"
+            sleep 5s
+        fi
+    done
+
+    echo "Migrate local SQLITE cache complete"
+}
+
 echo "Migrate for all databases."
 
-echo "Migrate postgres service"
-sequelize db:migrate
+migratePipelineDatabaseService
 
-echo "Migrate local sqlite cache"
-knex migrate:latest
+migrateLocalCache
 
 export NODE_ENV=${LAST_NODE_ENV}
+
+exit 0

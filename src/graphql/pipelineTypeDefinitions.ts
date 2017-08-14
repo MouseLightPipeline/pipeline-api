@@ -247,19 +247,28 @@ input PipelineWorkerInput {
 type Query {
   pipelineWorker(id: String!): PipelineWorker
   pipelineWorkers: [PipelineWorker!]!
+  
   project(id: String!): Project
   projects: [Project!]!
+  
   pipelineStage(id: String!): PipelineStage
   pipelineStages: [PipelineStage!]!
   pipelineStagesForProject(id: String!): [PipelineStage!]!
+  
   taskDefinition(id: String!): TaskDefinition
   taskDefinitions: [TaskDefinition!]!
+  
   taskRepository(id: String!): TaskRepository
   taskRepositories: [TaskRepository!]!
+  
   pipelineStagePerformance(id: String!): PipelineStagePerformance
   pipelineStagePerformances: [PipelineStagePerformance!]!
+  
   projectPlaneTileStatus(project_id: String, plane: Int): TilePlane
+  
   scriptContents(task_definition_id: String): String
+  
+  pipelineVolume: String
 }
 
 type Mutation {

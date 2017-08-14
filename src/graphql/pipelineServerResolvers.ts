@@ -108,6 +108,9 @@ let resolvers = {
         },
         scriptContents(_, args: ITaskDefinitionIdArguments, context: IPipelineServerContext): Promise<string> {
             return context.getScriptContents(args.task_definition_id);
+        },
+        pipelineVolume(): string {
+            return process.env.PIPELINE_VOLUME || "";
         }
     },
     Mutation: {

@@ -1,6 +1,9 @@
-const seedEnv = process.env.PIPELINE_SEED_ENV || "production";
+import * as path from "path";
 
+const seedEnv = process.env.PIPELINE_SEED_ENV || "production";
 const isProduction = seedEnv === "production";
+
+const locationPrefix = process.env.PIPELINE_SEED_PREFIX || "/opt/pipeline/";
 
 export = {
     up: async (queryInterface, Sequelize) => {
@@ -28,7 +31,7 @@ function createTaskRepositories(when: Date) {
             id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             name: "Default",
             description: "Default task repository.",
-            location: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/taskdefinitions/default",
+            location: path.join(locationPrefix, "taskdefinitions/default"),
             created_at: when
         }];
     } else {
@@ -36,12 +39,13 @@ function createTaskRepositories(when: Date) {
             id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             name: "Default",
             description: "Default task repository.",
-            location: "../taskdefinitions/default",
+            location: path.join(locationPrefix, "taskdefinitions/default"),
             created_at: when
         }, {
             id: "f22c6e43-782c-4e0e-b0ca-b34fcec3340a",
+            name: "Development",
             description: "Development task repository.",
-            location: "../taskdefinitions/development",
+            location: path.join(locationPrefix, "taskdefinitions/development"),
             created_at: when
         }];
     }
@@ -85,21 +89,21 @@ function createTaskDefinitions(when: Date) {
             id: "04b8313e-0e96-4194-9c06-22771acd3986",
             name: "Echo",
             description: "Simple command to test shell worker execution.  Will echo all arguments.",
-            script: "tasks/echo.sh",
+            script: "echo.sh",
             interpreter: "none",
             args: `"custom arg 1" "custom arg 2"`,
             work_units: 0,
-            task_repository_id: null,
+            task_repository_id: "f22c6e43-782c-4e0e-b0ca-b34fcec3340a",
             created_at: when
         }, {
             id: "1ec76026-4ecc-4d25-9c6e-cdf992a05da3",
             name: "ilastik Pixel Classifier Test",
             description: "Calls ilastik with test project.",
-            script: "tasks/pixel_shell.sh",
+            script: "pixel_shell.sh",
             interpreter: "none",
             args: "test/pixel_classifier_test",
             work_units: 4,
-            task_repository_id: null,
+            task_repository_id: "f22c6e43-782c-4e0e-b0ca-b34fcec3340a",
             created_at: when
         }, {
             id: "a9f21399-07c0-425c-86f6-6e4f45bb06b9",

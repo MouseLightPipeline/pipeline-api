@@ -10,4 +10,4 @@ fi
 
 ./migrate.sh ${PIPELINE_DATABASE_HOST} ${PIPELINE_DATABASE_PORT}
 
-nohup npm run dev &
+nohup npm run devel &

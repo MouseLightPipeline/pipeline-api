@@ -1,22 +1,17 @@
 {
   "name": "pipeline-api",
-  "version": "1.0.14",
+  "version": "1.0.19",
   "description": "",
   "main": "src/pipelineApiApp.js",
-  "licenses": [
-    "Janelia"
-  ],
+  "license": "LicenseRef-LICENSE",
   "dockerRepository": "mouselightpipeline",
   "scripts": {
-    "dev": "DEBUG=pipeline* node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
+    "devel": "DEBUG=pipeline* node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
     "start": "node src/pipelineApiApp.js",
-    "deploy-dev": "nohup DEBUG=pipeline* node $NODE_DEBUG_OPTION src/pipelineApiApp.js",
-    "deploy-run": "nohup node src/pipelineApiApp.js > /dev/null 2>&1",
     "docker-build": "gulp docker-build",
-    "release": "gulp release"
+    "docker-release": "gulp docker-release"
   },
   "author": "Patrick Edson <pedson@leapscientific.com> (http://github.com/pedson)",
-  "license": "Janelia",
   "dependencies": {
     "apollo-client": "^1.5.0",
     "async": "^2.4.1",

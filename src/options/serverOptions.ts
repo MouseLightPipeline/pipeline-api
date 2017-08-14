@@ -1,6 +1,6 @@
 import SequelizeOptions from "./sequelizeOptions";
 
-interface IServerOptions {
+interface IServiceOptions {
     port: number;
     graphQlEndpoint: string;
     graphiQlEndpoint: string;
@@ -8,7 +8,7 @@ interface IServerOptions {
 }
 
 interface IServerEnvDefinitions {
-    production: IServerOptions;
+    production: IServiceOptions;
 }
 
 const configurations: IServerEnvDefinitions = {
@@ -20,9 +20,18 @@ const configurations: IServerEnvDefinitions = {
     }
 };
 
-export default function (): IServerOptions {
-    return configurations.production;
+function loadConfiguration(): IServiceOptions {
+    const options = configurations.production;
+
+    options.port = process.env.PIPELINE_API_PORT || options.port;
+
+    return options;
 }
 
+export const ServiceOptions = loadConfiguration();
 
 export const SequelizeDatabaseOptions = SequelizeOptions;
+
+export default function (): IServiceOptions {
+    return ServiceOptions;
+}

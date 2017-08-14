@@ -15,6 +15,12 @@ if [ ! -z "$3" ]
     export PIPELINE_SEED_ENV=$3
 fi
 
+if [ ! -z "$4" ]
+  then
+    export PIPELINE_SEED_PREFIX=$4
+fi
+
+
 LAST_NODE_ENV=${NODE_ENV}
 
 export NODE_ENV=production
