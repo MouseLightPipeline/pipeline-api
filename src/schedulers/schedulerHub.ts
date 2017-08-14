@@ -1,14 +1,15 @@
-import Timer = NodeJS.Timer;
+import {startZComparisonPipelineStageWorker} from "./pipelineZComparisonSchedulerChildProcess";
+
 const path = require("path");
 const child_process = require("child_process");
 
 const debug = require("debug")("pipeline:coordinator-api:scheduler-hub");
 
 import {startTileStatusFileWorker} from "./tileStatusWorkerChildProcess";
-import {startPipelineStageWorker} from "./pipelineMapSchedulerChildProcess";
+import {startMapPipelineStageWorker} from "./pipelineMapSchedulerChildProcess";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {IProject} from "../data-model/sequelize/project";
-import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
+import {IPipelineStage, PipelineStageMethod} from "../data-model/sequelize/pipelineStage";
 
 export interface ISchedulerInterface {
     IsExitRequested: boolean;
@@ -208,7 +209,11 @@ export class SchedulerHub {
     }
 
     private async resumeStage(stage: IPipelineStage): Promise<boolean> {
-        return this.addWorker(stage, startPipelineStageWorker, "/pipelineMapSchedulerChildProcess.js");
+        if (stage.function_type === PipelineStageMethod.ZIndexTileComparison) {
+            return this.addWorker(stage, startZComparisonPipelineStageWorker, "/pipelineZComparisonSchedulerChildProcess.js");
+        } else {
+            return this.addWorker(stage, startMapPipelineStageWorker, "/pipelineMapSchedulerChildProcess.js");
+        }
     }
 
     private async pauseStagesForProject(pipelineStagesManager: any, project: IProject) {
