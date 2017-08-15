@@ -3,7 +3,7 @@ import * as path from "path";
 const seedEnv = process.env.PIPELINE_SEED_ENV || "production";
 const isProduction = seedEnv === "production";
 
-const locationPrefix = process.env.PIPELINE_SEED_PREFIX || "/opt/pipeline/";
+const taskLocationPrefix = process.env.PIPELINE_VOLUME_PREFIX || "/opt/pipeline";
 
 export = {
     up: async (queryInterface, Sequelize) => {
@@ -31,7 +31,7 @@ function createTaskRepositories(when: Date) {
             id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             name: "Default",
             description: "Default task repository.",
-            location: path.join(locationPrefix, "taskdefinitions/default"),
+            location: path.join(taskLocationPrefix, "taskdefinitions/default"),
             created_at: when
         }];
     } else {
@@ -39,13 +39,13 @@ function createTaskRepositories(when: Date) {
             id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             name: "Default",
             description: "Default task repository.",
-            location: path.join(locationPrefix, "taskdefinitions/default"),
+            location: path.join(taskLocationPrefix, "taskdefinitions/default"),
             created_at: when
         }, {
             id: "f22c6e43-782c-4e0e-b0ca-b34fcec3340a",
             name: "Development",
             description: "Development task repository.",
-            location: path.join(locationPrefix, "taskdefinitions/development"),
+            location: path.join(taskLocationPrefix, "taskdefinitions/development"),
             created_at: when
         }];
     }

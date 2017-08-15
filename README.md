@@ -26,14 +26,14 @@ For production the postgres user/pass should of course be changed.
 As a standalone service it requires node 7.10 or later. 
 
 Outside of a container the service can be started in a number of ways
-* `start.sh` ensures that all migrations are up to date and launches the node process and sleeps
-* `bg_start.sh` ensures that all migrations are up to date and uses nohup to facilitate disconnecting from the session
+* `run.sh` ensures that all migrations are up to date and uses nohup to facilitate disconnecting from the session
 * `npm run start` or `npm run devel` for production or development mode (node debugger attachment and debug messages) without migration checks
+* `docker-entry.sh` ensures that all migrations are up to date and launches the node process and sleeps
 
-`start.sh` may be useful where nohup is not necessary and/or you want the script to stay alive.   For example, this is
+`run.sh` is useful for starting from an interactive session where you plan to disconnect.
+
+`docker-entry.sh` may be useful where nohup is not necessary and/or you want the script to stay alive.   For example, this is
  used by the container where the sleep is required to keep the container active.
-
-`bg_start.sh` is useful for starting from an interactive session where you plan to disconnect.
 
 #### Container
 
@@ -81,6 +81,6 @@ values for the pipeline database host and port from localhost and 4432 below to 
 1. Start the pipeline database using the server-prod repo and the `up.sh` script to start all background services and
 data volumes via Docker Compose.
 2. Stop this api service container via `docker stop <container_id>`.  You can find the id for the pipeline_api container using `docker ps`
-3. If this is the first launch, or if a new migration has been added, use the `migrate.sh` script as `./migrate.sh localhost 4432`.
-4. If this is the first launch, optionally seed the database to get up and running quickly using `./seed.sh localhost 4432`
+3. If this is the first launch, or if a new migration has been added, use the `migrate.sh` script as `./migrate.sh localhost 3932`.
+4. If this is the first launch, optionally seed the database to get up and running quickly using `./seed.sh localhost 3932`
 5. Launch using `npm run devel` 

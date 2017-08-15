@@ -10,10 +10,6 @@ if [ ! -z "$2" ]
     export PIPELINE_DATABASE_PORT=$2
 fi
 
-LAST_NODE_ENV=${NODE_ENV}
-
-export NODE_ENV=production
-
 migratePipelineDatabaseService()
 {
     SUCCESS=1
@@ -57,7 +53,5 @@ echo "Migrate for all databases."
 migratePipelineDatabaseService
 
 migrateLocalCache
-
-export NODE_ENV=${LAST_NODE_ENV}
 
 exit 0

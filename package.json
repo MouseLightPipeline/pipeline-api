@@ -1,6 +1,6 @@
 {
   "name": "pipeline-api",
-  "version": "1.0.19",
+  "version": "1.0.6",
   "description": "",
   "main": "src/pipelineApiApp.js",
   "license": "LicenseRef-LICENSE",

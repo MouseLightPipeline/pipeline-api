@@ -17,17 +17,10 @@ fi
 
 if [ ! -z "$4" ]
   then
-    export PIPELINE_SEED_PREFIX=$4
+    export PIPELINE_VOLUME_PREFIX=$4
 fi
-
-
-LAST_NODE_ENV=${NODE_ENV}
-
-export NODE_ENV=production
 
 echo "Seed for all databases."
 
 echo "Seed postgres service"
 sequelize db:seed:all
-
-export NODE_ENV=${LAST_NODE_ENV}

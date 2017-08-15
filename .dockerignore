@@ -1,6 +1,7 @@
 .dockerignore
 .gitignore
 .idea
+*.js
 Dockerfile
 node_modules
 README.md

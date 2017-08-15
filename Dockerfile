@@ -10,6 +10,6 @@ RUN yarn install
 
 RUN tsc
 
-CMD ["./start.sh"]
+CMD ["./docker-entry.sh"]
 
 EXPOSE  3000
