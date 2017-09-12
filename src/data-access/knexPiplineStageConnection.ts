@@ -1,6 +1,7 @@
-import {IKnexOptions} from "../options/knexOptions";
 const path = require("path");
 
+// TODO Move to Sequelize.  The pipeline schedulers are very dependent on the specific knex syntax and batch operations
+// at the moment.
 import * as Knex from "knex";
 
 const asyncUtils = require("async");
@@ -153,7 +154,7 @@ async function findConnection(name: string, requiredTable: string = null): Promi
 }
 
 async function createConnection(name: string, requiredTable: string): Promise<Knex> {
-    const configuration: IKnexOptions = {
+    const configuration = {
         client: "sqlite3",
         connection: {
             filename: name

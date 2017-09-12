@@ -1,10 +1,10 @@
-import {ExecutionStatusCode, CompletionStatusCode} from "../data-model/taskExecution";
+import * as  path from "path";
+import {isNullOrUndefined} from "util";
 
-const path = require("path");
 const fse = require("fs-extra");
 const debug = require("debug")("pipeline:coordinator-api:pipeline-worker");
 
-import {updatePipelineStagePerformance, updatePipelineStageCounts} from "../data-model/pipelineStagePerformance";
+import {updatePipelineStagePerformance, updatePipelineStageCounts} from "../data-model/sequelize/pipelineStagePerformance";
 import {ISchedulerInterface} from "./schedulerHub";
 import performanceConfiguration from "../options/performanceOptions"
 import {
@@ -19,7 +19,8 @@ import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {IProject} from "../data-model/sequelize/project";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
-import {isNullOrUndefined} from "util";
+import {CompletionStatusCode, ExecutionStatusCode} from "../data-model/sequelize/taskExecution";
+
 
 const perfConf = performanceConfiguration();
 

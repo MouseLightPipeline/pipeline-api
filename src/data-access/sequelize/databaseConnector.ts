@@ -10,6 +10,7 @@ import {SequelizeDatabaseOptions} from "../../options/serverOptions";
 export interface IPipelineModels {
     TaskDefinitions?: any;
     TaskRepositories?: any;
+    TaskExecutions?: any;
     PipelineWorkers?: any;
     Projects?: any;
     PipelineStages?: any;
@@ -44,6 +45,10 @@ export class PersistentStorageManager {
 
     public get TaskDefinitions() {
         return this.pipelineDatabase.models.TaskDefinitions;
+    }
+
+    public get TaskExecutions() {
+        return this.pipelineDatabase.models.TaskExecutions;
     }
 
     public get PipelineWorkers() {

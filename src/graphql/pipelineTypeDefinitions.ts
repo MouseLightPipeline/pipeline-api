@@ -1,7 +1,31 @@
 let typeDefinitions = `
+type PageInfo {
+    endCursor: String
+    hasNextPage: Boolean
+}
+
+type ExecutionEdge {
+    node: TaskExecution
+    cursor: String
+}
+
+type ExecutionConnection {
+    totalCount: Int
+    pageInfo: PageInfo
+    edges: [ExecutionEdge]
+}
+
+type ExecutionPage {
+    offset: Int
+    limit: Int
+    totalCount: Int
+    hasNextPage: Boolean
+    items: [TaskExecution]
+}
+
 type PipelineWorker {
   id: String!
-  machine_id: String
+  worker_id: String
   name: String
   os_type: String
   platform: String
@@ -48,6 +72,28 @@ type TaskDefinition {
   created_at: Float
   updated_at: Float
   deleted_at: Float
+}
+
+type TaskExecution {
+  id: String
+  worker_id: String
+  task_definition_id: String
+  task_definition: TaskDefinition
+  work_units: Float
+  resolved_script: String
+  resolved_interpreter: String
+  resolved_args: String
+  execution_status_code: Int
+  completion_status_code: Int
+  last_process_status_code: Float
+  max_memory: Float
+  max_cpu: Float
+  exit_code: Int
+  started_at: String
+  completed_at: String
+  created_at: String
+  updated_at: String
+  deleted_at: String
 }
 
 type Project {
@@ -261,6 +307,10 @@ type Query {
   taskRepository(id: String!): TaskRepository
   taskRepositories: [TaskRepository!]!
   
+  taskExecution(id: String!): TaskExecution
+  taskExecutions: [TaskExecution!]!
+  taskExecutionsPage(offset: Int, limit: Int, status: Int): ExecutionPage
+
   pipelineStagePerformance(id: String!): PipelineStagePerformance
   pipelineStagePerformances: [PipelineStagePerformance!]!
   

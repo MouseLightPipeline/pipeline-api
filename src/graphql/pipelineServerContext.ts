@@ -1,7 +1,7 @@
 import * as path from "path";
 import * as fs from "fs";
 
-import {IPipelineStagePerformance, pipelineStagePerformanceInstance} from "../data-model/pipelineStagePerformance";
+import {IPipelineStagePerformance} from "../data-model/sequelize/pipelineStagePerformance";
 import {SchedulerHub} from "../schedulers/schedulerHub";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {ITaskDefinition} from "../data-model/sequelize/taskDefinition";
@@ -10,8 +10,7 @@ import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {IProject, IProjectInput, NO_BOUND, NO_SAMPLE} from "../data-model/sequelize/project";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 import {PipelineWorkerClient} from "./client/pipelineWorkerClient";
-
-const debug = require("debug")("pipeline:coordinator-api:context");
+import {CompletionStatusCode, ITaskExecution} from "../data-model/sequelize/taskExecution";
 
 export interface IWorkerMutationOutput {
     worker: IPipelineWorker;
@@ -56,6 +55,14 @@ export interface ITaskDefinitionMutationOutput {
 export interface ITaskDefinitionDeleteOutput {
     id: string;
     error: string;
+}
+
+export interface ISimplePage<T> {
+    offset: number;
+    limit: number;
+    totalCount: number;
+    hasNextPage: boolean;
+    items: T[]
 }
 
 export interface IPipelineServerContext {
@@ -121,6 +128,12 @@ export interface IPipelineServerContext {
 
     deleteTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionDeleteOutput>;
 
+    getTaskExecution(id: string): Promise<ITaskExecution>;
+
+    getTaskExecutions(): Promise<ITaskExecution[]>;
+
+    getTaskExecutionsPage(reqOffset: number, reqLimit: number, completionStatus: CompletionStatusCode): Promise<ISimplePage<ITaskExecution>>;
+
     getPipelineStagePerformance(id: string): Promise<IPipelineStagePerformance>;
 
     getPipelineStagePerformances(): Promise<IPipelineStagePerformance[]>;
@@ -131,8 +144,6 @@ export interface IPipelineServerContext {
 }
 
 export class PipelineServerContext implements IPipelineServerContext {
-    private _pipelinePerformance = pipelineStagePerformanceInstance;
-
     private _persistentStorageManager: PersistentStorageManager = PersistentStorageManager.Instance();
 
     public getPipelineWorker(id: string): Promise<IPipelineWorker> {
@@ -445,16 +456,59 @@ export class PipelineServerContext implements IPipelineServerContext {
         return null;
     }
 
+    public getTaskExecution(id: string): Promise<ITaskExecution> {
+        return this._persistentStorageManager.TaskExecutions.findById(id);
+    }
+
+    public getTaskExecutions(): Promise<ITaskExecution[]> {
+        return this._persistentStorageManager.TaskExecutions.findAll({});
+    }
+
+    public async getTaskExecutionsPage(reqOffset: number, reqLimit: number, completionCode: CompletionStatusCode): Promise<ISimplePage<ITaskExecution>> {
+        let offset = 0;
+        let limit = 10;
+
+        if (reqOffset !== null && reqOffset !== undefined) {
+            offset = reqOffset;
+        }
+
+        if (reqLimit !== null && reqLimit !== undefined) {
+            limit = reqLimit;
+        }
+
+        const count = await this._persistentStorageManager.TaskExecutions.count();
+
+        if (offset > count) {
+            return {
+                offset: offset,
+                limit: limit,
+                totalCount: count,
+                hasNextPage: false,
+                items: []
+            };
+        }
+
+        const nodes: ITaskExecution[] = await this._persistentStorageManager.TaskExecutions.getPage(offset, limit, completionCode);
+
+        return {
+            offset: offset,
+            limit: limit,
+            totalCount: count,
+            hasNextPage: offset + limit < count,
+            items: nodes
+        };
+    }
+
     public getPipelineStagePerformance(id: string): Promise<IPipelineStagePerformance> {
-        return this._pipelinePerformance.get(id);
+        return this._persistentStorageManager.PipelineStagePerformances.findById(id);
     }
 
     public getPipelineStagePerformances(): Promise<IPipelineStagePerformance[]> {
-        return this._pipelinePerformance.getAll();
+        return this._persistentStorageManager.PipelineStagePerformances.findAll({});
     }
 
-    public getForStage(pipeline_stage_id: string): Promise<IPipelineStagePerformance> {
-        return this._pipelinePerformance.getForStage(pipeline_stage_id);
+    public async getForStage(pipeline_stage_id: string): Promise<IPipelineStagePerformance> {
+        return this._persistentStorageManager.PipelineStagePerformances.findOne({where: {pipeline_stage_id}});
     }
 
     public getProjectPlaneTileStatus(project_id: string, plane: number): Promise<any> {

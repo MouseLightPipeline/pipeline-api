@@ -50,7 +50,7 @@ export = {
                     type: Sequelize.UUID,
                     defaultValue: Sequelize.UUIDV4
                 },
-                machine_id: Sequelize.UUID,
+                worker_id: Sequelize.UUID,
                 name: Sequelize.TEXT,
                 address: Sequelize.TEXT,
                 port: Sequelize.INTEGER,

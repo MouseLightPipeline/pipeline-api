@@ -4,10 +4,10 @@ import "isomorphic-fetch";
 
 const debug = require("debug")("pipeline:coordinator-api:pipeline-worker-client");
 
-import {ITaskExecution} from "../../data-model/taskExecution";
 import {ITaskDefinition} from "../../data-model/sequelize/taskDefinition";
 import {IPipelineWorker, PipelineWorkerStatus} from "../../data-model/sequelize/pipelineWorker";
 import {IWorkerMutationOutput, PipelineServerContext} from "../pipelineServerContext";
+import {ITaskExecution} from "../../data-model/sequelize/taskExecution";
 
 
 export class PipelineWorkerClient {

@@ -29,29 +29,8 @@ migratePipelineDatabaseService()
     echo "Migrate postgres service complete"
 }
 
-migrateLocalCache()
-{
-    SUCCESS=1
-
-    while [ ${SUCCESS} -ne 0 ]; do
-        echo "Migrate local SQLITE cache"
-
-        knex migrate:latest
-        SUCCESS=$?
-
-        if [ ${SUCCESS} -ne 0 ]; then
-            echo "Migration failed - waiting 5 seconds"
-            sleep 5s
-        fi
-    done
-
-    echo "Migrate local SQLITE cache complete"
-}
-
 echo "Migrate for all databases."
 
 migratePipelineDatabaseService
-
-migrateLocalCache
 
 exit 0

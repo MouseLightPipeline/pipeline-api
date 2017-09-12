@@ -11,6 +11,7 @@ let executableSchema = makeExecutableSchema({
     }
 });
 
+/*
 addMockFunctionsToSchema({
     schema: executableSchema,
     mocks: {
@@ -19,5 +20,6 @@ addMockFunctionsToSchema({
     },
     preserveResolvers: true
 });
+*/
 
 export {executableSchema as schema};

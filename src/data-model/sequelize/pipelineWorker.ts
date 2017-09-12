@@ -7,7 +7,7 @@ export enum PipelineWorkerStatus {
 
 export interface IPipelineWorker {
     id?: string;
-    machine_id?: string;
+    worker_id?: string;
     name?: string;
     address?: string;
     port?: number;
@@ -42,7 +42,7 @@ export function sequelizeImport(sequelize, DataTypes) {
             type: DataTypes.UUID,
             defaultValue: DataTypes.UUIDV4
         },
-        machine_id: {
+        worker_id: {
             type: DataTypes.TEXT,
             defaultValue: ""
         },
@@ -145,11 +145,11 @@ export function sequelizeImport(sequelize, DataTypes) {
         paranoid: true
     });
 
-    PipelineWorker.getForMachineId = async (machineId: string): Promise<IPipelineWorker> => {
-        let worker = await PipelineWorker.findOne({where: {machine_id: machineId}});
+    PipelineWorker.getForWorkerId = async (workerIc: string): Promise<IPipelineWorker> => {
+        let worker = await PipelineWorker.findOne({where: {worker_id: workerIc}});
 
         if (!worker) {
-            worker = await PipelineWorker.create({machine_id: machineId});
+            worker = await PipelineWorker.create({worker_id: workerIc});
         }
 
         return worker;

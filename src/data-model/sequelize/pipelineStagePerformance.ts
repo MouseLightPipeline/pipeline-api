@@ -1,11 +1,5 @@
-import {v4} from "uuid";
 const AsyncLock = require("async");
 
-const debug = require("debug")("pipeline:coordinator-api:pipeline-stage-performance");
-
-import {knex} from "../data-access/knexConnector";
-
-import {TableModel, ITableModelRow} from "./tableModel";
 import {CompletionStatusCode, ITaskExecution} from "./taskExecution";
 
 enum PerformanceQueueActions {
@@ -33,7 +27,8 @@ interface IUpdateStatsQueueItem {
     duration_ms: number;
 }
 
-export interface IPipelineStagePerformance extends ITableModelRow {
+export interface IPipelineStagePerformance {
+    id?: string;
     pipeline_stage_id: string;
     num_in_process: number;
     num_ready_to_process: number;
@@ -50,37 +45,130 @@ export interface IPipelineStagePerformance extends ITableModelRow {
     duration_average: number;
     duration_high: number;
     duration_low: number;
+    created_at: Date;
+    updated_at: Date;
+    deleted_at: Date;
 }
 
-export class PipelineStagePerformance extends TableModel<IPipelineStagePerformance> {
-    public constructor() {
-        super("PipelineStagePerformance");
-    }
+export const TableName = "PipelineStagePerformances";
 
-    public async getForStage(pipeline_stage_id: string): Promise<IPipelineStagePerformance> {
-        let performance = await this.getOneRelationship("pipeline_stage_id", pipeline_stage_id);
+let PipelineStagePerformanceAccess = null;
 
-        return performance || this.create(pipeline_stage_id);
-    }
+export function sequelizeImport(sequelize, DataTypes) {
+    const PipelineStagePerformance = sequelize.define(TableName, {
+        id: {
+            primaryKey: true,
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4
+        },
+        num_in_process: {
+            type: DataTypes.INTEGER,
+        },
+        num_ready_to_process: {
+            type: DataTypes.INTEGER,
+        },
+        num_execute: {
+            type: DataTypes.INTEGER,
+            defaultValue: ""
+        },
+        num_complete: {
+            type: DataTypes.INTEGER,
+            defaultValue: ""
+        },
+        num_error: {
+            type: DataTypes.INTEGER,
+            defaultValue: ""
+        },
+        num_cancel: {
+            type: DataTypes.INTEGER,
+        },
+        duration_average: {
+            type: DataTypes.FLOAT,
+        },
+        duration_high: {
+            type: DataTypes.FLOAT,
+        },
+        duration_low: {
+            type: DataTypes.FLOAT,
+        },
+        cpu_average: {
+            type: DataTypes.FLOAT,
+        },
+        cpu_high: {
+            type: DataTypes.FLOAT,
+        },
+        cpu_low: {
+            type: DataTypes.FLOAT,
+        },
+        memory_average: {
+            type: DataTypes.FLOAT,
+        },
+        memory_high: {
+            type: DataTypes.FLOAT
+        },
+        memory_low: {
+            type: DataTypes.FLOAT
+        }
+    }, {
+        timestamps: true,
+        createdAt: "created_at",
+        updatedAt: "updated_at",
+        deletedAt: "deleted_at",
+        paranoid: false
+    });
 
-    public async updateCountsForPipelineStage(updateTask: IUpdateCountsQueueItem) {
-        let performance = await this.getForStage(updateTask.pipeline_stage_id);
+    PipelineStagePerformance.associate = models => {
+        PipelineStagePerformance.belongsTo(models.PipelineStages, {foreignKey: "pipeline_stage_id"});
+    };
+
+    PipelineStagePerformance.createForStage = async function (pipelineStageId: string): Promise<IPipelineStagePerformance> {
+        let pipelineStagePerformance = create(pipelineStageId);
+
+        return PipelineStagePerformance.create(pipelineStagePerformance);
+    };
+
+    PipelineStagePerformance.queue = AsyncLock.queue(async (updateItem: IPerformanceQueueItem, callback) => {
+        try {
+            switch (updateItem.action) {
+                case PerformanceQueueActions.Reset:
+                    await PipelineStagePerformance.reset(true);
+                    break;
+                case PerformanceQueueActions.UpdateStatistics:
+                    await PipelineStagePerformance.updateForPipelineStage(updateItem.context);
+                    break;
+                case PerformanceQueueActions.UpdateCounts:
+                    await PipelineStagePerformance.updateCountsForPipelineStage(updateItem.context);
+                    break;
+            }
+        } catch (err) {
+            console.log(err);
+        }
+
+        callback();
+    }, 1);
+
+    PipelineStagePerformance.queue.error = (err) => {
+        console.log("queue error");
+    };
+
+    PipelineStagePerformance.updateCountsForPipelineStage = async function (updateTask: IUpdateCountsQueueItem) {
+        let performance = await this.findOne({where: {pipeline_stage_id: updateTask.pipeline_stage_id}});
 
         if (!performance) {
-            return;
+            performance = await this.createForStage(updateTask.pipeline_stage_id);
         }
 
         performance.num_in_process = updateTask.inProcess;
         performance.num_ready_to_process = updateTask.waiting;
 
-        await this.save(performance);
-    }
+        await performance.save();
+    };
 
-    public async updateForPipelineStage(updateTask: IUpdateStatsQueueItem) {
-        let performance = await this.getForStage(updateTask.pipeline_stage_id);
+    PipelineStagePerformance.updateForPipelineStage = async function (updateTask: IUpdateStatsQueueItem) {
+        let performance = await this.findOne({where: {pipeline_stage_id: updateTask.pipeline_stage_id}});
 
         if (!performance) {
-            return;
+            performance = await this.createForStage(updateTask.pipeline_stage_id);
         }
 
         switch (updateTask.status) {
@@ -100,33 +188,31 @@ export class PipelineStagePerformance extends TableModel<IPipelineStagePerforman
 
         performance.num_execute++;
 
-        await this.save(performance);
-    }
+        await performance.save();
+    };
 
-    public async reset(now: boolean = false) {
+    PipelineStagePerformance.reset = async function (now: boolean = false) {
         if (now) {
-            await knex(this.tableName).select().del();
+            await PipelineStagePerformance.destroy({where: {}, truncate: true});
         } else {
-            queue.push({
+            PipelineStagePerformance.queue.push({
                 action: PerformanceQueueActions.Reset,
                 context: null
             }, (err) => {
+                console.log(err);
             });
         }
 
         return 0;
-    }
+    };
 
-    private async create(pipelineStageId: string): Promise<IPipelineStagePerformance> {
-        let pipelineStage = create(pipelineStageId);
+    PipelineStagePerformanceAccess = PipelineStagePerformance;
 
-        return await this.insertRow(pipelineStage);
-    }
+    return PipelineStagePerformance;
 }
 
 function create(pipelineStageId: string): IPipelineStagePerformance {
     return {
-        id: v4(),
         pipeline_stage_id: pipelineStageId,
         num_in_process: 0,
         num_ready_to_process: 0,
@@ -149,32 +235,6 @@ function create(pipelineStageId: string): IPipelineStagePerformance {
     };
 }
 
-export const pipelineStagePerformanceInstance = new PipelineStagePerformance();
-
-const queue = AsyncLock.queue(async(updateItem: IPerformanceQueueItem, callback) => {
-    try {
-        switch (updateItem.action) {
-            case PerformanceQueueActions.Reset:
-                await pipelineStagePerformanceInstance.reset(true);
-                break;
-            case PerformanceQueueActions.UpdateStatistics:
-                await pipelineStagePerformanceInstance.updateForPipelineStage(updateItem.context);
-                break;
-            case PerformanceQueueActions.UpdateCounts:
-                await pipelineStagePerformanceInstance.updateCountsForPipelineStage(updateItem.context);
-                break;
-        }
-    } catch (err) {
-        console.log(err);
-    }
-
-    callback();
-}, 1);
-
-queue.error = (err) => {
-    console.log("queue error");
-};
-
 function updatePerformanceStatistics(performance: IPipelineStagePerformance, cpu: number, mem: number, duration_ms: number) {
     updatePerformance(performance, "cpu", cpu);
     updatePerformance(performance, "memory", mem);
@@ -196,7 +256,11 @@ function updateAverage(existing_average: number, existing_count: number, latestV
 }
 
 export function updatePipelineStageCounts(pipelineStageId: string, inProcess: number, waiting: number) {
-    queue.push({
+    if (!PipelineStagePerformanceAccess) {
+        return;
+    }
+
+    PipelineStagePerformanceAccess.queue.push({
         action: PerformanceQueueActions.UpdateCounts,
         context: {
             pipeline_stage_id: pipelineStageId,
@@ -208,13 +272,17 @@ export function updatePipelineStageCounts(pipelineStageId: string, inProcess: nu
 }
 
 export function updatePipelineStagePerformance(pipelineStageId: string, taskExecution: ITaskExecution) {
+    if (!PipelineStagePerformanceAccess) {
+        return;
+    }
+
     let duration_ms = null;
 
     if (taskExecution.completed_at && taskExecution.started_at) {
         duration_ms = taskExecution.completed_at.valueOf() - taskExecution.started_at.valueOf();
     }
 
-    queue.push({
+    PipelineStagePerformanceAccess.queue.push({
         action: PerformanceQueueActions.UpdateStatistics,
         context: {
             pipeline_stage_id: pipelineStageId,
@@ -226,5 +294,4 @@ export function updatePipelineStagePerformance(pipelineStageId: string, taskExec
     }, (err) => {
     });
 }
-
 

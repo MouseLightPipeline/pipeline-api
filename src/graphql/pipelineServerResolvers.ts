@@ -1,11 +1,9 @@
 import {ITaskRepository} from "../data-model/sequelize/taskRepository";
 
-const debug = require("debug")("pipeline:coordinator-api:resolvers");
-
-import {IPipelineStagePerformance} from "../data-model/pipelineStagePerformance";
+import {IPipelineStagePerformance} from "../data-model/sequelize/pipelineStagePerformance";
 import {
     IPipelineServerContext, IPipelineStageDeleteOutput, IPipelineStageMutationOutput, IProjectDeleteOutput,
-    IProjectMutationOutput, ITaskDefinitionDeleteOutput,
+    IProjectMutationOutput, ISimplePage, ITaskDefinitionDeleteOutput,
     ITaskDefinitionMutationOutput,
     ITaskRepositoryDeleteOutput,
     ITaskRepositoryMutationOutput, IWorkerMutationOutput
@@ -14,6 +12,7 @@ import {ITaskDefinition} from "../data-model/sequelize/taskDefinition";
 import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {IProject, IProjectInput} from "../data-model/sequelize/project";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
+import {CompletionStatusCode, ITaskExecution} from "../data-model/sequelize/taskExecution";
 
 interface IIdOnlyArgument {
     id: string;
@@ -62,6 +61,12 @@ interface IActiveWorkerArguments {
     shouldBeInSchedulerPool: boolean;
 }
 
+interface ITaskExecutionPageArguments {
+    offset: number;
+    limit: number;
+    status: CompletionStatusCode;
+}
+
 let resolvers = {
     Query: {
         pipelineWorker(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IPipelineWorker> {
@@ -96,6 +101,15 @@ let resolvers = {
         },
         taskRepositories(_, __, context: IPipelineServerContext): Promise<ITaskRepository[]> {
             return context.getTaskRepositories();
+        },
+        taskExecution(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<ITaskExecution> {
+            return context.getTaskExecution(args.id);
+        },
+        taskExecutions(_, __, context: IPipelineServerContext): Promise<ITaskExecution[]> {
+            return context.getTaskExecutions();
+        },
+        taskExecutionsPage(_, args: ITaskExecutionPageArguments, context: IPipelineServerContext): Promise<ISimplePage<ITaskExecution>> {
+            return context.getTaskExecutionsPage(args.offset, args.limit, args.status);
         },
         pipelineStagePerformance(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IPipelineStagePerformance> {
             return context.getPipelineStagePerformance(args.id);
@@ -200,6 +214,11 @@ let resolvers = {
         },
         script_status(taskDefinition: ITaskDefinition, _, context: IPipelineServerContext): any {
             return context.getScriptStatusForTaskDefinition(taskDefinition);
+        }
+    },
+    TaskExecution: {
+        task_definition(taskExecution, _, context: IPipelineServerContext) {
+            return context.getTaskDefinition(taskExecution.task_definition_id);
         }
     }
 };
