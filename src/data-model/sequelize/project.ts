@@ -25,6 +25,7 @@ export interface IProject {
     name?: string;
     description?: string;
     root_path?: string;
+    log_root_path?: string;
     sample_number?: number;
     sample_x_min?: number;
     sample_x_max?: number;
@@ -62,6 +63,10 @@ export function sequelizeImport(sequelize, DataTypes) {
             defaultValue: ""
         },
         root_path: {
+            type: DataTypes.TEXT,
+            defaultValue: ""
+        },
+        log_root_path: {
             type: DataTypes.TEXT,
             defaultValue: ""
         },

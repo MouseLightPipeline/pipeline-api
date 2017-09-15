@@ -14,7 +14,8 @@ export enum CompletionStatusCode {
     Incomplete = 1,
     Cancel = 2,
     Success = 3,
-    Error = 4
+    Error = 4,
+    Resubmitted = 5
 }
 
 
@@ -28,11 +29,14 @@ export enum SyncStatus {
 export interface ITaskExecution {
     id: string;
     worker_id: string;
+    tile_id;
     task_definition_id: string;
+    pipeline_stage_id: string;
     work_units: number;
     resolved_script: string;
     resolved_interpreter: string;
     resolved_args: string;
+    expected_exit_code: number;
     execution_status_code: ExecutionStatusCode;
     completion_status_code: CompletionStatusCode;
     last_process_status_code: number;
@@ -75,6 +79,10 @@ export function sequelizeImport(sequelize, DataTypes) {
             type: DataTypes.TEXT,
             defaultValue: ""
         },
+        expected_exit_code: {
+            type: DataTypes.INTEGER,
+            defaultValue: 0
+        },
         execution_status_code: {
             type: DataTypes.INTEGER,
         },
@@ -115,6 +123,7 @@ export function sequelizeImport(sequelize, DataTypes) {
 
     TaskExecution.associate = models => {
         TaskExecution.belongsTo(models.TaskDefinitions, {foreignKey: "task_definition_id"});
+        TaskExecution.belongsTo(models.PipelineStages, {foreignKey: "pipeline_stage_id"});
     };
 
     TaskExecution.getPage = async function (reqOffset: number, reqLimit: number, completionCode: CompletionStatusCode): Promise<ITaskExecution[]> {

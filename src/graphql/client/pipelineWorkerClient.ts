@@ -136,7 +136,7 @@ export class PipelineWorkerClient {
         return null;
     }
 
-    public async startTaskExecution(worker: IPipelineWorker, taskId: string, baseArgs: string[] = []): Promise<ITaskExecution> {
+    public async startTaskExecution(worker: IPipelineWorker, taskId: string, pipelineStageId: string, tileId: string, baseArgs: string[] = []): Promise<ITaskExecution> {
         const client = this.getClient(worker);
 
         if (client === null) {
@@ -146,8 +146,8 @@ export class PipelineWorkerClient {
         try {
             let response = await client.mutate({
                 mutation: gql`
-                mutation startTask($taskId: String!, $args: [String!]) {
-                    startTask(taskDefinitionId: $taskId, scriptArgs: $args) {
+                mutation startTask($taskId: String!, $pipelineStageId: String!, $tileId: String!, $args: [String!]) {
+                    startTask(taskDefinitionId: $taskId, pipelineStageId: $pipelineStageId, tileId: $tileId, scriptArgs: $args) {
                         id
                         last_process_status_code
                         completion_status_code
@@ -158,7 +158,9 @@ export class PipelineWorkerClient {
                     }
                 }`,
                 variables: {
-                    taskId: taskId,
+                    taskId,
+                    pipelineStageId,
+                    tileId,
                     args: baseArgs
                 }
             });

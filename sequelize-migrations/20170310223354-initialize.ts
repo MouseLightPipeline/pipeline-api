@@ -29,6 +29,7 @@ export = {
                 script: Sequelize.TEXT,
                 interpreter: Sequelize.TEXT,
                 args: Sequelize.TEXT,
+                expected_exit_code: Sequelize.INTEGER,
                 work_units: Sequelize.DOUBLE,
                 task_repository_id: {
                     type: Sequelize.UUID,
@@ -82,6 +83,7 @@ export = {
                 name: Sequelize.TEXT,
                 description: Sequelize.TEXT,
                 root_path: Sequelize.TEXT,
+                log_root_path: Sequelize.TEXT,
                 sample_number: Sequelize.INTEGER,
                 sample_x_min: Sequelize.INTEGER,
                 sample_x_max: Sequelize.INTEGER,

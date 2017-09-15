@@ -64,6 +64,7 @@ type TaskDefinition {
   script: String!
   interpreter: String!
   args: String!
+  expected_exit_code: Int
   work_units: Float
   task_repository_id: String
   task_repository: TaskRepository
@@ -77,8 +78,11 @@ type TaskDefinition {
 type TaskExecution {
   id: String
   worker_id: String
+  task_id: String
   task_definition_id: String
   task_definition: TaskDefinition
+  pipeline_stage_id: String
+  pipeline_stage: PipelineStage
   work_units: Float
   resolved_script: String
   resolved_interpreter: String
@@ -101,6 +105,7 @@ type Project {
   name: String
   description: String
   root_path: String
+  log_root_path: String
   dashboard_json_status: Boolean
   sample_number: Int
   sample_x_min: Int
@@ -165,6 +170,13 @@ type PipelineStage {
   created_at: Float
   updated_at: Float
   deleted_at: Float
+}
+
+type Tile {
+  relative_path: String
+  lat_x: Int
+  lat_y: Int
+  lat_z: Int
 }
 
 type TileStageStatus {
@@ -248,6 +260,7 @@ input ProjectInput {
   name: String
   description: String
   root_path: String
+  log_root_path: String
   sample_number: Int
   is_processing: Boolean
   region_bounds: RegionInput
@@ -282,6 +295,7 @@ input TaskDefinitionInput {
   interpreter: String
   task_repository_id: String
   args: String
+  expected_exit_code: Int
   work_units: Float
 }
 
@@ -315,6 +329,8 @@ type Query {
   pipelineStagePerformances: [PipelineStagePerformance!]!
   
   projectPlaneTileStatus(project_id: String, plane: Int): TilePlane
+  
+  tilesForStage(pipeline_stage_id: String, status: Int): [Tile]
   
   scriptContents(task_definition_id: String): String
   

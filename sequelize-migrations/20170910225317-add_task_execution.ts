@@ -9,6 +9,7 @@ export = {
                 },
                 worker_id: Sequelize.UUID,
                 work_units: Sequelize.DOUBLE,
+                tile_id: Sequelize.TEXT,
                 resolved_script: Sequelize.TEXT,
                 resolved_interpreter: Sequelize.TEXT,
                 resolved_args: Sequelize.TEXT,
@@ -29,6 +30,13 @@ export = {
                     type: Sequelize.UUID,
                     references: {
                         model: "TaskDefinitions",
+                        key: "id"
+                    }
+                },
+                pipeline_stage_id: {
+                    type: Sequelize.UUID,
+                    references: {
+                        model: "PipelineStages",
                         key: "id"
                     }
                 }

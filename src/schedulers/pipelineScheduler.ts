@@ -38,7 +38,8 @@ export enum TilePipelineStatus {
     Queued = 2,
     Processing = 3,
     Complete = 4,
-    Failed = 5
+    Failed = 5,
+    Canceled = 6
 }
 
 export interface IPipelineTile {
@@ -75,6 +76,7 @@ export interface IInProcessTile {
 export interface IToProcessTile {
     relative_path: string;
     created_at: Date;
+
     updated_at: Date;
 }
 
@@ -288,7 +290,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                     tileStatus = TilePipelineStatus.Failed; // Do not queue again
                     break;
                 case CompletionStatusCode.Cancel:
-                    tileStatus = TilePipelineStatus.Incomplete; // Return to incomplete to be queued again
+                    tileStatus = TilePipelineStatus.Canceled; // Could return to incomplete to be queued again
                     break;
             }
 
@@ -392,13 +394,13 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
                     fse.ensureDirSync(outputPath);
 
-                    let args = [project.name, project.root_path, src_path, this._pipelineStage.dst_path, pipelineTile.relative_path, pipelineTile.tile_name];
+                    let args = [project.name, project.root_path, src_path, this._pipelineStage.dst_path, pipelineTile.relative_path, pipelineTile.tile_name, project.log_root_path];
 
                     let context = await this.getTaskContext(pipelineTile);
 
                     args = args.concat(this.getTaskArguments(pipelineTile, context));
 
-                    let taskExecution = await PipelineWorkerClient.Instance().startTaskExecution(worker, this._pipelineStage.task_id, args);
+                    let taskExecution = await PipelineWorkerClient.Instance().startTaskExecution(worker, this._pipelineStage.task_id, this._pipelineStage.id, pipelineTile.relative_path, args);
 
                     if (taskExecution != null) {
                         let now = new Date();
