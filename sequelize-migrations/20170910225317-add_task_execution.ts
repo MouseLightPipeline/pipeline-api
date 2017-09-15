@@ -13,6 +13,7 @@ export = {
                 resolved_script: Sequelize.TEXT,
                 resolved_interpreter: Sequelize.TEXT,
                 resolved_args: Sequelize.TEXT,
+                expected_exit_code: Sequelize.INTEGER,
                 max_memory: Sequelize.DOUBLE,
                 max_cpu: Sequelize.DOUBLE,
                 execution_status_code: Sequelize.INTEGER,
