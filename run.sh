@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+if [ -a "options.sh" ]; then
+    source "options.sh"
+fi
+
 if [ -z "$PIPELINE_DATABASE_HOST" ]; then
     export PIPELINE_DATABASE_HOST="localhost"
 fi

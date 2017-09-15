@@ -41,7 +41,7 @@ As a container the service only requires that Docker be installed.  The containe
 repository as an example) or directly from the `docker` command.
 
 The container has the same startup options as the standalone via the `CMD` compose property or `docker run` command line 
-argument, but defaults to `start.sh`.
+argument, but defaults to `docker-entry.sh`.
 
 The offline database is stored in /app/internal-data.  To persist offline data between container updates, map this directory to
 a host volume or data volume.  This is required as the offline database only synchronizes task information from the coordinator
