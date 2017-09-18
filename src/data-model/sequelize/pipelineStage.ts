@@ -1,3 +1,5 @@
+import {CompletionStatusCode} from "./taskExecution";
+
 export enum PipelineStageMethod {
     DashboardProjectRefresh = 1,
     MapTile = 2,

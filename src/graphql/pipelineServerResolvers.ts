@@ -6,13 +6,14 @@ import {
     IProjectMutationOutput, ISimplePage, ITaskDefinitionDeleteOutput,
     ITaskDefinitionMutationOutput,
     ITaskRepositoryDeleteOutput,
-    ITaskRepositoryMutationOutput, IWorkerMutationOutput
+    ITaskRepositoryMutationOutput, ITilePage, IWorkerMutationOutput
 } from "./pipelineServerContext";
 import {ITaskDefinition} from "../data-model/sequelize/taskDefinition";
 import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {IProject, IProjectInput} from "../data-model/sequelize/project";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 import {CompletionStatusCode, ITaskExecution} from "../data-model/sequelize/taskExecution";
+import {IPipelineTile, TilePipelineStatus} from "../schedulers/pipelineScheduler";
 
 interface IIdOnlyArgument {
     id: string;
@@ -65,6 +66,19 @@ interface ITaskExecutionPageArguments {
     offset: number;
     limit: number;
     status: CompletionStatusCode;
+}
+
+interface ITileStatusArguments {
+    pipelineStageId: string;
+    status: TilePipelineStatus;
+    offset: number;
+    limit: number;
+}
+
+interface ITileStatusArgs {
+    pipelineStageId: string;
+    tileId: string;
+    status: TilePipelineStatus;
 }
 
 let resolvers = {
@@ -120,6 +134,9 @@ let resolvers = {
         projectPlaneTileStatus(_, args: IPipelinePlaneStatusArguments, context: IPipelineServerContext): Promise<any> {
             return context.getProjectPlaneTileStatus(args.project_id, args.plane);
         },
+        tilesForStage(_, args: ITileStatusArguments, context: IPipelineServerContext): Promise<ITilePage> {
+            return context.tilesForStage(args.pipelineStageId, args.status, args.offset, args.limit);
+        },
         scriptContents(_, args: ITaskDefinitionIdArguments, context: IPipelineServerContext): Promise<string> {
             return context.getScriptContents(args.task_definition_id);
         },
@@ -163,6 +180,9 @@ let resolvers = {
         },
         deleteTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: IPipelineServerContext): Promise<ITaskDefinitionDeleteOutput> {
             return context.deleteTaskDefinition(args.taskDefinition);
+        },
+        setTileStatus(_, args: ITileStatusArgs, context: IPipelineServerContext): Promise<IPipelineTile> {
+            return context.setTileStatus(args.pipelineStageId, args.tileId, args.status);
         },
         updateWorker(_, args: IUpdateWorkerArguments, context: IPipelineServerContext): Promise<IWorkerMutationOutput> {
             return context.updateWorker(args.worker);

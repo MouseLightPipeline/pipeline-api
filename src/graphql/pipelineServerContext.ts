@@ -11,6 +11,12 @@ import {IProject, IProjectInput, NO_BOUND, NO_SAMPLE} from "../data-model/sequel
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 import {PipelineWorkerClient} from "./client/pipelineWorkerClient";
 import {CompletionStatusCode, ITaskExecution} from "../data-model/sequelize/taskExecution";
+import {DefaultPipelineIdKey, IPipelineTile, TilePipelineStatus} from "../schedulers/pipelineScheduler";
+import {
+    connectorForFile,
+    generatePipelineStageTableName,
+    generatePipelineStateDatabaseName
+} from "../data-access/knexPiplineStageConnection";
 
 export interface IWorkerMutationOutput {
     worker: IPipelineWorker;
@@ -64,6 +70,8 @@ export interface ISimplePage<T> {
     hasNextPage: boolean;
     items: T[]
 }
+
+export type ITilePage = ISimplePage<IPipelineTile>;
 
 export interface IPipelineServerContext {
     getPipelineWorker(id: string): Promise<IPipelineWorker>;
@@ -141,6 +149,10 @@ export interface IPipelineServerContext {
     getForStage(pipeline_stage_id: string): Promise<IPipelineStagePerformance>
 
     getProjectPlaneTileStatus(project_id: string, plane: number): Promise<any>;
+
+    tilesForStage(pipelineStageId: string, status: TilePipelineStatus, reqOffset: number, reqLimit: number): Promise<ITilePage>;
+
+    setTileStatus(pipelineStageId: string, tileId: string, status: TilePipelineStatus): Promise<IPipelineTile>;
 }
 
 export class PipelineServerContext implements IPipelineServerContext {
@@ -513,5 +525,75 @@ export class PipelineServerContext implements IPipelineServerContext {
 
     public getProjectPlaneTileStatus(project_id: string, plane: number): Promise<any> {
         return SchedulerHub.Instance.loadTileStatusForPlane(project_id, plane);
+    }
+
+    public async tilesForStage(pipelineStageId: string, status: TilePipelineStatus, reqOffset: number, reqLimit: number): Promise<ITilePage> {
+        const pipelineStage = await this._persistentStorageManager.PipelineStages.findById(pipelineStageId);
+
+        if (!pipelineStage) {
+            return {
+                offset: reqOffset,
+                limit: reqLimit,
+                totalCount: 0,
+                hasNextPage: false,
+                items: []
+            };
+        }
+
+        let offset = 0;
+        let limit = 10;
+
+        if (reqOffset !== null && reqOffset !== undefined) {
+            offset = reqOffset;
+        }
+
+        if (reqLimit !== null && reqLimit !== undefined) {
+            limit = reqLimit;
+        }
+        const tableName = generatePipelineStageTableName(pipelineStage.id);
+
+        const connector = await connectorForFile(generatePipelineStateDatabaseName(pipelineStage.dst_path), tableName);
+
+        const countObj = await connector(tableName).where({
+            prev_stage_status: TilePipelineStatus.Complete,
+            this_stage_status: status,
+        }).count("relative_path");
+
+        const count = countObj[0][`count("relative_path")`];
+
+        const items = await connector(tableName).where({
+            prev_stage_status: TilePipelineStatus.Complete,
+            this_stage_status: status,
+        }).limit(limit).offset(offset).select();
+
+        return {
+            offset: offset,
+            limit: limit,
+            totalCount: count,
+            hasNextPage: offset + limit < count,
+            items
+        }
+    }
+
+    public async setTileStatus(pipelineStageId: string, tileId: string, status: TilePipelineStatus): Promise<IPipelineTile> {
+        const pipelineStage = await this._persistentStorageManager.PipelineStages.findById(pipelineStageId);
+
+        if (!pipelineStage) {
+            return null;
+        }
+
+        const tableName = generatePipelineStageTableName(pipelineStage.id);
+
+        const connector = await connectorForFile(generatePipelineStateDatabaseName(pipelineStage.dst_path), tableName);
+
+        await connector(tableName).where(DefaultPipelineIdKey, tileId).update({this_stage_status: status});
+
+        let tiles: IPipelineTile[] = await connector(tableName).where(DefaultPipelineIdKey, tileId).select();
+
+        if (tiles.length > 0) {
+            return tiles[0];
+        } else {
+            return null;
+        }
     }
 }

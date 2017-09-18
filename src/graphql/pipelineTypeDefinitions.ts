@@ -177,6 +177,16 @@ type Tile {
   lat_x: Int
   lat_y: Int
   lat_z: Int
+  prev_stage_status: Int
+  this_stage_status: Int
+}
+
+type TilePage {
+    offset: Int
+    limit: Int
+    totalCount: Int
+    hasNextPage: Boolean
+    items: [Tile]
 }
 
 type TileStageStatus {
@@ -330,7 +340,7 @@ type Query {
   
   projectPlaneTileStatus(project_id: String, plane: Int): TilePlane
   
-  tilesForStage(pipeline_stage_id: String, status: Int): [Tile]
+  tilesForStage(pipelineStageId: String, status: Int, offset: Int, limit: Int): TilePage
   
   scriptContents(task_definition_id: String): String
   
@@ -355,8 +365,9 @@ type Mutation {
   deleteTaskDefinition(taskDefinition: TaskDefinitionInput): DeleteTaskDefinitionOutput
 
   setWorkerAvailability(id: String!, shouldBeInSchedulerPool: Boolean!): PipelineWorker
-  
   updateWorker(worker: PipelineWorkerInput): MutatePipelineWorkerOutput
+  
+  setTileStatus(pipelineStageId: String, tileId: String, status: Int): Tile
 }
 
 schema {
