@@ -6,7 +6,10 @@ const databaseOptions = {
         database: "pipeline_production",
         username: "postgres",
         password: "pgsecret",
-        logging: null
+        logging: null,
+        pool: {
+            acquire: 20000
+        }
     }
 };
 
