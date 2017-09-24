@@ -4,7 +4,10 @@ import {isNullOrUndefined} from "util";
 const fse = require("fs-extra");
 const debug = require("debug")("pipeline:coordinator-api:pipeline-worker");
 
-import {updatePipelineStagePerformance, updatePipelineStageCounts} from "../data-model/sequelize/pipelineStagePerformance";
+import {
+    updatePipelineStagePerformance,
+    updatePipelineStageCounts
+} from "../data-model/sequelize/pipelineStagePerformance";
 import {ISchedulerInterface} from "./schedulerHub";
 import performanceConfiguration from "../options/performanceOptions"
 import {
@@ -393,6 +396,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                     let outputPath = path.join(this._pipelineStage.dst_path, pipelineTile.relative_path);
 
                     fse.ensureDirSync(outputPath);
+                    fse.chmodSync(outputPath, 0o755);
 
                     let args = [project.name, project.root_path, src_path, this._pipelineStage.dst_path, pipelineTile.relative_path, pipelineTile.tile_name, project.log_root_path];
 
@@ -559,6 +563,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
         try {
             fse.ensureDirSync(srcPath);
+            fse.chmodSync(srcPath, 0o775);
         } catch (err) {
             if (err && err.code === "EACCES") {
                 debug("pipeline source directory permission denied");
@@ -570,6 +575,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
         try {
             fse.ensureDirSync(this._pipelineStage.dst_path);
+            fse.chmodSync(srcPath, 0o775);
         } catch (err) {
             if (err && err.code === "EACCES") {
                 debug("pipeline output directory permission denied");

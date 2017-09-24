@@ -71,6 +71,7 @@ export class TileStatusWorker extends PipelineScheduler {
         try {
 
             fse.ensureDirSync(project.root_path);
+            fse.chmodSync(project.root_path, 0x755);
         } catch (err) {
             // Most likely drive/share is not present or failed permissions.
             if (err && err.code === "EACCES") {
