@@ -1,4 +1,5 @@
 const path = require("path");
+const fse = require("fs-extra");
 
 // TODO Move to Sequelize.  The pipeline schedulers are very dependent on the specific knex syntax and batch operations
 // at the moment.
@@ -153,11 +154,14 @@ async function findConnection(name: string, requiredTable: string = null): Promi
     return connection;
 }
 
-async function createConnection(name: string, requiredTable: string): Promise<Knex> {
+async function createConnection(filename: string, requiredTable: string): Promise<Knex> {
+
+    const exists = fse.existsSync(filename);
+
     const configuration = {
         client: "sqlite3",
         connection: {
-            filename: name
+            filename: filename
         },
         acquireConnectionTimeout: 180000,
         useNullAsDefault: true,
@@ -171,12 +175,16 @@ async function createConnection(name: string, requiredTable: string): Promise<Kn
 
     try {
         await knex.migrate.latest(configuration.migrations);
+
+        if (!exists) {
+            fse.chmodSync(filename, 0o775)
+        }
     } catch (err) {
         debug(err);
         return null;
     }
 
-    connectionMap.set(name, knex);
+    connectionMap.set(filename, knex);
 
     return knex;
 }
