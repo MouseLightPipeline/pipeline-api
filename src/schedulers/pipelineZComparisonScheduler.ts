@@ -11,8 +11,8 @@ import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 
 interface IPreviousLayerMap {
     relative_path: string,
-    relative_path_z_minus_1: string;
-    tile_name_z_minus_1: string;
+    relative_path_z_plus_1: string;
+    tile_name_z_plus_1: string;
 }
 
 interface IMuxUpdateLists {
@@ -42,8 +42,8 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
 
         await verifyTable(this._outputKnexConnector, this._zIndexMapTableName, (table) => {
             table.string(DefaultPipelineIdKey).primary().unique();
-            table.string("relative_path_z_minus_1");
-            table.string("tile_name_z_minus_1");
+            table.string("relative_path_z_plus_1");
+            table.string("tile_name_z_plus_1");
         });
 
         return true;
@@ -64,11 +64,11 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
             return [];
         }
 
-        return [context.relative_path_z_minus_1, context.tile_name_z_minus_1];
+        return [context.relative_path_z_plus_1, context.tile_name_z_plus_1];
     }
 
     private async findPreviousLayerTile(inputTile: IPipelineTile): Promise<IPipelineTile> {
-        const rows = await this.inputTable.where({lat_x: inputTile.lat_x, lat_y: inputTile.lat_y, lat_z: inputTile.lat_z - 1});
+        const rows = await this.inputTable.where({lat_x: inputTile.lat_x, lat_y: inputTile.lat_y, lat_z: inputTile.lat_z + 1});
 
         if (rows && rows.length > 0) {
             return rows[0];
@@ -89,13 +89,13 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
         const knownInputIdLookup = knownInput.map(obj => obj[DefaultPipelineIdKey]);
 
         // List of tiles where we already know the previous layer tile id.
-        const prevLayerMapRows = await this.zIndexMapTable.select();
-        const prevLayerMapIdLookup = prevLayerMapRows.map(obj => obj[DefaultPipelineIdKey]);
+        const nextLayerMapRows = await this.zIndexMapTable.select();
+        const nextLayerMapIdLookup = nextLayerMapRows.map(obj => obj[DefaultPipelineIdKey]);
 
         // Force serial execution of each tile given async calls within function.
         await knownInput.reduce(async (promiseChain, inputTile) => {
             return promiseChain.then(() => {
-                return this.muxUpdateTile(inputTile, knownInput, knownOutput, prevLayerMapRows, knownInputIdLookup, knownOutputIdLookup, prevLayerMapIdLookup, muxUpdateLists);
+                return this.muxUpdateTile(inputTile, knownInput, knownOutput, nextLayerMapRows, knownInputIdLookup, knownOutputIdLookup, nextLayerMapIdLookup, muxUpdateLists);
             });
         }, Promise.resolve());
 
@@ -121,8 +121,8 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
             if (tile !== null) {
                 prevLayerMap = {
                     relative_path: inputTile.relative_path,
-                    relative_path_z_minus_1: tile.relative_path,
-                    tile_name_z_minus_1: tile.tile_name
+                    relative_path_z_plus_1: tile.relative_path,
+                    tile_name_z_plus_1: tile.tile_name
                 };
 
                 muxUpdateLists.toInsertZMapIndex.push(prevLayerMap);
@@ -131,15 +131,15 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
 
         // This really shouldn't fail since we should have already seen the tile at some point to have created the
         // mapping.
-        const prevLayerInputTileIdx = prevLayerMap ? knownInputIdLookup.indexOf(prevLayerMap.relative_path_z_minus_1) : -1;
-        const prevLayerInputTile = prevLayerInputTileIdx > -1 ? knownInput[prevLayerInputTileIdx] : null;
+        const nextLayerInputTileIdx = prevLayerMap ? knownInputIdLookup.indexOf(prevLayerMap.relative_path_z_plus_1) : -1;
+        const nextLayerInputTile = nextLayerInputTileIdx > -1 ? knownInput[nextLayerInputTileIdx] : null;
 
         let prev_status = TilePipelineStatus.DoesNotExist;
 
-        if ((inputTile.this_stage_status === TilePipelineStatus.Failed) || (prevLayerInputTile && (prevLayerInputTile.this_stage_status === TilePipelineStatus.Failed))) {
+        if ((inputTile.this_stage_status === TilePipelineStatus.Failed) || (nextLayerInputTile && (nextLayerInputTile.this_stage_status === TilePipelineStatus.Failed))) {
             prev_status = TilePipelineStatus.Failed;
         } else {
-           prev_status = Math.min(inputTile.this_stage_status, (prevLayerInputTile ? prevLayerInputTile.this_stage_status : TilePipelineStatus.DoesNotExist));
+           prev_status = Math.min(inputTile.this_stage_status, (nextLayerInputTile ? nextLayerInputTile.this_stage_status : TilePipelineStatus.DoesNotExist));
         }
 
         if (existingOutput) {
