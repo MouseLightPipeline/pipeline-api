@@ -370,10 +370,12 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                 return true;
             }
 
-            let capacity = worker.work_unit_capacity - taskLoad + 0.1;
+            const workUnits = worker.is_cluster_proxy ? 1 : task.work_units;
 
-            if (capacity < task.work_units) {
-                debug(`worker ${worker.name} has insufficient capacity ${capacity} of ${worker.work_unit_capacity}`);
+            let capacity = worker.work_unit_capacity - taskLoad;
+
+            if ((capacity + 0.000001) < workUnits) {
+                debug(`worker ${worker.name} has insufficient capacity: ${capacity} of ${worker.work_unit_capacity}`);
                 return true;
             }
 
@@ -419,7 +421,10 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                             updated_at: now
                         });
 
-                        taskLoad += taskExecution.work_units;
+                        // TODO: Should use value returned from taskExecution in case it is worker-dependent
+                        // In order to do that, workers must be updated to return the right value when a cluster
+                        // worker (i.e., 1 per job).  Currently they only return the actual value.
+                        taskLoad += workUnits;
 
                         worker.task_load = taskLoad;
 
@@ -431,11 +436,11 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
                         debug(`started task on worker ${worker.name} with execution id ${taskExecution.id}`);
 
-                        capacity = worker.work_unit_capacity - taskLoad + 0.1;
+                        capacity = worker.work_unit_capacity - taskLoad;
 
                         // Does this worker have enough capacity to handle more tiles from this task given the work units
                         // per task on this worker.
-                        if (capacity < task.work_units) {
+                        if ((capacity + 0.00001) < workUnits) {
                             debug(`worker ${worker.name} has insufficient capacity ${capacity} of ${worker.work_unit_capacity} for further tasks`);
                             return false;
                         }
