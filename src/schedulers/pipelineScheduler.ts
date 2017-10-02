@@ -176,8 +176,12 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         return await this.inProcessTable.select();
     }
 
-    protected async loadToProcess(): Promise<IToProcessTile[]> {
-        return await this.toProcessTable.select();
+    protected async loadToProcess(limit: number = 0): Promise<IToProcessTile[]> {
+        if (limit > 0) {
+            return await this.toProcessTable.select().orderBy("created_at", "asc").limit(limit);
+        } else {
+            return await this.toProcessTable.select().orderBy("created_at", "asc");
+        }
     }
 
     protected async updateToProcessQueue() {
@@ -402,7 +406,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
             debug(`worker ${worker.name} has load ${taskLoad} of capacity ${worker.work_unit_capacity}`);
 
-            let waitingToProcess = await this.loadToProcess();
+            let waitingToProcess = await this.loadToProcess(200);
 
             if (!waitingToProcess || waitingToProcess.length === 0) {
                 return false;
