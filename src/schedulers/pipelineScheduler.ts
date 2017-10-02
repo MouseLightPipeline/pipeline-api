@@ -178,9 +178,9 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
     protected async loadToProcess(limit: number = 0): Promise<IToProcessTile[]> {
         if (limit > 0) {
-            return await this.toProcessTable.select().orderBy("created_at", "asc").limit(limit);
+            return await this.toProcessTable.select().orderBy("relative_path", "asc").limit(limit);
         } else {
-            return await this.toProcessTable.select().orderBy("created_at", "asc");
+            return await this.toProcessTable.select().orderBy("relative_path", "asc");
         }
     }
 
