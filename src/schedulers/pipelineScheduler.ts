@@ -1,5 +1,6 @@
 import * as  path from "path";
 import {isNullOrUndefined} from "util";
+import * as _ from "lodash";
 
 const fse = require("fs-extra");
 const debug = require("debug")("pipeline:coordinator-api:pipeline-worker");
@@ -184,7 +185,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
         let toProcessInsert: IToProcessTile[] = [];
 
-        let unscheduled: IPipelineTile[] = await this.outputTable.where({
+        const unscheduled: IPipelineTile[] = await this.outputTable.where({
             prev_stage_status: TilePipelineStatus.Complete,
             this_stage_status: TilePipelineStatus.Incomplete,
         }).select();
@@ -192,11 +193,21 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         debug(`found ${unscheduled.length} unscheduled`);
 
         if (unscheduled.length > 0) {
+            let waitingToProcess = await this.loadToProcess();
+
             let projects = PersistentStorageManager.Instance().Projects;
 
             let project: IProject = await projects.findById(this._pipelineStage.project_id);
 
-            unscheduled = unscheduled.filter(tile => {
+            // Only items that are ready to queue, but aren't actually in the toProcess table yet.  There appear to be
+            // some resubmit situations where these are out of sync temporarily.
+            const notAlreadyInToProcessTable = _.differenceBy(unscheduled, waitingToProcess, "relative_path");
+
+            // Items that are already queued in toProcess table, but for some reason are listed as incomplete rather
+            // than queued in the main table.
+            let alreadyInToProcessTable = _.intersectionBy(unscheduled, waitingToProcess, "relative_path");
+
+            let toSchedule = notAlreadyInToProcessTable.filter(tile => {
                 if (!isNullOrUndefined(project.region_x_min) && tile.lat_x < project.region_x_min) {
                     return false;
                 }
@@ -222,14 +233,14 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
             debug(`have ${unscheduled.length} unscheduled after region filtering`);
 
-            unscheduled = unscheduled.map(obj => {
+            toSchedule = toSchedule.map(obj => {
                 obj.this_stage_status = TilePipelineStatus.Queued;
                 return obj;
             });
 
             let now = new Date();
 
-            toProcessInsert = unscheduled.map(obj => {
+            toProcessInsert = toSchedule.map(obj => {
                 return {
                     relative_path: obj.relative_path,
                     created_at: now,
@@ -237,11 +248,21 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                 };
             });
 
-            debug(`transitioning ${unscheduled.length} tiles to to-process queue`);
+            // Update that are already in the toProcess table.
+            alreadyInToProcessTable = alreadyInToProcessTable.map(obj => {
+                obj.this_stage_status = TilePipelineStatus.Queued;
+                return obj
+            });
+
+            if (alreadyInToProcessTable.length > 0) {
+                await this.batchUpdate(this._outputKnexConnector, this._outputTableName, alreadyInToProcessTable);
+            }
+
+            debug(`transitioning ${toSchedule.length} tiles to to-process queue`);
 
             await this.batchInsert(this._outputKnexConnector, this._toProcessTableName, toProcessInsert);
 
-            await this.batchUpdate(this._outputKnexConnector, this._outputTableName, unscheduled);
+            await this.batchUpdate(this._outputKnexConnector, this._outputTableName, toSchedule);
         }
 
         return toProcessInsert;
