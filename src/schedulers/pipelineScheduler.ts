@@ -183,7 +183,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             return await this.toProcessTable.select().orderBy("relative_path", "asc");
         }
     }
-
+,
     protected async updateToProcessQueue() {
         debug("looking for new to-process");
 

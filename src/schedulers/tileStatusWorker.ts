@@ -222,10 +222,6 @@ export class TileStatusWorker extends PipelineScheduler {
             projectUpdate.sample_z_min = jsonContent.monitor.extents.minimumZ;
             projectUpdate.sample_z_max = jsonContent.monitor.extents.maximumZ;
 
-            //const context = new PipelineServerContext();
-
-            //this._project = await context.updateProject(projectUpdate);
-
             await project.update(projectUpdate);
         }
 
