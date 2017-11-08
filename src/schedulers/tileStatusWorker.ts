@@ -1,6 +1,6 @@
-import Timer = NodeJS.Timer;
 const fse = require("fs-extra");
 const path = require("path");
+import * as _ from "lodash";
 
 const debug = require("debug")("pipeline:coordinator-api:tile-status-worker");
 
@@ -14,11 +14,11 @@ import {
 
 import performanceConfiguration from "../options/performanceOptions"
 import {
-    PipelineScheduler, DefaultPipelineIdKey, TilePipelineStatus
+    PipelineScheduler, DefaultPipelineIdKey, TilePipelineStatus, IPipelineTile, IMuxTileLists
 } from "./pipelineScheduler";
 import {IProject} from "../data-model/sequelize/project";
-import {PipelineServerContext} from "../graphql/pipelineServerContext";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
+
 const perfConf = performanceConfiguration();
 
 interface IPosition {
@@ -71,7 +71,7 @@ export class TileStatusWorker extends PipelineScheduler {
         try {
 
             fse.ensureDirSync(project.root_path);
-            fse.chmodSync(project.root_path, 0x755);
+            fse.chmodSync(project.root_path, 0o775);
         } catch (err) {
             // Most likely drive/share is not present or failed permissions.
             if (err && err.code === "EACCES") {
@@ -105,17 +105,19 @@ export class TileStatusWorker extends PipelineScheduler {
 
                 debug(`dashboard update for project ${project.name}`);
 
-                let knownInput = await this.performJsonUpdate();
+                const knownInput = await this.performJsonUpdate();
 
                 if (knownInput.length > 0) {
 
-                    let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "prev_stage_status"]);
+                    const knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "prev_stage_status"]);
 
-                    let sorted = await this.muxInputOutputTiles(knownInput, knownOutput);
+                    const sorted = await this.muxInputOutputTiles(knownInput, knownOutput);
 
                     await this.batchInsert(this._outputKnexConnector, this._outputTableName, sorted.toInsert);
 
-                    await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdatePrevious, DefaultPipelineIdKey);
+                    await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdate, DefaultPipelineIdKey);
+
+                    await this.batchDelete(this._outputKnexConnector, this._outputTableName, sorted.toDelete, DefaultPipelineIdKey);
                 }
             } catch (err) {
                 console.log(err);
@@ -125,42 +127,57 @@ export class TileStatusWorker extends PipelineScheduler {
         setTimeout(() => this.performWork(), perfConf.pipelineSchedulerIntervalSeconds * 5 * 1000)
     }
 
-    protected async muxInputOutputTiles(knownInput: IDashboardJsonTile[], knownOutput) {
-        let sorted = {
+    protected async muxInputOutputTiles(knownInput: IDashboardJsonTile[], knownOutput: IPipelineTile[]): Promise<IMuxTileLists> {
+        const sorted = {
             toInsert: [],
-            toUpdatePrevious: []
+            toUpdate: [],
+            toDelete: []
         };
 
-        let knownOutputLookup = knownOutput.map(obj => obj[DefaultPipelineIdKey]);
+        const toInsert = _.differenceBy(knownInput, knownOutput, DefaultPipelineIdKey);
 
-        knownInput.reduce((list, inputTile) => {
-            let idx = knownOutputLookup.indexOf(inputTile.relative_path);
+        const toUpdate = _.intersectionBy(knownInput, knownOutput, DefaultPipelineIdKey);
 
-            let existingOutput = idx > -1 ? knownOutput[idx] : null;
+        sorted.toDelete = _.differenceBy(knownOutput, knownInput, DefaultPipelineIdKey).map(t => t.relative_path);
 
-            if (existingOutput) {
-                if (existingOutput.prev_stage_status !== inputTile.status) {
-                    list.toUpdatePrevious.push({
-                        relative_path: inputTile.relative_path,
-                        prev_stage_status: inputTile.status,
-                        this_stage_status: inputTile.status,
-                        x: inputTile.position.x,
-                        y: inputTile.position.y,
-                        z: inputTile.position.z,
-                        lat_x: inputTile.lattice_position.x,
-                        lat_y: inputTile.lattice_position.y,
-                        lat_z: inputTile.lattice_position.z,
-                        cut_offset: inputTile.cut_offset,
-                        z_offset: inputTile.z_offset,
-                        delta_z: inputTile.delta_z,
-                        updated_at: new Date()
-                    });
-                }
-            } else {
-                let now = new Date();
-                list.toInsert.push({
+        sorted.toInsert = toInsert.map(inputTile => {
+            const now = new Date();
+
+            return {
+                relative_path: inputTile.relative_path,
+                tile_name: inputTile.name,
+                prev_stage_status: inputTile.status,
+                this_stage_status: inputTile.status,
+                x: inputTile.position.x,
+                y: inputTile.position.y,
+                z: inputTile.position.z,
+                lat_x: inputTile.lattice_position.x,
+                lat_y: inputTile.lattice_position.y,
+                lat_z: inputTile.lattice_position.z,
+                cut_offset: inputTile.cut_offset,
+                z_offset: inputTile.z_offset,
+                delta_z: inputTile.delta_z,
+                duration: 0,
+                cpu_high: 0,
+                memory_high: 0,
+                created_at: now,
+                updated_at: now
+            };
+        });
+
+        sorted.toUpdate = toUpdate.map(inputTile => {
+            const existingTileIdx = _.findIndex(knownOutput, t => t.relative_path === inputTile.relative_path);
+
+            if (existingTileIdx < 0) {
+                debug(`unexpected missing tile ${inputTile.relative_path}`);
+                return null;
+            }
+
+            const existingTile = knownOutput[existingTileIdx];
+
+            if (existingTile.prev_stage_status !== inputTile.status) {
+                return {
                     relative_path: inputTile.relative_path,
-                    tile_name: inputTile.name,
                     prev_stage_status: inputTile.status,
                     this_stage_status: inputTile.status,
                     x: inputTile.position.x,
@@ -172,16 +189,12 @@ export class TileStatusWorker extends PipelineScheduler {
                     cut_offset: inputTile.cut_offset,
                     z_offset: inputTile.z_offset,
                     delta_z: inputTile.delta_z,
-                    duration: 0,
-                    cpu_high: 0,
-                    memory_high: 0,
-                    created_at: now,
-                    updated_at: now
-                });
+                    updated_at: new Date()
+                };
+            } else {
+                return null;
             }
-
-            return list;
-        }, sorted);
+        }).filter(t => t !== null);
 
         return sorted;
     }

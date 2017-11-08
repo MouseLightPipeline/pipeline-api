@@ -156,7 +156,7 @@ async function findConnection(name: string, requiredTable: string = null): Promi
 
 async function createConnection(filename: string, requiredTable: string): Promise<Knex> {
 
-    const exists = fse.existsSync(filename);
+    const existed = fse.existsSync(filename);
 
     const configuration = {
         client: "sqlite3",
@@ -176,7 +176,7 @@ async function createConnection(filename: string, requiredTable: string): Promis
     try {
         await knex.migrate.latest(configuration.migrations);
 
-        if (!exists) {
+        if (!existed && fse.existsSync(filename)) {
             fse.chmodSync(filename, 0o775)
         }
     } catch (err) {

@@ -1,6 +1,11 @@
-const debug = require("debug")("pipeline:coordinator-api:pipeline-map-worker");
+import * as _ from "lodash";
 
-import {PipelineScheduler, TilePipelineStatus, DefaultPipelineIdKey, IPipelineTile} from "./pipelineScheduler";
+const debug = require("debug")("pipeline:coordinator-api:pipeline-z-comp-worker");
+
+import {
+    PipelineScheduler, TilePipelineStatus, DefaultPipelineIdKey, IPipelineTile,
+    IMuxTileLists
+} from "./pipelineScheduler";
 import {verifyTable, generatePipelineCustomTableName} from "../data-access/knexPiplineStageConnection";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 
@@ -15,9 +20,7 @@ interface IPreviousLayerMap {
     tile_name_z_plus_1: string;
 }
 
-interface IMuxUpdateLists {
-    toInsert: IPipelineTile[],
-    toUpdatePrevious: IPipelineTile[],
+interface IMuxUpdateLists extends IMuxTileLists {
     toInsertZMapIndex: IPreviousLayerMap[]
 }
 
@@ -77,10 +80,11 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
         }
     }
 
-    protected async muxInputOutputTiles(knownInput, knownOutput) {
+    protected async muxInputOutputTiles(knownInput: IPipelineTile[], knownOutput: IPipelineTile[]) {
         const muxUpdateLists: IMuxUpdateLists = {
             toInsert: [],
-            toUpdatePrevious: [],
+            toUpdate: [],
+            toDelete: [],
             toInsertZMapIndex: []
         };
 
@@ -99,8 +103,11 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
             });
         }, Promise.resolve());
 
+        muxUpdateLists.toDelete = _.differenceBy(knownOutput, knownInput, DefaultPipelineIdKey).map(t => t.relative_path);
+
         await this.batchInsert(this._outputKnexConnector, this._zIndexMapTableName, muxUpdateLists.toInsertZMapIndex);
 
+        // Insert, update, delete handled by base.
         return muxUpdateLists;
     }
 
@@ -144,7 +151,7 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
 
         if (existingOutput) {
             if (existingOutput.prev_stage_status !== prev_status) {
-                muxUpdateLists.toUpdatePrevious.push({
+                muxUpdateLists.toUpdate.push({
                     relative_path: inputTile.relative_path,
                     prev_stage_status: prev_status,
                     x: inputTile.x,

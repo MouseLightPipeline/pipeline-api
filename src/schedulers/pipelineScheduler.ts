@@ -28,7 +28,7 @@ import {CompletionStatusCode, ExecutionStatusCode} from "../data-model/sequelize
 
 const perfConf = performanceConfiguration();
 
-const MAX_KNOWN_INPUT_SKIP_COUNT = 10;
+const MAX_KNOWN_INPUT_SKIP_COUNT = 1;
 
 export const DefaultPipelineIdKey = "relative_path";
 
@@ -82,6 +82,12 @@ export interface IToProcessTile {
     created_at: Date;
 
     updated_at: Date;
+}
+
+export interface IMuxTileLists {
+    toInsert: IPipelineTile[],
+    toUpdate: IPipelineTile[],
+    toDelete: string[]
 }
 
 export abstract class PipelineScheduler implements ISchedulerInterface {
@@ -183,7 +189,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             return await this.toProcessTable.select().orderBy("relative_path", "asc");
         }
     }
-,
+
     protected async updateToProcessQueue() {
         debug("looking for new to-process");
 
@@ -500,10 +506,11 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         });
     }
 
-    protected async muxInputOutputTiles(knownInput, knownOutput) {
+    protected async muxInputOutputTiles(knownInput, knownOutput: IPipelineTile[]): Promise<IMuxTileLists> {
         return {
             toInsert: [],
-            toUpdatePrevious: []
+            toUpdate: [],
+            toDelete: []
         };
     }
 
@@ -535,7 +542,12 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
                     await this.batchInsert(this._outputKnexConnector, this._outputTableName, sorted.toInsert);
 
-                    await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdatePrevious, DefaultPipelineIdKey);
+                    await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdate, DefaultPipelineIdKey);
+
+                    await this.batchDelete(this._outputKnexConnector, this._outputTableName, sorted.toDelete, DefaultPipelineIdKey);
+
+                    // Also remove any queued to process.
+                    await this.batchDelete(this._outputKnexConnector, this._toProcessTableName, sorted.toDelete, DefaultPipelineIdKey);
                 } else {
                     debug("no input from previous stage yet");
                 }
@@ -723,27 +735,46 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
      * Extensions to knex.js.  Don't particularly belong here, but convenient until properly mixed in.
      */
 
-    protected async batchInsert(connector: any, tableName: string, toInsert: any[]) {
-        if (!toInsert || toInsert.length === 0) {
+    protected async batchInsert(connector: any, tableName: string, inputToInsert: any[]) {
+        if (!inputToInsert || inputToInsert.length === 0) {
             return;
         }
 
-        debug(`batch insert ${toInsert.length} items`);
+        debug(`batch insert ${inputToInsert.length} items`);
+
+        // Operate on a shallow copy since splice is going to be destructive.
+        const toInsert = inputToInsert.slice();
 
         while (toInsert.length > 0) {
             await connector.batchInsert(tableName, toInsert.splice(0, perfConf.regenTileStatusSqliteChunkSize));
         }
     }
 
-    protected async batchUpdate(connector: any, tableName: string, toUpdate: any[], idKey: string = DefaultPipelineIdKey) {
-        if (!toUpdate || toUpdate.length === 0) {
+    protected async batchUpdate(connector: any, tableName: string, inputToUpdate: any[], idKey: string = DefaultPipelineIdKey) {
+        if (!inputToUpdate || inputToUpdate.length === 0) {
             return;
         }
 
-        debug(`batch update ${toUpdate.length} items`);
+        debug(`batch update ${inputToUpdate.length} items`);
+
+        const toUpdate = inputToUpdate.slice();
 
         while (toUpdate.length > 0) {
             await this.batchUpdateInternal(connector, tableName, toUpdate.splice(0, perfConf.regenTileStatusSqliteChunkSize), idKey);
+        }
+    }
+
+    protected async batchDelete(connector: any, tableName: string, inputKeys: string[], idKey: string = DefaultPipelineIdKey) {
+        if (!inputKeys || inputKeys.length === 0) {
+            return;
+        }
+
+        debug(`batch delete ${inputKeys.length} items from ${tableName}`);
+
+        const keys = inputKeys.slice();
+
+        while (keys.length > 0) {
+            await this.batchDeleteInternal(connector, tableName, keys.splice(0, perfConf.regenTileStatusSqliteChunkSize), idKey);
         }
     }
 
@@ -753,9 +784,21 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         });
     }
 
+    private async batchDeleteInternal(connector: Knex, tableName: string, keys: any[], idKey: string) {
+        await connector.transaction((trx) => {
+            return keys.reduce((promiseChain, key) => this.createDeletePromise(promiseChain, connector, tableName, trx, key, idKey), Promise.resolve());
+        });
+    }
+
     private createUpdatePromise(promiseChain: any, connector: Knex, tableName: string, transaction: any, item: any[], idKey: string) {
         return promiseChain.then(() => {
             return connector(tableName).where(idKey, item[idKey]).update(item).transacting(transaction);
+        });
+    }
+
+    private createDeletePromise(promiseChain: any, connector: Knex, tableName: string, transaction: any, key: any[], idKey: string) {
+        return promiseChain.then(() => {
+            return connector(tableName).where(idKey, key).del().transacting(transaction);
         });
     }
 }
