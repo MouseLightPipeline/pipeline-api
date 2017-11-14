@@ -172,7 +172,8 @@ export class PipelineServerContext implements IPipelineServerContext {
 
             let output = await PipelineWorkerClient.Instance().updateWorker(Object.assign({}, {
                 id: workerInput.id,
-                work_unit_capacity: workerInput.work_unit_capacity
+                work_unit_capacity: workerInput.work_unit_capacity,
+                is_cluster_proxy: workerInput.is_cluster_proxy
             }, {
                 name: row.name,
                 address: row.address,

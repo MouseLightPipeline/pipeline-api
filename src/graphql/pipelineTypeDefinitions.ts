@@ -312,6 +312,7 @@ input TaskDefinitionInput {
 input PipelineWorkerInput {
   id: String
   work_unit_capacity: Float
+  is_cluster_proxy: Boolean
 }
 
 type Query {
