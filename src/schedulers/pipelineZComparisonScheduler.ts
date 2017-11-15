@@ -21,7 +21,8 @@ interface IPreviousLayerMap {
 }
 
 interface IMuxUpdateLists extends IMuxTileLists {
-    toInsertZMapIndex: IPreviousLayerMap[]
+    toInsertZMapIndex: IPreviousLayerMap[];
+    toDeleteZMapIndex: string[];
 }
 
 export class PipelineZComparisonScheduler extends PipelineScheduler {
@@ -71,7 +72,11 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
     }
 
     private async findPreviousLayerTile(inputTile: IPipelineTile): Promise<IPipelineTile> {
-        const rows = await this.inputTable.where({lat_x: inputTile.lat_x, lat_y: inputTile.lat_y, lat_z: inputTile.lat_z + 1});
+        const rows = await this.inputTable.where({
+            lat_x: inputTile.lat_x,
+            lat_y: inputTile.lat_y,
+            lat_z: inputTile.lat_z + 1
+        });
 
         if (rows && rows.length > 0) {
             return rows[0];
@@ -85,7 +90,8 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
             toInsert: [],
             toUpdate: [],
             toDelete: [],
-            toInsertZMapIndex: []
+            toInsertZMapIndex: [],
+            toDeleteZMapIndex: []
         };
 
         // Flatten input and and output for faster searching.
@@ -96,49 +102,61 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
         const nextLayerMapRows = await this.zIndexMapTable.select();
         const nextLayerMapIdLookup = nextLayerMapRows.map(obj => obj[DefaultPipelineIdKey]);
 
+        muxUpdateLists.toDelete = _.differenceBy(knownOutput, knownInput, DefaultPipelineIdKey).map(t => t.relative_path);
+
         // Force serial execution of each tile given async calls within function.
         await knownInput.reduce(async (promiseChain, inputTile) => {
             return promiseChain.then(() => {
-                return this.muxUpdateTile(inputTile, knownInput, knownOutput, nextLayerMapRows, knownInputIdLookup, knownOutputIdLookup, nextLayerMapIdLookup, muxUpdateLists);
+                return this.muxUpdateTile(inputTile, knownInput, knownOutput, nextLayerMapRows, knownInputIdLookup, knownOutputIdLookup, nextLayerMapIdLookup, muxUpdateLists.toDelete, muxUpdateLists);
             });
         }, Promise.resolve());
 
-        muxUpdateLists.toDelete = _.differenceBy(knownOutput, knownInput, DefaultPipelineIdKey).map(t => t.relative_path);
-
         await this.batchInsert(this._outputKnexConnector, this._zIndexMapTableName, muxUpdateLists.toInsertZMapIndex);
+
+        await this.batchDelete(this._outputKnexConnector, this._zIndexMapTableName, muxUpdateLists.toDeleteZMapIndex);
 
         // Insert, update, delete handled by base.
         return muxUpdateLists;
     }
 
-    private async muxUpdateTile(inputTile: IPipelineTile, knownInput: IPipelineTile[], knownOutput: IPipelineTile[], prevLayerMapRows: IPreviousLayerMap[],
-                                knownInputIdLookup: string[], knownOutputIdLookup: string[], prevLayerMapIdLookup: string[],
+    private async muxUpdateTile(inputTile: IPipelineTile, knownInput: IPipelineTile[], knownOutput: IPipelineTile[], nextLayerMapRows: IPreviousLayerMap[],
+                                knownInputIdLookup: string[], knownOutputIdLookup: string[], nextLayerMapIdLookup: string[], toDelete: string[],
                                 muxUpdateLists: IMuxUpdateLists): Promise<void> {
         const idx = knownOutputIdLookup.indexOf(inputTile[DefaultPipelineIdKey]);
 
         const existingOutput: IPipelineTile = idx > -1 ? knownOutput[idx] : null;
 
-        const prevLayerLookupIndex = prevLayerMapIdLookup.indexOf(inputTile[DefaultPipelineIdKey]);
+        const nextLayerLookupIndex = nextLayerMapIdLookup.indexOf(inputTile[DefaultPipelineIdKey]);
 
-        let prevLayerMap: IPreviousLayerMap = prevLayerLookupIndex > -1 ? prevLayerMapRows[prevLayerLookupIndex] : null;
+        let nextLayerMap: IPreviousLayerMap = nextLayerLookupIndex > -1 ? nextLayerMapRows[nextLayerLookupIndex] : null;
 
-        if (prevLayerMap === null) {
-            const tile = await this.findPreviousLayerTile(inputTile);
+        let tile = null;
 
-            if (tile !== null) {
-                prevLayerMap = {
-                    relative_path: inputTile.relative_path,
-                    relative_path_z_plus_1: tile.relative_path,
-                    tile_name_z_plus_1: tile.tile_name
-                };
+        if (nextLayerMap === null) {
+            tile = await this.findPreviousLayerTile(inputTile);
+        } else {
+            // Assert the existing map is still valid given any curation/deletion.
+            const index = toDelete.indexOf(nextLayerMap.relative_path_z_plus_1);
 
-                muxUpdateLists.toInsertZMapIndex.push(prevLayerMap);
+            // Remove entry.  If a replacement exists, will be captured next time around.
+            if (index >= 0) {
+                muxUpdateLists.toDeleteZMapIndex.push(inputTile.relative_path);
             }
+        }
+
+        if (tile !== null) {
+            nextLayerMap = {
+                relative_path: inputTile.relative_path,
+                relative_path_z_plus_1: tile.relative_path,
+                tile_name_z_plus_1: tile.tile_name
+            };
+
+            muxUpdateLists.toInsertZMapIndex.push(nextLayerMap);
         }
 
         // This really shouldn't fail since we should have already seen the tile at some point to have created the
         // mapping.
-        const nextLayerInputTileIdx = prevLayerMap ? knownInputIdLookup.indexOf(prevLayerMap.relative_path_z_plus_1) : -1;
+        const nextLayerInputTileIdx = nextLayerMap ? knownInputIdLookup.indexOf(nextLayerMap.relative_path_z_plus_1) : -1;
         const nextLayerInputTile = nextLayerInputTileIdx > -1 ? knownInput[nextLayerInputTileIdx] : null;
 
         let prev_status = TilePipelineStatus.DoesNotExist;
@@ -146,7 +164,7 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
         if ((inputTile.this_stage_status === TilePipelineStatus.Failed) || (nextLayerInputTile && (nextLayerInputTile.this_stage_status === TilePipelineStatus.Failed))) {
             prev_status = TilePipelineStatus.Failed;
         } else {
-           prev_status = Math.min(inputTile.this_stage_status, (nextLayerInputTile ? nextLayerInputTile.this_stage_status : TilePipelineStatus.DoesNotExist));
+            prev_status = Math.min(inputTile.this_stage_status, (nextLayerInputTile ? nextLayerInputTile.this_stage_status : TilePipelineStatus.DoesNotExist));
         }
 
         if (existingOutput) {
