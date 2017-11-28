@@ -13,10 +13,13 @@ import {IPipelineStage, PipelineStageMethod} from "../data-model/sequelize/pipel
 import {isNullOrUndefined} from "util";
 
 export interface ISchedulerInterface {
+    OutputPath: string;
+
     IsExitRequested: boolean;
     IsProcessingRequested: boolean;
 
     loadTileStatusForPlane(zIndex: number);
+    loadTileThumbnailPath(x: number, y: number, z: number): Promise<string>
 }
 
 const kEmptyTileMap = {
@@ -48,6 +51,16 @@ export class SchedulerHub {
     private _useChildProcessWorkers: boolean;
 
     private _pipelineStageWorkers = new Map<string, ISchedulerInterface>();
+
+    public async thumbnailPath(stageId: string, x, y, z): Promise<string> {
+        const worker = this._pipelineStageWorkers.get(stageId);
+
+        if (worker) {
+            return worker.loadTileThumbnailPath(x, y, z);
+        }
+
+        return null;
+    }
 
     public async loadTileStatusForPlane(project_id: string, plane: number): Promise<any> {
         try {

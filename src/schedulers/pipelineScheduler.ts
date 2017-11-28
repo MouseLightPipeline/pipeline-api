@@ -141,6 +141,20 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         this.transitionToInitialized();
     }
 
+    public async loadTileThumbnailPath(x: number, y: number, z: number): Promise<string> {
+        try {
+            const tiles = await this.outputTable.where({"lat_x": x, "lat_y": y, "lat_z": z}).select("relative_path");
+
+            if (tiles.length > 0) {
+                return path.join(this.OutputPath, tiles[0].relative_path);
+            }
+        } catch (err) {
+            console.log(err);
+        }
+
+        return null;
+    }
+
     public async loadTileStatusForPlane(zIndex: number) {
         if (!this._outputKnexConnector) {
             return [];
@@ -151,11 +165,14 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         tiles = tiles.map(tile => {
             tile["stage_id"] = this.stageId;
             tile["depth"] = this._pipelineStage ? this._pipelineStage.depth : 0;
-
             return tile;
         });
 
         return tiles;
+    }
+
+    public get OutputPath(): string {
+        return this._pipelineStage.dst_path;
     }
 
     protected get stageId() {

@@ -30,10 +30,10 @@ async function startWorkerForProcess(projectId) {
 export async function startTileStatusFileWorker(projectId: string) {
     let tileStatusWorker = null;
 
-    // let project = await PersistentStorageManager.Instance().Projects.findById(projectId);
+    let project = await PersistentStorageManager.Instance().Projects.findById(projectId);
 
     // if (project) {
-        tileStatusWorker = new TileStatusWorker(projectId);
+        tileStatusWorker = new TileStatusWorker(project);
 
         tileStatusWorker.run();
    //  }
