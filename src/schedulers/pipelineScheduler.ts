@@ -330,7 +330,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
         let executionInfo = await PipelineWorkerClient.Instance().queryTaskExecution(workerForTask, tile.task_execution_id);
 
-        if (executionInfo != null && executionInfo.execution_status_code === ExecutionStatusCode.Completed) {
+        if (executionInfo != null && (executionInfo.execution_status_code === ExecutionStatusCode.Completed || executionInfo.execution_status_code === ExecutionStatusCode.Orphaned)) {
             let tileStatus = TilePipelineStatus.Queued;
 
             switch (executionInfo.completion_status_code) {
