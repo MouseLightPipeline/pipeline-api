@@ -55,12 +55,12 @@ export class SocketIoServer {
             worker.name = workerInformation.service.name;
             worker.address = workerInformation.service.networkAddress;
             worker.port = parseInt(workerInformation.service.networkPort);
-            worker.os_type = workerInformation.service.machineProperties.osType;
-            worker.platform = workerInformation.service.machineProperties.platform;
-            worker.arch = workerInformation.service.machineProperties.arch;
-            worker.release = workerInformation.service.machineProperties.release;
-            worker.cpu_count = workerInformation.service.machineProperties.cpuCount;
-            worker.total_memory = workerInformation.service.machineProperties.totalMemory;
+            worker.os_type = workerInformation.machine.osType;
+            worker.platform = workerInformation.machine.platform;
+            worker.arch = workerInformation.machine.arch;
+            worker.release = workerInformation.machine.release;
+            worker.cpu_count = workerInformation.machine.cpuCount;
+            worker.total_memory = workerInformation.machine.totalMemory;
             worker.last_seen = new Date();
 
             await row.update(worker);
