@@ -79,7 +79,7 @@ export class PipelineWorkerClient {
                         description
                         script
                         interpreter
-                        args
+                        script_args
                         work_units
                     }
                 }`,

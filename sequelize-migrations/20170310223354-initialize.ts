@@ -28,9 +28,11 @@ export = {
                 description: Sequelize.TEXT,
                 script: Sequelize.TEXT,
                 interpreter: Sequelize.TEXT,
-                args: Sequelize.TEXT,
+                script_args: Sequelize.TEXT,
+                cluster_args: Sequelize.TEXT,
                 expected_exit_code: Sequelize.INTEGER,
                 work_units: Sequelize.DOUBLE,
+                cluster_work_units: Sequelize.DOUBLE,
                 task_repository_id: {
                     type: Sequelize.UUID,
                     references: {

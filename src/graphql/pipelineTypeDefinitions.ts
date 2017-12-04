@@ -63,9 +63,11 @@ type TaskDefinition {
   description: String!
   script: String!
   interpreter: String!
-  args: String!
+  script_args: String!
+  cluster_args: String
   expected_exit_code: Int
   work_units: Float
+  cluster_work_units: Float
   task_repository_id: String
   task_repository: TaskRepository
   pipeline_stages: [PipelineStage!]!
@@ -304,9 +306,11 @@ input TaskDefinitionInput {
   script: String
   interpreter: String
   task_repository_id: String
-  args: String
+  script_args: String
+  cluster_args: String
   expected_exit_code: Int
   work_units: Float
+  cluster_work_units: Float
 }
 
 input PipelineWorkerInput {
