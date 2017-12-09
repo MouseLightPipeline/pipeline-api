@@ -4,16 +4,12 @@ if [ -a "options.sh" ]; then
     source "options.sh"
 fi
 
-if [ -z "$PIPELINE_DATABASE_HOST" ]; then
-    export PIPELINE_DATABASE_HOST="localhost"
-fi
+./migrate.sh
 
-if [ -z "$PIPELINE_DATABASE_PORT" ]; then
-    export PIPELINE_DATABASE_PORT=3932
-fi
+export DEBUG=pipeline*
 
-./migrate.sh ${PIPELINE_DATABASE_HOST} ${PIPELINE_DATABASE_PORT}
+nohup node server/pipelineApiApp.js &
 
-nohup npm run devel &
+sleep 3
 
-chmod 664 nohup.out
+chmod 775 nohup.out

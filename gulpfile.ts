@@ -21,11 +21,24 @@ const tagCommand = `docker tag ${imageWithVersion} ${imageAsLatest}`;
 const pushCommand = `docker push ${imageWithVersion}`;
 const pushLatestCommand = `docker push ${imageAsLatest}`;
 
+const cleanCommand = `rm -rf dist`;
+
+const compileTypescript = `tsc -p tsconfig.prod.json`;
+
+const moveFiles = `cp ./{package.json,yarn.lock,.sequelizerc,LICENSE,docker-entry.sh,migrate.sh,seed.sh} dist`;
+
 gulp.task("default", ["docker-build"]);
 
 gulp.task("docker-release", ["docker-push"]);
 
-gulp.task("docker-build", shell.task([
+gulp.task("build", shell.task([
+        cleanCommand,
+        compileTypescript,
+        moveFiles
+    ])
+);
+
+gulp.task("docker-build", ["build"], shell.task([
         buildCommand,
         tagCommand
     ])

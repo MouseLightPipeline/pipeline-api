@@ -31,7 +31,3 @@ function loadConfiguration(): IServiceOptions {
 export const ServiceOptions = loadConfiguration();
 
 export const SequelizeDatabaseOptions = SequelizeOptions;
-
-export default function (): IServiceOptions {
-    return ServiceOptions;
-}

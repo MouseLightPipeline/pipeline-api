@@ -3,7 +3,7 @@ import * as path from "path";
 const seedEnv = process.env.PIPELINE_SEED_ENV || "production";
 const isProduction = seedEnv === "production";
 
-const taskLocationPrefix = process.env.PIPELINE_VOLUME_PREFIX || "/opt/pipeline";
+const taskLocationPrefix = process.env.PIPELINE_VOLUME || "/opt/pipeline";
 
 export = {
     up: async (queryInterface, Sequelize) => {

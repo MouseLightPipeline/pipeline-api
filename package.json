@@ -1,15 +1,15 @@
 {
   "name": "pipeline-api",
-  "version": "1.0.6",
+  "version": "1.0.9",
   "description": "",
-  "main": "src/pipelineApiApp.js",
+  "main": "server/pipelineApiApp.js",
   "license": "LicenseRef-LICENSE",
   "dockerRepository": "mouselightpipeline",
   "scripts": {
-    "devel": "DEBUG=pipeline* node $NODE_DEBUG_OPTION --trace-warnings src/pipelineApiApp.js",
-    "start": "node src/pipelineApiApp.js",
+    "devel": "DEBUG=pipeline* node $NODE_DEBUG_OPTION --trace-warnings server/pipelineApiApp.js",
+    "start": "node server/pipelineApiApp.js",
     "docker-build": "gulp docker-build",
-    "docker-release": "gulp docker-release"
+    "release": "gulp docker-release"
   },
   "author": "Patrick Edson <pedson@leapscientific.com> (http://github.com/pedson)",
   "dependencies": {
@@ -23,7 +23,6 @@
     "graphql": "^0.10.3",
     "graphql-server-express": "^0.9.0",
     "graphql-tools": "^1.0.0",
-    "isomorphic-fetch": "^2.2.1",
     "knex": "^0.12.9",
     "mime": "^1.3.6",
     "pg": "^6.4.0",
