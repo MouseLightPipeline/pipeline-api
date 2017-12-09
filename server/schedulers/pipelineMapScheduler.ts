@@ -63,7 +63,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
 
             const existingTile = knownOutput[existingTileIdx];
 
-            if (existingTile.prev_stage_status !== inputTile.status) {
+            if (existingTile.prev_stage_status !== inputTile.this_stage_status) {
                 return {
                     relative_path: inputTile.relative_path,
                     prev_stage_status: inputTile.this_stage_status,
@@ -81,7 +81,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
             }  else {
                 return null;
             }
-        }).filter(t => t !== null);;
+        }).filter(t => t !== null);
 
         return sorted;
     }

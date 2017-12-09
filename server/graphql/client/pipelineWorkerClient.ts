@@ -1,5 +1,6 @@
 import ApolloClient, {createNetworkInterface} from "apollo-client";
 import gql from "graphql-tag";
+import "isomorphic-fetch";
 
 const debug = require("debug")("pipeline:coordinator-api:pipeline-worker-client");
 

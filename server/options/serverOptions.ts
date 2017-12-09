@@ -23,7 +23,7 @@ const configurations: IServerEnvDefinitions = {
 function loadConfiguration(): IServiceOptions {
     const options = configurations.production;
 
-    options.port = process.env.PIPELINE_API_PORT || options.port;
+    options.port = parseInt(process.env.PIPELINE_API_PORT) || options.port;
 
     return options;
 }

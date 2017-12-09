@@ -10,7 +10,7 @@ import {SchedulerHub} from "./schedulers/schedulerHub";
 import {ServiceOptions} from "./options/serverOptions";
 import {thumbnailParamQueryMiddleware, thumbnailQueryMiddleware} from "./middleware/thumbnailQueryMiddleware";
 
-const useChildProcessWorkers = process.env.USE_CHILD_PROCESS_WORKERS || false;
+const useChildProcessWorkers = (parseInt(process.env.USE_CHILD_PROCESS_WORKERS) === 1) || false;
 
 const app = express();
 

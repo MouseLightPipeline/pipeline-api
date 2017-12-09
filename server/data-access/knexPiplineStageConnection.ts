@@ -166,7 +166,7 @@ async function createConnection(filename: string, requiredTable: string): Promis
         acquireConnectionTimeout: 180000,
         useNullAsDefault: true,
         migrations: {
-            directory: "src/data-access/migrations",
+            directory: "server/data-access/migrations",
             tableName: "knex_migrations"
         }
     };
