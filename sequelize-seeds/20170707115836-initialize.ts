@@ -59,7 +59,7 @@ function createTaskDefinitions(when: Date) {
             description: "Axon UInt16",
             script: "axon-uint16.sh",
             interpreter: "none",
-            args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps /groups/mousebrainmicro/mousebrainmicro/Software/mcr/v90",
+            script_args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps /groups/mousebrainmicro/mousebrainmicro/Software/mcr/v90",
             work_units: 4,
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
@@ -69,7 +69,7 @@ function createTaskDefinitions(when: Date) {
             description: "",
             script: "dogDescriptor.sh",
             interpreter: "none",
-            args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps",
+            script_args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps",
             work_units: 2,
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
@@ -79,7 +79,7 @@ function createTaskDefinitions(when: Date) {
             description: "",
             script: "getDescriptorPerTile.sh",
             interpreter: "none",
-            args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps /groups/mousebrainmicro/mousebrainmicro/Software/mcr/v90",
+            script_args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps /groups/mousebrainmicro/mousebrainmicro/Software/mcr/v90",
             work_units: 1,
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
@@ -91,7 +91,7 @@ function createTaskDefinitions(when: Date) {
             description: "Simple command to test shell worker execution.  Will echo all arguments.",
             script: "echo.sh",
             interpreter: "none",
-            args: `"custom arg 1" "custom arg 2"`,
+            script_args: `"custom arg 1" "custom arg 2"`,
             work_units: 0,
             task_repository_id: "f22c6e43-782c-4e0e-b0ca-b34fcec3340a",
             created_at: when
@@ -101,7 +101,7 @@ function createTaskDefinitions(when: Date) {
             description: "Calls ilastik with test project.",
             script: "pixel_shell.sh",
             interpreter: "none",
-            args: "test/pixel_classifier_test",
+            script_args: "test/pixel_classifier_test",
             work_units: 4,
             task_repository_id: "f22c6e43-782c-4e0e-b0ca-b34fcec3340a",
             created_at: when
@@ -111,7 +111,7 @@ function createTaskDefinitions(when: Date) {
             description: "",
             script: "dogDescriptor.sh",
             interpreter: "none",
-            args: "/Volumes/Spare/Projects/MouseLight/Apps/Pipeline/dogDescriptor",
+            script_args: "/Volumes/Spare/Projects/MouseLight/Apps/Pipeline/dogDescriptor",
             work_units: 2,
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
@@ -121,7 +121,7 @@ function createTaskDefinitions(when: Date) {
             description: "",
             script: "getDescriptorPerTile.sh",
             interpreter: "none",
-            args: "/Volumes/Spare/Projects/MouseLight/Apps/Pipeline/dogDescriptor/getDescriptorPerTile",
+            script_args: "/Volumes/Spare/Projects/MouseLight/Apps/Pipeline/dogDescriptor/getDescriptorPerTile",
             work_units: 1,
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
