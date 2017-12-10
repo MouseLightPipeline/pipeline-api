@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 
+logName=$(date '+%Y-%m-%d%H-%M-%S');
+
 if [ ! -z "${PIPELINE_PERFORM_MIGRATION}" ]; then
-    ./migrate.sh
+    ./migrate.sh &> /var/log/pipeline/coordinator-${logName}.log
 fi
 
-node server/pipelineApiApp.js
+export DEBUG=pipeline*
 
-sleep infinity
+node server/pipelineApiApp.js &> /var/log/pipeline/coordinator-${logName}.log
+
+# sleep infinity

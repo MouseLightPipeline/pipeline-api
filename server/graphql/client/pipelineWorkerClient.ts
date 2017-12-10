@@ -9,7 +9,6 @@ import {IPipelineWorker, PipelineWorkerStatus} from "../../data-model/sequelize/
 import {IWorkerMutationOutput, PipelineServerContext} from "../pipelineServerContext";
 import {ITaskExecution} from "../../data-model/sequelize/taskExecution";
 
-
 export class PipelineWorkerClient {
     private static _instance: PipelineWorkerClient = null;
 

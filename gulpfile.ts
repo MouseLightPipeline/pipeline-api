@@ -25,7 +25,9 @@ const cleanCommand = `rm -rf dist`;
 
 const compileTypescript = `tsc -p tsconfig.prod.json`;
 
+const moveMigration = `cp ./server/data-access/migrations/*.ts ./dist/server/data-access/migrations/`;
 const moveFiles = `cp ./{package.json,yarn.lock,.sequelizerc,LICENSE,docker-entry.sh,migrate.sh,seed.sh} dist`;
+const moveMigrations = `cp -R sequelize-migrations dist/`;
 
 gulp.task("default", ["docker-build"]);
 
@@ -34,7 +36,9 @@ gulp.task("docker-release", ["docker-push"]);
 gulp.task("build", shell.task([
         cleanCommand,
         compileTypescript,
-        moveFiles
+        moveFiles,
+        moveMigrations,
+        moveMigration
     ])
 );
 
