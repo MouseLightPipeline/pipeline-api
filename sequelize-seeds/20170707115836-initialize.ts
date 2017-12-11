@@ -3,7 +3,7 @@ import * as path from "path";
 const seedEnv = process.env.PIPELINE_SEED_ENV || "production";
 const isProduction = seedEnv === "production";
 
-const taskLocationPrefix = process.env.PIPELINE_VOLUME || "/opt/pipeline";
+const taskLocationPrefix = process.env.PIPELINE_VOLUME || "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/pipeline-task-definitions/default";
 
 export = {
     up: async (queryInterface, Sequelize) => {
@@ -59,7 +59,7 @@ function createTaskDefinitions(when: Date) {
             description: "Axon UInt16",
             script: "axon-uint16.sh",
             interpreter: "none",
-            script_args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps /groups/mousebrainmicro/mousebrainmicro/Software/mcr/v90",
+            script_args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps/axon-classifier",
             work_units: 4,
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
