@@ -60,27 +60,36 @@ function createTaskDefinitions(when: Date) {
             script: "axon-uint16.sh",
             interpreter: "none",
             script_args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps/axon-classifier",
+            cluster_args: "",
+            expected_exit_code: 0,
             work_units: 4,
+            cluster_work_units: 1,
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }, {
             id: "a9f21399-07c0-425c-86f6-6e4f45bb06b9",
-            name: "dogDescriptor",
+            name: "Descriptor",
             description: "",
             script: "dogDescriptor.sh",
             interpreter: "none",
-            script_args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps",
+            script_args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps /groups/mousebrainmicro/mousebrainmicro/Software/mcr/v90",
+            cluster_args: "",
+            expected_exit_code: 0,
             work_units: 2,
+            cluster_work_units: 1,
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }, {
             id: "3ba41d1c-13d0-4def-9b5b-54d940a0fa08",
-            name: "getDescriptorPerTile",
+            name: "Point Match",
             description: "",
-            script: "getDescriptorPerTile.sh",
+            script: "pointMatch.sh",
             interpreter: "none",
-            script_args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps /groups/mousebrainmicro/mousebrainmicro/Software/mcr/v90",
+            script_args: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps /groups/mousebrainmicro/mousebrainmicro/Software/mcr/v92",
+            cluster_args: "",
+            expected_exit_code: 0,
             work_units: 1,
+            cluster_work_units: 1,
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }];
@@ -92,7 +101,10 @@ function createTaskDefinitions(when: Date) {
             script: "echo.sh",
             interpreter: "none",
             script_args: `"custom arg 1" "custom arg 2"`,
+            cluster_args: "",
+            expected_exit_code: 0,
             work_units: 0,
+            cluster_work_units: 1,
             task_repository_id: "f22c6e43-782c-4e0e-b0ca-b34fcec3340a",
             created_at: when
         }, {
@@ -102,7 +114,10 @@ function createTaskDefinitions(when: Date) {
             script: "pixel_shell.sh",
             interpreter: "none",
             script_args: "test/pixel_classifier_test",
+            cluster_args: "",
+            expected_exit_code: 0,
             work_units: 4,
+            cluster_work_units: 1,
             task_repository_id: "f22c6e43-782c-4e0e-b0ca-b34fcec3340a",
             created_at: when
         }, {
@@ -112,7 +127,10 @@ function createTaskDefinitions(when: Date) {
             script: "dogDescriptor.sh",
             interpreter: "none",
             script_args: "/Volumes/Spare/Projects/MouseLight/Apps/Pipeline/dogDescriptor",
+            cluster_args: "",
+            expected_exit_code: 0,
             work_units: 2,
+            cluster_work_units: 1,
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }, {
@@ -122,7 +140,10 @@ function createTaskDefinitions(when: Date) {
             script: "getDescriptorPerTile.sh",
             interpreter: "none",
             script_args: "/Volumes/Spare/Projects/MouseLight/Apps/Pipeline/dogDescriptor/getDescriptorPerTile",
+            cluster_args: "",
+            expected_exit_code: 0,
             work_units: 1,
+            cluster_work_units: 1,
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }];
@@ -136,6 +157,7 @@ function createProjects(when: Date) {
             name: "Sample Brain",
             description: "Sample brain pipeline project",
             root_path: "/groups/mousebrainmicro/mousebrainmicro/from_tier2/data/2016-10-31/Tiling",
+            log_root_path: "",
             sample_number: 99998,
             region_x_min: 277,
             region_x_max: 281,
@@ -152,6 +174,7 @@ function createProjects(when: Date) {
             name: "Small",
             description: "Small dashboard.json test project",
             root_path: "/Volumes/Spare/Projects/MouseLight/Dashboard Output/small",
+            log_root_path: "",
             sample_number: 99998,
             region_x_min: null,
             region_x_max: null,
@@ -166,6 +189,7 @@ function createProjects(when: Date) {
             name: "Small SubGrid",
             description: "Small dashboard.json test project",
             root_path: "/Volumes/Spare/Projects/MouseLight/Dashboard Output/small",
+            log_root_path: "",
             sample_number: 99998,
             region_x_min: 1,
             region_x_max: 2,
@@ -180,6 +204,7 @@ function createProjects(when: Date) {
             name: "Large",
             description: "Large dashboard.json test project",
             root_path: "/Volumes/Spare/Projects/MouseLight/Dashboard Output/large",
+            log_root_path: "",
             sample_number: 99999,
             region_x_min: null,
             region_x_max: null,

@@ -33,9 +33,12 @@ export interface ITaskExecution {
     task_definition_id: string;
     pipeline_stage_id: string;
     work_units: number;
+    cluster_work_units: number;
     resolved_script: string;
     resolved_interpreter: string;
-    resolved_args: string;
+    resolved_script_args: string;
+    resolved_cluster_args: string;
+    resolved_log_path: string;
     expected_exit_code: number;
     execution_status_code: ExecutionStatusCode;
     completion_status_code: CompletionStatusCode;
@@ -67,6 +70,9 @@ export function sequelizeImport(sequelize, DataTypes) {
         work_units: {
             type: DataTypes.INTEGER,
         },
+        cluster_work_units: {
+            type: DataTypes.INTEGER,
+        },
         resolved_script: {
             type: DataTypes.TEXT,
             defaultValue: ""
@@ -75,7 +81,15 @@ export function sequelizeImport(sequelize, DataTypes) {
             type: DataTypes.TEXT,
             defaultValue: ""
         },
-        resolved_args: {
+        resolved_script_args: {
+            type: DataTypes.TEXT,
+            defaultValue: ""
+        },
+        resolved_cluster_args: {
+            type: DataTypes.TEXT,
+            defaultValue: ""
+        },
+        resolved_log_path: {
             type: DataTypes.TEXT,
             defaultValue: ""
         },
