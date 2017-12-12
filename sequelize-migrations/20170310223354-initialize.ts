@@ -33,6 +33,7 @@ export = {
                 expected_exit_code: Sequelize.INTEGER,
                 work_units: Sequelize.DOUBLE,
                 cluster_work_units: Sequelize.DOUBLE,
+                log_prefix: Sequelize.TEXT,
                 task_repository_id: {
                     type: Sequelize.UUID,
                     references: {

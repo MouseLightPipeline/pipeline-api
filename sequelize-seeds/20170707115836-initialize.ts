@@ -64,6 +64,7 @@ function createTaskDefinitions(when: Date) {
             expected_exit_code: 0,
             work_units: 4,
             cluster_work_units: 1,
+            log_prefix: "ax-",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }, {
@@ -77,6 +78,7 @@ function createTaskDefinitions(when: Date) {
             expected_exit_code: 0,
             work_units: 2,
             cluster_work_units: 1,
+            log_prefix: "dd-",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }, {
@@ -90,6 +92,7 @@ function createTaskDefinitions(when: Date) {
             expected_exit_code: 0,
             work_units: 1,
             cluster_work_units: 1,
+            log_prefix: "pm-",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }];
@@ -105,6 +108,7 @@ function createTaskDefinitions(when: Date) {
             expected_exit_code: 0,
             work_units: 0,
             cluster_work_units: 1,
+            log_prefix: "ec-",
             task_repository_id: "f22c6e43-782c-4e0e-b0ca-b34fcec3340a",
             created_at: when
         }, {
@@ -118,6 +122,7 @@ function createTaskDefinitions(when: Date) {
             expected_exit_code: 0,
             work_units: 4,
             cluster_work_units: 1,
+            log_prefix: "ax-",
             task_repository_id: "f22c6e43-782c-4e0e-b0ca-b34fcec3340a",
             created_at: when
         }, {
@@ -131,6 +136,7 @@ function createTaskDefinitions(when: Date) {
             expected_exit_code: 0,
             work_units: 2,
             cluster_work_units: 1,
+            log_prefix: "dd-",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }, {
@@ -144,6 +150,7 @@ function createTaskDefinitions(when: Date) {
             expected_exit_code: 0,
             work_units: 1,
             cluster_work_units: 1,
+            log_prefix: "pm-",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }];

@@ -448,7 +448,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                     fse.ensureDirSync(outputPath);
                     fse.chmodSync(outputPath, 0o775);
 
-                    const log_root_path = project.log_root_path || project.root_path;
+                    const log_root_path = project.log_root_path || this._pipelineStage.dst_path;
 
                     let args = [project.name, project.root_path, src_path, this._pipelineStage.dst_path, pipelineTile.relative_path, pipelineTile.tile_name, log_root_path];
 

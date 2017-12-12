@@ -68,6 +68,7 @@ type TaskDefinition {
   expected_exit_code: Int
   work_units: Float
   cluster_work_units: Float
+  log_prefix: String
   task_repository_id: String
   task_repository: TaskRepository
   pipeline_stages: [PipelineStage!]!
@@ -314,6 +315,7 @@ input TaskDefinitionInput {
   expected_exit_code: Int
   work_units: Float
   cluster_work_units: Float
+  log_prefix: String
 }
 
 input PipelineWorkerInput {
