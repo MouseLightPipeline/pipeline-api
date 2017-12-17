@@ -9,6 +9,11 @@ import {IPipelineWorker, PipelineWorkerStatus} from "../../data-model/sequelize/
 import {IWorkerMutationOutput, PipelineServerContext} from "../pipelineServerContext";
 import {ITaskExecution} from "../../data-model/sequelize/taskExecution";
 
+export interface ITaskExecutionStatus {
+    workerResponded: boolean;
+    taskExecution: ITaskExecution;
+}
+
 export class PipelineWorkerClient {
     private static _instance: PipelineWorkerClient = null;
 
@@ -97,11 +102,16 @@ export class PipelineWorkerClient {
         return null;
     }
 
-    public async queryTaskExecution(worker: IPipelineWorker, executionId: string): Promise<ITaskExecution> {
+    public async queryTaskExecution(worker: IPipelineWorker, executionId: string): Promise<ITaskExecutionStatus> {
+        const taskExecutionStatus = {
+            workerResponded: false,
+            taskExecution: null
+        };
+
         const client = this.getClient(worker);
 
         if (client === null) {
-            return null;
+            return taskExecutionStatus;
         }
 
         try {
@@ -126,13 +136,14 @@ export class PipelineWorkerClient {
                 fetchPolicy: "network-only"
             });
 
-            return response.data.taskExecution;
+            taskExecutionStatus.taskExecution = response.data.taskExecution;
+            taskExecutionStatus.workerResponded = true;
         } catch (err) {
             await this.markWorkerUnavailable(worker);
             debug(`error querying task status for worker ${worker.name}`);
         }
 
-        return null;
+        return taskExecutionStatus;
     }
 
     public async startTaskExecution(worker: IPipelineWorker, taskId: string, pipelineStageId: string, tileId: string, baseArgs: string[] = []): Promise<ITaskExecution> {

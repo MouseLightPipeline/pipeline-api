@@ -328,31 +328,43 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
     private async updateOneExecutingTile(serverContext: PipelineServerContext, tile: IInProcessTile): Promise<void> {
         let workerForTask = await serverContext.getPipelineWorker(tile.worker_id);
 
-        let executionInfo = await PipelineWorkerClient.Instance().queryTaskExecution(workerForTask, tile.task_execution_id);
+        const executionStatus = await PipelineWorkerClient.Instance().queryTaskExecution(workerForTask, tile.task_execution_id);
 
-        if (executionInfo != null && (executionInfo.execution_status_code === ExecutionStatusCode.Completed || executionInfo.execution_status_code === ExecutionStatusCode.Orphaned)) {
-            let tileStatus = TilePipelineStatus.Queued;
+        if (executionStatus.workerResponded) {
+            const executionInfo = executionStatus.taskExecution;
 
-            switch (executionInfo.completion_status_code) {
-                case CompletionStatusCode.Success:
-                    tileStatus = TilePipelineStatus.Complete;
-                    break;
-                case CompletionStatusCode.Error:
-                    tileStatus = TilePipelineStatus.Failed; // Do not queue again
-                    break;
-                case CompletionStatusCode.Cancel:
-                    tileStatus = TilePipelineStatus.Canceled; // Could return to incomplete to be queued again
-                    break;
-            }
+            if (executionInfo != null) {
+                if (executionInfo.execution_status_code === ExecutionStatusCode.Completed || executionInfo.execution_status_code === ExecutionStatusCode.Zombie) {
+                    let tileStatus = TilePipelineStatus.Queued;
 
-            // Tile should be marked with status and not be present in any intermediate tables.
+                    switch (executionInfo.completion_status_code) {
+                        case CompletionStatusCode.Success:
+                            tileStatus = TilePipelineStatus.Complete;
+                            break;
+                        case CompletionStatusCode.Error:
+                            tileStatus = TilePipelineStatus.Failed; // Do not queue again
+                            break;
+                        case CompletionStatusCode.Cancel:
+                            tileStatus = TilePipelineStatus.Canceled; // Could return to incomplete to be queued again
+                            break;
+                    }
 
-            await this.outputTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]).update({this_stage_status: tileStatus});
+                    // Tile should be marked with status and not be present in any intermediate tables.
 
-            await this.inProcessTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]).del();
+                    await this.outputTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]).update({this_stage_status: tileStatus});
 
-            if (tileStatus === TilePipelineStatus.Complete) {
-                updatePipelineStagePerformance(this._pipelineStage.id, executionInfo);
+                    await this.inProcessTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]).del();
+
+                    if (tileStatus === TilePipelineStatus.Complete) {
+                        updatePipelineStagePerformance(this._pipelineStage.id, executionInfo);
+                    }
+                }
+            } else {
+                // If the worker responded and has no knowledge of this task id, it may have cleared on the worker side
+                // prematurely via the worker UI.  Mark as canceled since the status is unknown.
+                await this.outputTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]).update({this_stage_status: TilePipelineStatus.Canceled});
+
+                await this.inProcessTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]).del();
             }
         }
     }
