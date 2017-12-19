@@ -3,7 +3,7 @@ import {isNullOrUndefined} from "util";
 import * as _ from "lodash";
 
 const fse = require("fs-extra");
-const debug = require("debug")("pipeline:coordinator-api:pipeline-worker");
+const debug = require("debug")("pipeline:coordinator-api:pipeline-scheduler");
 
 import {
     updatePipelineStagePerformance,
@@ -453,7 +453,25 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             let stillLookingForTilesForWorker = await this.queue(waitingToProcess, async (toProcessTile: IToProcessTile) => {
                 // Return true to continue searching for an available worker and false if the task is launched.
                 try {
-                    let pipelineTile = (await this.outputTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]))[0];
+                    const pipelineTiles = (await this.outputTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]));
+
+                    const inputTiles = (await this.inputTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]));
+
+                    if (pipelineTiles.length === 0 || inputTiles.length === 0) {
+                        // Something is not right - can not find tile in the input and/or output tables.
+                        return false;
+                    }
+
+                    const inputTile = inputTiles[0];
+
+                    // Verify the state is still complete.  The previous stage status is only update once every N times
+                    // through scheduling of work.
+                    if (inputTile.this_stage_status !== TilePipelineStatus.Complete) {
+                        // Will eventually get cleaned up in overall tile update.
+                        return false;
+                    }
+
+                    const pipelineTile = pipelineTiles[0];
 
                     let outputPath = path.join(this._pipelineStage.dst_path, pipelineTile.relative_path);
 
@@ -579,6 +597,14 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
                     // Also remove any queued to process.
                     await this.batchDelete(this._outputKnexConnector, this._toProcessTableName, sorted.toDelete, DefaultPipelineIdKey);
+
+                    // Remove any queued whose previous stage have been reverted.
+                    const previousStageRegression = sorted.toUpdate.filter(t => t.prev_stage_status !== TilePipelineStatus.Complete).map(t => t[DefaultPipelineIdKey]);
+
+                    if (previousStageRegression.length > 0) {
+                        debug(`${previousStageRegression.length} tiles have reverted their status and should be removed.`);
+                        await this.batchDelete(this._outputKnexConnector, this._toProcessTableName, previousStageRegression, DefaultPipelineIdKey);
+                    }
                 } else {
                     debug("no input from previous stage yet");
                 }
