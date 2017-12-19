@@ -67,6 +67,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
                 return {
                     relative_path: inputTile.relative_path,
                     prev_stage_status: inputTile.this_stage_status,
+                    this_stage_status: (inputTile === TilePipelineStatus.Complete || existingTile.this_stage_status === TilePipelineStatus.Processing) ? existingTile.this_stage_status : TilePipelineStatus.Incomplete,
                     x: inputTile.x,
                     y: inputTile.y,
                     z: inputTile.z,

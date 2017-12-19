@@ -172,6 +172,7 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
                 muxUpdateLists.toUpdate.push({
                     relative_path: inputTile.relative_path,
                     prev_stage_status: prev_status,
+                    this_stage_status: (inputTile === TilePipelineStatus.Complete || existingOutput.this_stage_status === TilePipelineStatus.Processing) ? existingOutput.this_stage_status : TilePipelineStatus.Incomplete,
                     x: inputTile.x,
                     y: inputTile.y,
                     z: inputTile.z,
