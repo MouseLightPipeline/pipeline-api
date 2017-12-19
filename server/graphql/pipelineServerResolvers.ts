@@ -77,7 +77,7 @@ interface ITileStatusArguments {
 
 interface ITileStatusArgs {
     pipelineStageId: string;
-    tileId: string;
+    tileIds: string[];
     status: TilePipelineStatus;
 }
 
@@ -181,8 +181,8 @@ let resolvers = {
         deleteTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: IPipelineServerContext): Promise<ITaskDefinitionDeleteOutput> {
             return context.deleteTaskDefinition(args.taskDefinition);
         },
-        setTileStatus(_, args: ITileStatusArgs, context: IPipelineServerContext): Promise<IPipelineTile> {
-            return context.setTileStatus(args.pipelineStageId, args.tileId, args.status);
+        setTileStatus(_, args: ITileStatusArgs, context: IPipelineServerContext): Promise<IPipelineTile[]> {
+            return context.setTileStatus(args.pipelineStageId, args.tileIds, args.status);
         },
         updateWorker(_, args: IUpdateWorkerArguments, context: IPipelineServerContext): Promise<IWorkerMutationOutput> {
             return context.updateWorker(args.worker);

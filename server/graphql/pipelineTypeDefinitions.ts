@@ -377,7 +377,7 @@ type Mutation {
   setWorkerAvailability(id: String!, shouldBeInSchedulerPool: Boolean!): PipelineWorker
   updateWorker(worker: PipelineWorkerInput): MutatePipelineWorkerOutput
   
-  setTileStatus(pipelineStageId: String, tileId: String, status: Int): Tile
+  setTileStatus(pipelineStageId: String, tileIds: [String], status: Int): [Tile]
 }
 
 schema {

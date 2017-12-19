@@ -152,7 +152,7 @@ export interface IPipelineServerContext {
 
     tilesForStage(pipelineStageId: string, status: TilePipelineStatus, reqOffset: number, reqLimit: number): Promise<ITilePage>;
 
-    setTileStatus(pipelineStageId: string, tileId: string, status: TilePipelineStatus): Promise<IPipelineTile>;
+    setTileStatus(pipelineStageId: string, tileIds: string[], status: TilePipelineStatus): Promise<IPipelineTile[]>;
 }
 
 export class PipelineServerContext implements IPipelineServerContext {
@@ -576,7 +576,7 @@ export class PipelineServerContext implements IPipelineServerContext {
         }
     }
 
-    public async setTileStatus(pipelineStageId: string, tileId: string, status: TilePipelineStatus): Promise<IPipelineTile> {
+    public async setTileStatus(pipelineStageId: string, tileIds: string[], status: TilePipelineStatus): Promise<IPipelineTile[]> {
         const pipelineStage = await this._persistentStorageManager.PipelineStages.findById(pipelineStageId);
 
         if (!pipelineStage) {
@@ -587,14 +587,10 @@ export class PipelineServerContext implements IPipelineServerContext {
 
         const connector = await connectorForFile(generatePipelineStateDatabaseName(pipelineStage.dst_path), tableName);
 
-        await connector(tableName).where(DefaultPipelineIdKey, tileId).update({this_stage_status: status});
+        await connector(tableName).whereIn(DefaultPipelineIdKey, tileIds).update({this_stage_status: status});
 
-        let tiles: IPipelineTile[] = await connector(tableName).where(DefaultPipelineIdKey, tileId).select();
+        const tiles = await connector(tableName).whereIn(DefaultPipelineIdKey, tileIds).select();
 
-        if (tiles.length > 0) {
-            return tiles[0];
-        } else {
-            return null;
-        }
+        return tiles;
     }
 }
