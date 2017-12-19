@@ -71,6 +71,15 @@ export interface ISimplePage<T> {
     items: T[]
 }
 
+export interface IPipelineStageTileStatus {
+    incomplete: number;
+    queued: number;
+    processing: number;
+    complete: number;
+    failed: number;
+    canceled: number;
+}
+
 export type ITilePage = ISimplePage<IPipelineTile>;
 
 export interface IPipelineServerContext {
@@ -145,6 +154,8 @@ export interface IPipelineServerContext {
     getPipelineStagePerformance(id: string): Promise<IPipelineStagePerformance>;
 
     getPipelineStagePerformances(): Promise<IPipelineStagePerformance[]>;
+
+    getPipelineStageTileStatus(pipeline_stage_id: string): Promise<IPipelineStageTileStatus>;
 
     getForStage(pipeline_stage_id: string): Promise<IPipelineStagePerformance>
 
@@ -575,6 +586,63 @@ export class PipelineServerContext implements IPipelineServerContext {
             items
         }
     }
+
+    public async getPipelineStageTileStatus(pipeline_stage_id: string): Promise<IPipelineStageTileStatus> {
+        const pipelineStage = await this._persistentStorageManager.PipelineStages.findById(pipeline_stage_id);
+
+        if (!pipelineStage) {
+            return {
+                incomplete: 0,
+                queued: 0,
+                processing: 0,
+                complete: 0,
+                failed: 0,
+                canceled: 0
+            };
+        }
+
+        const tableName = generatePipelineStageTableName(pipelineStage.id);
+
+        const connector = await connectorForFile(generatePipelineStateDatabaseName(pipelineStage.dst_path), tableName);
+
+        const countObj = await connector(tableName).select("this_stage_status").groupBy("this_stage_status").count();
+
+        return countObj.reduce((prev, curr) => {
+            switch (curr.this_stage_status) {
+                case TilePipelineStatus.Incomplete:
+                    prev.incomplete = curr["count(*)"];
+                    break;
+                case TilePipelineStatus.Queued:
+                    prev.queued = curr["count(*)"];
+                    break;
+                case TilePipelineStatus.Processing:
+                    prev.processing = curr["count(*)"];
+                    break;
+
+                case TilePipelineStatus.Complete:
+                    prev.complete = curr["count(*)"];
+                    break;
+
+                case TilePipelineStatus.Failed:
+                    prev.failed = curr["count(*)"];
+                    break;
+
+                case TilePipelineStatus.Canceled:
+                    prev.canceled = curr["count(*)"];
+                    break;
+            }
+
+            return prev;
+        }, {
+            incomplete: 0,
+            queued: 0,
+            processing: 0,
+            complete: 0,
+            failed: 0,
+            canceled: 0
+        });
+    }
+
 
     public async setTileStatus(pipelineStageId: string, tileIds: string[], status: TilePipelineStatus): Promise<IPipelineTile[]> {
         const pipelineStage = await this._persistentStorageManager.PipelineStages.findById(pipelineStageId);

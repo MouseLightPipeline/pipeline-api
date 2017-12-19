@@ -2,7 +2,8 @@ import {ITaskRepository} from "../data-model/sequelize/taskRepository";
 
 import {IPipelineStagePerformance} from "../data-model/sequelize/pipelineStagePerformance";
 import {
-    IPipelineServerContext, IPipelineStageDeleteOutput, IPipelineStageMutationOutput, IProjectDeleteOutput,
+    IPipelineServerContext, IPipelineStageDeleteOutput, IPipelineStageMutationOutput, IPipelineStageTileStatus,
+    IProjectDeleteOutput,
     IProjectMutationOutput, ISimplePage, ITaskDefinitionDeleteOutput,
     ITaskDefinitionMutationOutput,
     ITaskRepositoryDeleteOutput,
@@ -214,6 +215,9 @@ let resolvers = {
         },
         child_stages(stage, _, context: IPipelineServerContext): Promise<IPipelineStage[]> {
             return context.getPipelineStageChildren(stage.id);
+        },
+        tile_status(stage, _, context: IPipelineServerContext): Promise<IPipelineStageTileStatus> {
+            return context.getPipelineStageTileStatus(stage.id);
         }
     },
     TaskRepository: {

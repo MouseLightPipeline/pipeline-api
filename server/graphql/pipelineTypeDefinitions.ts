@@ -133,6 +133,15 @@ type Project {
   stages: [PipelineStage]
 }
 
+type PipelineTileStatus {
+  incomplete: Int
+  queued: Int
+  processing: Int
+  complete: Int
+  failed: Int
+  canceled: Int
+}
+
 type PipelineStagePerformance {
   id: String!
   pipeline_stage_id: String
@@ -170,6 +179,7 @@ type PipelineStage {
   previous_stage_id: String
   project: Project
   task: TaskDefinition
+  tile_status: PipelineTileStatus
   performance: PipelineStagePerformance
   previous_stage: PipelineStage
   child_stages: [PipelineStage]
