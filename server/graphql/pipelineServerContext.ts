@@ -601,46 +601,59 @@ export class PipelineServerContext implements IPipelineServerContext {
             };
         }
 
-        const tableName = generatePipelineStageTableName(pipelineStage.id);
+        try {
+            // This could fail if we are checking for status before a project has been run for the first time and the
+            // output locations are accessible and/or permissions are bad.
+            const tableName = generatePipelineStageTableName(pipelineStage.id);
 
-        const connector = await connectorForFile(generatePipelineStateDatabaseName(pipelineStage.dst_path), tableName);
+            const connector = await connectorForFile(generatePipelineStateDatabaseName(pipelineStage.dst_path), tableName);
 
-        const countObj = await connector(tableName).select("this_stage_status").groupBy("this_stage_status").count();
+            const countObj = await connector(tableName).select("this_stage_status").groupBy("this_stage_status").count();
 
-        return countObj.reduce((prev, curr) => {
-            switch (curr.this_stage_status) {
-                case TilePipelineStatus.Incomplete:
-                    prev.incomplete = curr["count(*)"];
-                    break;
-                case TilePipelineStatus.Queued:
-                    prev.queued = curr["count(*)"];
-                    break;
-                case TilePipelineStatus.Processing:
-                    prev.processing = curr["count(*)"];
-                    break;
+            return countObj.reduce((prev, curr) => {
+                switch (curr.this_stage_status) {
+                    case TilePipelineStatus.Incomplete:
+                        prev.incomplete = curr["count(*)"];
+                        break;
+                    case TilePipelineStatus.Queued:
+                        prev.queued = curr["count(*)"];
+                        break;
+                    case TilePipelineStatus.Processing:
+                        prev.processing = curr["count(*)"];
+                        break;
 
-                case TilePipelineStatus.Complete:
-                    prev.complete = curr["count(*)"];
-                    break;
+                    case TilePipelineStatus.Complete:
+                        prev.complete = curr["count(*)"];
+                        break;
 
-                case TilePipelineStatus.Failed:
-                    prev.failed = curr["count(*)"];
-                    break;
+                    case TilePipelineStatus.Failed:
+                        prev.failed = curr["count(*)"];
+                        break;
 
-                case TilePipelineStatus.Canceled:
-                    prev.canceled = curr["count(*)"];
-                    break;
-            }
+                    case TilePipelineStatus.Canceled:
+                        prev.canceled = curr["count(*)"];
+                        break;
+                }
 
-            return prev;
-        }, {
-            incomplete: 0,
-            queued: 0,
-            processing: 0,
-            complete: 0,
-            failed: 0,
-            canceled: 0
-        });
+                return prev;
+            }, {
+                incomplete: 0,
+                queued: 0,
+                processing: 0,
+                complete: 0,
+                failed: 0,
+                canceled: 0
+            });
+        } catch (err) {
+            return {
+                incomplete: 0,
+                queued: 0,
+                processing: 0,
+                complete: 0,
+                failed: 0,
+                canceled: 0
+            };
+        }
     }
 
 
