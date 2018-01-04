@@ -459,6 +459,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
                     if (pipelineTiles.length === 0 || inputTiles.length === 0) {
                         // Something is not right - can not find tile in the input and/or output tables.
+                        debug("missing input or output tile upon scheduling");
                         return false;
                     }
 
@@ -468,6 +469,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                     // through scheduling of work.
                     if (inputTile.this_stage_status !== TilePipelineStatus.Complete) {
                         // Will eventually get cleaned up in overall tile update.
+                        debug("input tile is no longer marked complete");
                         return false;
                     }
 
@@ -526,6 +528,8 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                         }
 
                         return true;
+                    } else {
+                        debug("start task did not error, however returned null");
                     }
                 } catch (err) {
                     debug(`worker ${worker.name} with error starting execution ${err}`);
