@@ -53,7 +53,7 @@ const connectionMap = new Map<string, Knex>();
 const connectorQueueAccess = asyncUtils.queue(accessQueueWorker, 1);
 
 export async function connectorForFile(name: string, requiredTable: string = null) {
-    debug(`requesting connector for ${name}`);
+     // debug(`requesting connector for ${name}`);
 
     // Serialize access to queue for a particular connector so only one is created.
 
