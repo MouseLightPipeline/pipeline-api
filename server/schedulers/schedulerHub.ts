@@ -69,8 +69,6 @@ export class SchedulerHub {
                 return kEmptyTileMap;
             }
 
-            debug(`tile status for plane ${plane}`);
-
             const projectsManager = PersistentStorageManager.Instance().Projects;
 
             const project = await projectsManager.findById(project_id);
@@ -169,8 +167,6 @@ export class SchedulerHub {
                     output.push(tiles[prop]);
                 }
             }
-
-            debug(output);
 
             return {
                 max_depth: maxDepth,
