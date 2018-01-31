@@ -53,7 +53,7 @@ const connectionMap = new Map<string, Knex>();
 const connectorQueueAccess = asyncUtils.queue(accessQueueWorker, 1);
 
 export async function connectorForFile(name: string, requiredTable: string = null) {
-     // debug(`requesting connector for ${name}`);
+    // debug(`requesting connector for ${name}`);
 
     // Serialize access to queue for a particular connector so only one is created.
 
@@ -77,11 +77,13 @@ export async function connectorForFile(name: string, requiredTable: string = nul
     });
 }
 
-export async function verifyTable(connection, tableName: string, createFunction) {
+export async function verifyTable(connection, tableName: string, createFunction, migrationFunction = null) {
     let test = await connection.schema.hasTable(tableName);
 
     if (!test) {
         await connection.schema.createTableIfNotExists(tableName, createFunction);
+    } else if (migrationFunction) {
+        await migrationFunction(connection.schema);
     }
 }
 
