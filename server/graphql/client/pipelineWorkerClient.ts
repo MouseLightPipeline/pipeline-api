@@ -85,6 +85,7 @@ export class PipelineWorkerClient {
                         interpreter
                         script_args
                         work_units
+                        log_prefix
                     }
                 }`,
                 variables: {
@@ -126,6 +127,7 @@ export class PipelineWorkerClient {
                         max_cpu
                         max_memory
                         work_units
+                        resolved_log_path
                         started_at
                         completed_at
                     }
@@ -163,6 +165,7 @@ export class PipelineWorkerClient {
                         completion_status_code
                         execution_status_code
                         work_units
+                        resolved_log_path
                         started_at
                         completed_at
                     }

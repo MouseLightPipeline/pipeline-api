@@ -353,11 +353,18 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
                     await this.outputTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]).update({this_stage_status: tileStatus});
 
-                    await this.inProcessTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]).del();
-
                     if (tileStatus === TilePipelineStatus.Complete) {
                         updatePipelineStagePerformance(this._pipelineStage.id, executionInfo);
+
+                        // const inProcessTiles = (await this.inProcessTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]));
+
+                        // if (inProcessTiles.length > 0) {
+                        //     const inProcessTile = inProcessTiles[0];
+                        fse.appendFileSync(`${executionInfo.resolved_log_path}-done.txt`, `Complete ${(new Date()).toUTCString()}`);
+                        //  }
                     }
+
+                    await this.inProcessTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]).del();
                 }
             } else {
                 // If the worker responded and has no knowledge of this task id, it may have cleared on the worker side
@@ -499,6 +506,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                             worker_id: worker.id,
                             worker_last_seen: now,
                             task_execution_id: taskExecution.id,
+                            // resolved_log_path: taskExecution.resolved_log_path,
                             created_at: now,
                             updated_at: now
                         });
@@ -515,6 +523,16 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                         await this.outputTable.where(DefaultPipelineIdKey, pipelineTile[DefaultPipelineIdKey]).update(pipelineTile);
 
                         await this.toProcessTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]).del();
+
+                        const completeFile = path.join(`${taskExecution.resolved_log_path}-done.txt`);
+
+                        try {
+                            if (fse.existsSync(completeFile)) {
+                                fse.unlinkSync(completeFile);
+                            }
+                        } catch (err) {
+                            debug(err);
+                        }
 
                         debug(`started task on worker ${worker.name} with execution id ${taskExecution.id}`);
 
@@ -710,8 +728,26 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             table.uuid("worker_id");
             table.timestamp("worker_last_seen");
             table.uuid("task_execution_id");
+            // table.string("resolved_log_path");
+            // table.string("log_prefix");
             table.timestamps();
-        });
+        }  /*, async (schema) => {
+
+            try {
+                const hasColumn = await schema.hasColumn(this._inProcessTableName, "resolved_log_path");
+                debug("checking for log columns");
+                if (!hasColumn) {
+                    debug("not found - adding");
+                    await schema.table(this._inProcessTableName, (table) => {
+                        table.string("resolved_log_path");
+                        table.string("log_prefix");
+                    })
+                }
+            } catch (err) {
+                debug(err);
+            }
+
+        } */);
 
         this._toProcessTableName = generatePipelineStageToProcessTableName(this._pipelineStage.id);
 
