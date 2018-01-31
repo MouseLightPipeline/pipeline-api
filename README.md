@@ -84,3 +84,83 @@ data volumes via Docker Compose.
 3. If this is the first launch, or if a new migration has been added, use the `migrate.sh` script as `./migrate.sh localhost 3932`.
 4. If this is the first launch, optionally seed the database to get up and running quickly using `./seed.sh localhost 3932`
 5. Launch using `npm run devel` 
+
+### Expected Input
+#### Tile Information
+The pipeline first attempts to read from a file named `pipeline-input.json` in the project root directory.  This file is
+a streamlined version of the dashboard.json data file from the Acquisition Dashboard that can also be created for data
+sets generated outside of the Mouse Light acquisition process.
+
+If `pipeline-input.json` does not exist, the system will look for `dashboard.json`.  If neither are found the system will
+not update the expected tiles for the project.  If `pipeline-input.json` appears after `dashboard.json` it will be used
+during the first update after it exists.
+
+Any input file has the following required structure:
+```json
+ {
+   "tilemap":
+   {
+     "0":
+     [
+       {
+         "id": 1,
+         "relative_path": "2017-12-20\\00\\00001",
+         "isComplete": true,
+         "contents": {
+           "latticePosition": {
+             "x": 197,
+             "y": 119,
+             "z": 1867
+           }
+         }       
+       },
+       {
+         "id": 2
+         ...
+       }
+     ],
+     "1":
+     [
+      ...
+     ]
+   }
+ }
+```
+
+The `tilemap` property is a dictionary of one or more sets of tile data.  The dashboard uses the dictionary to break up
+the tiles by day of acquisition (mirroring the folder structure) and uses the index of the day within all the days
+as the keys (0, 1 above), however the tiles can be grouped in any manner and the keys can be anything.
+
+Each entry in the tilemap dictionary is an array of tile information.  The required components, structure, and data
+types are shown above. `relativePath` can be Windows or Unix format and will be normalized to Unix for internal use.  In
+either case it must be escaped properly, as shown above, to be interpreted correctly.  The value is a relative path from
+the project root directory.
+
+The `isComplete` property is used to determine whether to pass the tile to any stage 1.  If false, it will appear as a
+known tile in the Tile Heat Map display page, known tile counts for the project, etc..., but will not be processed.
+
+#### Project Information
+There is an optional top-level section of the file that can be used to provide information about the project itself.
+Currently this is just the known extents of the sample.  This improves/simplifies some of the information displayed about the 
+project, but is not required.
+
+The section is at the same level as the `tilemap` property and is as follows:
+```json
+{
+  "monitor":
+  {
+    "extents":
+    {
+      "minimumX": 184,
+      "maximumX": 214,
+      "minimumY": 115,
+      "maximumY": 130,
+      "minimumZ": 1867,
+      "maximumZ": 1941
+    }
+  },
+  "tilemap":{
+    ...
+  }
+}
+```
