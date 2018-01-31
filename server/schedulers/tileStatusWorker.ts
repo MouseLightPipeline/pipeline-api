@@ -33,11 +33,11 @@ interface IDashboardJsonTile {
     name: string;
     relative_path: string;
     status: number;
-    position: IPosition,
     lattice_position: IPosition,
-    cut_offset: number,
-    z_offset: number,
-    delta_z: number
+    // position: IPosition,
+    // cut_offset: number,
+    // z_offset: number,
+    // delta_z: number
 }
 
 export class TileStatusWorker extends PipelineScheduler {
@@ -144,15 +144,15 @@ export class TileStatusWorker extends PipelineScheduler {
                 tile_name: inputTile.name,
                 prev_stage_status: inputTile.status,
                 this_stage_status: inputTile.status,
-                x: inputTile.position.x,
-                y: inputTile.position.y,
-                z: inputTile.position.z,
+                // x: inputTile.position.x,
+                // y: inputTile.position.y,
+                // z: inputTile.position.z,
                 lat_x: inputTile.lattice_position.x,
                 lat_y: inputTile.lattice_position.y,
                 lat_z: inputTile.lattice_position.z,
-                cut_offset: inputTile.cut_offset,
-                z_offset: inputTile.z_offset,
-                delta_z: inputTile.delta_z,
+                // cut_offset: inputTile.cut_offset,
+                // z_offset: inputTile.z_offset,
+                // delta_z: inputTile.delta_z,
                 duration: 0,
                 cpu_high: 0,
                 memory_high: 0,
@@ -176,15 +176,15 @@ export class TileStatusWorker extends PipelineScheduler {
                     relative_path: inputTile.relative_path,
                     prev_stage_status: inputTile.status,
                     this_stage_status: inputTile.status,
-                    x: inputTile.position.x,
-                    y: inputTile.position.y,
-                    z: inputTile.position.z,
+                    // x: inputTile.position.x,
+                    // y: inputTile.position.y,
+                    // z: inputTile.position.z,
                     lat_x: inputTile.lattice_position.x,
                     lat_y: inputTile.lattice_position.y,
                     lat_z: inputTile.lattice_position.z,
-                    cut_offset: inputTile.cut_offset,
-                    z_offset: inputTile.z_offset,
-                    delta_z: inputTile.delta_z,
+                    // cut_offset: inputTile.cut_offset,
+                    // z_offset: inputTile.z_offset,
+                    // delta_z: inputTile.delta_z,
                     updated_at: new Date()
                 };
             } else {
@@ -245,11 +245,11 @@ export class TileStatusWorker extends PipelineScheduler {
                         name: tileName,
                         relative_path: normalizedPath,
                         status: tile.isComplete ? TilePipelineStatus.Complete : TilePipelineStatus.Incomplete,
-                        position: tile.contents.position,
+                        // position: tile.contents.position,
                         lattice_position: tile.contents.latticePosition,
-                        cut_offset: tile.contents.cutOffset,
-                        z_offset: tile.contents.zOffset,
-                        delta_z: tile.contents.deltaZ
+                        // cut_offset: tile.contents.cutOffset,
+                        // z_offset: tile.contents.zOffset,
+                        // delta_z: tile.contents.deltaZ
                     });
                 });
             }
