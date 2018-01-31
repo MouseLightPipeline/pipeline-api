@@ -182,6 +182,7 @@ async function createConnection(filename: string, requiredTable: string): Promis
             fse.chmodSync(filename, 0o775)
         }
     } catch (err) {
+        debug(`failed creating connection to ${filename}`);
         debug(err);
         return null;
     }
