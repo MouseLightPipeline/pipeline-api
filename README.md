@@ -129,7 +129,7 @@ Any input file has the following required structure:
 
 The `tilemap` property is a dictionary of one or more sets of tile data.  The dashboard uses the dictionary to break up
 the tiles by day of acquisition (mirroring the folder structure) and uses the index of the day within all the days
-as the keys (0, 1 above), however the tiles can be grouped in any manner and the keys can be anything.
+as the keys (0, 1 above), however the tiles can be grouped in any manner (or just be one group) and the key(s) can be anything.
 
 Each entry in the tilemap dictionary is an array of tile information.  The required components, structure, and data
 types are shown above. `relativePath` can be Windows or Unix format and will be normalized to Unix for internal use.  In
