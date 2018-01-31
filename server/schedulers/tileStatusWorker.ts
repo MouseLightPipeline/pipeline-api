@@ -6,6 +6,7 @@ import * as _ from "lodash";
 
 const debug = require("debug")("pipeline:coordinator-api:tile-status-worker");
 
+const pipelineInputJsonFile = "pipeline-input.json";
 const dashboardJsonFile = "dashboard.json";
 const tileStatusJsonFile = "pipeline-storage.json";
 const tileStatusLastJsonFile = tileStatusJsonFile + ".last";
@@ -202,11 +203,16 @@ export class TileStatusWorker extends PipelineScheduler {
 
         let tiles: IDashboardJsonTile[] = [];
 
-        let dataFile = path.join(this._project.root_path, dashboardJsonFile);
+        let dataFile = path.join(this._project.root_path, pipelineInputJsonFile);
 
         if (!fse.existsSync(dataFile)) {
-            debug(`\tthere is no dashboard.json file in the project root path ${dataFile}`);
-            return;
+            debug(`${pipelineInputJsonFile} does not exist in the project root path - moving on to ${dashboardJsonFile}`);
+            dataFile = path.join(this._project.root_path, dashboardJsonFile);
+
+            if (!fse.existsSync(dataFile)) {
+                debug(`${dashboardJsonFile} also does not exist in the project root path ${dataFile} - skipping tile update`);
+                return;
+            }
         }
 
         let outputFile = path.join(this._project.root_path, tileStatusJsonFile);
