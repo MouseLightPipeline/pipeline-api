@@ -590,15 +590,8 @@ export class PipelineServerContext implements IPipelineServerContext {
     public async getPipelineStageTileStatus(pipeline_stage_id: string): Promise<IPipelineStageTileStatus> {
         const pipelineStage = await this._persistentStorageManager.PipelineStages.findById(pipeline_stage_id);
 
-        if (!pipelineStage) {
-            return {
-                incomplete: 0,
-                queued: 0,
-                processing: 0,
-                complete: 0,
-                failed: 0,
-                canceled: 0
-            };
+        if (!pipelineStage || !fs.existsSync(generatePipelineStateDatabaseName(pipelineStage.dst_path))) {
+            return PipelineStageStatusUnavailable;
         }
 
         try {
@@ -645,14 +638,7 @@ export class PipelineServerContext implements IPipelineServerContext {
                 canceled: 0
             });
         } catch (err) {
-            return {
-                incomplete: 0,
-                queued: 0,
-                processing: 0,
-                complete: 0,
-                failed: 0,
-                canceled: 0
-            };
+            return PipelineStageStatusUnavailable;
         }
     }
 
@@ -675,3 +661,12 @@ export class PipelineServerContext implements IPipelineServerContext {
         return tiles;
     }
 }
+
+const PipelineStageStatusUnavailable: IPipelineStageTileStatus = {
+    incomplete: 0,
+    queued: 0,
+    processing: 0,
+    complete: 0,
+    failed: 0,
+    canceled: 0
+};
