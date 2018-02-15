@@ -217,7 +217,7 @@ export class SchedulerHub {
 
             this._pidCount++;
 
-            if (_pidCount >= 6) {
+            if (this._pidCount >= 6) {
                 debug(`process id: ${process.pid}`);
                 this._pidCount = 0;
             }
