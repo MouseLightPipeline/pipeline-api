@@ -30,6 +30,8 @@ const perfConf = performanceConfiguration();
 
 const MAX_KNOWN_INPUT_SKIP_COUNT = 10;
 
+const MAX_ASSIGN_PER_ITERATION = 50;
+
 export const DefaultPipelineIdKey = "relative_path";
 
 /**
@@ -448,7 +450,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
             debug(`worker ${worker.name} has load ${taskLoad} of capacity ${worker.work_unit_capacity}`);
 
-            let waitingToProcess = await this.loadToProcess(200);
+            let waitingToProcess = await this.loadToProcess(MAX_ASSIGN_PER_ITERATION);
 
             if (!waitingToProcess || waitingToProcess.length === 0) {
                 return false;
