@@ -189,6 +189,8 @@ export class SchedulerHub {
         await this.manageAllWorkers();
     }
 
+    private _pidCount = 0;
+
     private async manageAllWorkers() {
         try {
             if (PersistentStorageManager.Instance() && PersistentStorageManager.Instance().IsConnected) {
@@ -211,6 +213,13 @@ export class SchedulerHub {
 
                 // Refresh processing state for active workers.
                 await this.manageStageProcessingFlag();
+            }
+
+            this._pidCount++;
+
+            if (_pidCount >= 6) {
+                debug(`process id: ${process.pid}`);
+                this._pidCount = 0;
             }
         } catch (err) {
             debug(`exception (manageAllWorkers): ${err}`);
