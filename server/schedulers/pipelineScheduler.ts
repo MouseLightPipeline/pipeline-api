@@ -28,7 +28,7 @@ import {CompletionStatusCode, ExecutionStatusCode} from "../data-model/sequelize
 
 const perfConf = performanceConfiguration();
 
-const MAX_KNOWN_INPUT_SKIP_COUNT = 1;
+const MAX_KNOWN_INPUT_SKIP_COUNT = 10;
 
 export const DefaultPipelineIdKey = "relative_path";
 
