@@ -98,7 +98,6 @@ export class SchedulerHub {
             }
 
             if (stageWorkers.length === 0) {
-                debug("project not running");
                 return kEmptyTileMap;
             }
 
