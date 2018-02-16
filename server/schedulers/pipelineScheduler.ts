@@ -479,7 +479,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                     if (inputTile.this_stage_status !== TilePipelineStatus.Complete) {
                         // Will eventually get cleaned up in overall tile update.
                         debug("input tile is no longer marked complete");
-                        return false;
+                        return true;
                     }
 
                     const pipelineTile = pipelineTiles[0];
