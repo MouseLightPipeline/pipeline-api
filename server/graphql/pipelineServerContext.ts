@@ -82,91 +82,7 @@ export interface IPipelineStageTileStatus {
 
 export type ITilePage = ISimplePage<IPipelineTile>;
 
-export interface IPipelineServerContext {
-    getPipelineWorker(id: string): Promise<IPipelineWorker>;
-
-    getPipelineWorkers(): Promise<IPipelineWorker[]>;
-
-    updateWorker(workerInput: IPipelineWorker): Promise<IWorkerMutationOutput>;
-
-    setWorkerAvailability(id: string, shouldBeInSchedulerPool: boolean): Promise<IPipelineWorker>;
-
-    getProject(id: string): Promise<IProject>;
-
-    getProjects(): Promise<IProject[]>;
-
-    getDashboardJsonStatusForProject(project: IProject): boolean;
-
-    createProject(project: IProjectInput): Promise<IProjectMutationOutput>;
-
-    updateProject(project: IProjectInput): Promise<IProjectMutationOutput>;
-
-    deleteProject(id: string): Promise<IProjectDeleteOutput>;
-
-    getPipelineStage(id: string): Promise<IPipelineStage>;
-
-    getPipelineStages(): Promise<IPipelineStage[]>;
-
-    getPipelineStagesForProject(id: string): Promise<IPipelineStage[]>;
-
-    getPipelineStagesForTaskDefinition(id: string): Promise<IPipelineStage[]>;
-
-    getPipelineStageChildren(id: string): Promise<IPipelineStage[]>
-
-    createPipelineStage(pipelineStage: IPipelineStage): Promise<IPipelineStageMutationOutput>;
-
-    updatePipelineStage(pipelineStage: IPipelineStage): Promise<IPipelineStageMutationOutput>;
-
-    deletePipelineStage(id: string): Promise<IPipelineStageDeleteOutput>;
-
-    getTaskRepository(id: string): Promise<ITaskRepository>;
-
-    getTaskRepositories(): Promise<ITaskRepository[]>;
-
-    getRepositoryTasks(id: string): Promise<ITaskDefinition[]>;
-
-    createTaskRepository(taskRepository: ITaskRepository): Promise<ITaskRepositoryMutationOutput>;
-
-    updateTaskRepository(taskRepository: ITaskRepository): Promise<ITaskRepositoryMutationOutput>;
-
-    deleteTaskRepository(taskRepository: ITaskRepository): Promise<ITaskRepositoryDeleteOutput>;
-
-    getTaskDefinition(id: string): Promise<ITaskDefinition>;
-
-    getTaskDefinitions(): Promise<ITaskDefinition[]>;
-
-    getScriptStatusForTaskDefinition(taskDefinition: ITaskDefinition): Promise<boolean>;
-
-    getScriptContents(taskDefinitionId: string): Promise<string>;
-
-    createTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionMutationOutput>;
-
-    updateTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionMutationOutput>;
-
-    deleteTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionDeleteOutput>;
-
-    getTaskExecution(id: string): Promise<ITaskExecution>;
-
-    getTaskExecutions(): Promise<ITaskExecution[]>;
-
-    getTaskExecutionsPage(reqOffset: number, reqLimit: number, completionStatus: CompletionStatusCode): Promise<ISimplePage<ITaskExecution>>;
-
-    getPipelineStagePerformance(id: string): Promise<IPipelineStagePerformance>;
-
-    getPipelineStagePerformances(): Promise<IPipelineStagePerformance[]>;
-
-    getPipelineStageTileStatus(pipeline_stage_id: string): Promise<IPipelineStageTileStatus>;
-
-    getForStage(pipeline_stage_id: string): Promise<IPipelineStagePerformance>
-
-    getProjectPlaneTileStatus(project_id: string, plane: number): Promise<any>;
-
-    tilesForStage(pipelineStageId: string, status: TilePipelineStatus, reqOffset: number, reqLimit: number): Promise<ITilePage>;
-
-    setTileStatus(pipelineStageId: string, tileIds: string[], status: TilePipelineStatus): Promise<IPipelineTile[]>;
-}
-
-export class PipelineServerContext implements IPipelineServerContext {
+export class PipelineServerContext {
     private _persistentStorageManager: PersistentStorageManager = PersistentStorageManager.Instance();
 
     public getPipelineWorker(id: string): Promise<IPipelineWorker> {
@@ -286,6 +202,49 @@ export class PipelineServerContext implements IPipelineServerContext {
         }
     }
 
+    public async duplicateProject(id: string): Promise<IProjectMutationOutput> {
+        try {
+            const input = (await this._persistentStorageManager.Projects.findById(id)).toJSON();
+
+            input.id = undefined;
+            input.name += " copy";
+            input.root_path += "copy";
+
+            const project = await this._persistentStorageManager.Projects.create(input);
+
+            const inputStages = await this._persistentStorageManager.PipelineStages.findAll({where: {project_id: id}, order: [["depth", "ASC"]]});
+
+            const duplicateMap = new Map<string, IPipelineStage>();
+
+            const dupeStage = async (inputStage): Promise<IPipelineStage> => {
+                const stageData: IPipelineStage = inputStage.toJSON();
+
+                stageData.project_id = project.id;
+                if (inputStage.previous_stage_id !== null) {
+                    stageData.previous_stage_id = duplicateMap.get(inputStage.previous_stage_id).id;
+                } else {
+                    stageData.previous_stage_id = null;
+                }
+                stageData.dst_path += "copy";
+
+                const stage = await this._persistentStorageManager.PipelineStages.createFromInput(stageData);
+
+                duplicateMap.set(inputStage.id, stage);
+
+                return stage;
+            };
+
+            await inputStages.reduce(async (promise, stage) => {
+                await promise;
+                return dupeStage(stage);
+            }, Promise.resolve());
+
+            return {project, error: ""};
+        } catch (err) {
+            return {project: null, error: err.message}
+        }
+    }
+
     public async deleteProject(id: string): Promise<IProjectDeleteOutput> {
         try {
             const affectedRowCount = await this._persistentStorageManager.Projects.destroy({where: {id}});
@@ -333,6 +292,13 @@ export class PipelineServerContext implements IPipelineServerContext {
     public async updatePipelineStage(pipelineStage: IPipelineStage): Promise<IPipelineStageMutationOutput> {
         try {
             let row = await this._persistentStorageManager.PipelineStages.findById(pipelineStage.id);
+
+            if (pipelineStage.previous_stage_id === null) {
+                pipelineStage.depth = 1;
+            } else {
+                const stage = await this._persistentStorageManager.PipelineStages.findById(pipelineStage.previous_stage_id);
+                pipelineStage.depth = stage.depth + 1;
+            }
 
             await row.update(pipelineStage);
 

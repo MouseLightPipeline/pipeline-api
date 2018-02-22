@@ -370,6 +370,7 @@ type Query {
 type Mutation {
   createProject(project: ProjectInput): MutateProjectOutput
   updateProject(project: ProjectInput): MutateProjectOutput
+  duplicateProject(id: String): MutateProjectOutput
   deleteProject(id: String!): DeleteProjectOutput
   
   createPipelineStage(pipelineStage: PipelineStageInput): MutatePipelineStageOutput

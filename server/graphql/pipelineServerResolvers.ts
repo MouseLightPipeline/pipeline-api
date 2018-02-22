@@ -2,12 +2,12 @@ import {ITaskRepository} from "../data-model/sequelize/taskRepository";
 
 import {IPipelineStagePerformance} from "../data-model/sequelize/pipelineStagePerformance";
 import {
-    IPipelineServerContext, IPipelineStageDeleteOutput, IPipelineStageMutationOutput, IPipelineStageTileStatus,
+    IPipelineStageDeleteOutput, IPipelineStageMutationOutput, IPipelineStageTileStatus,
     IProjectDeleteOutput,
     IProjectMutationOutput, ISimplePage, ITaskDefinitionDeleteOutput,
     ITaskDefinitionMutationOutput,
     ITaskRepositoryDeleteOutput,
-    ITaskRepositoryMutationOutput, ITilePage, IWorkerMutationOutput
+    ITaskRepositoryMutationOutput, ITilePage, IWorkerMutationOutput, PipelineServerContext
 } from "./pipelineServerContext";
 import {ITaskDefinition} from "../data-model/sequelize/taskDefinition";
 import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
@@ -84,61 +84,61 @@ interface ITileStatusArgs {
 
 let resolvers = {
     Query: {
-        pipelineWorker(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IPipelineWorker> {
+        pipelineWorker(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IPipelineWorker> {
             return context.getPipelineWorker(args.id);
         },
-        pipelineWorkers(_, __, context: IPipelineServerContext): Promise<IPipelineWorker[]> {
+        pipelineWorkers(_, __, context: PipelineServerContext): Promise<IPipelineWorker[]> {
             return context.getPipelineWorkers();
         },
-        project(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IProject> {
+        project(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IProject> {
             return context.getProject(args.id);
         },
-        projects(_, __, context: IPipelineServerContext): Promise<IProject[]> {
+        projects(_, __, context: PipelineServerContext): Promise<IProject[]> {
             return context.getProjects();
         },
-        pipelineStage(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IPipelineStage> {
+        pipelineStage(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IPipelineStage> {
             return context.getPipelineStage(args.id);
         },
-        pipelineStages(_, __, context: IPipelineServerContext): Promise<IPipelineStage[]> {
+        pipelineStages(_, __, context: PipelineServerContext): Promise<IPipelineStage[]> {
             return context.getPipelineStages();
         },
-        pipelineStagesForProject(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IPipelineStage[]> {
+        pipelineStagesForProject(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IPipelineStage[]> {
             return context.getPipelineStagesForProject(args.id);
         },
-        taskDefinition(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<ITaskDefinition> {
+        taskDefinition(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskDefinition> {
             return context.getTaskDefinition(args.id);
         },
-        taskDefinitions(_, __, context: IPipelineServerContext): Promise<ITaskDefinition[]> {
+        taskDefinitions(_, __, context: PipelineServerContext): Promise<ITaskDefinition[]> {
             return context.getTaskDefinitions();
         },
-        taskRepository(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<ITaskRepository> {
+        taskRepository(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskRepository> {
             return context.getTaskRepository(args.id);
         },
-        taskRepositories(_, __, context: IPipelineServerContext): Promise<ITaskRepository[]> {
+        taskRepositories(_, __, context: PipelineServerContext): Promise<ITaskRepository[]> {
             return context.getTaskRepositories();
         },
-        taskExecution(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<ITaskExecution> {
+        taskExecution(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskExecution> {
             return context.getTaskExecution(args.id);
         },
-        taskExecutions(_, __, context: IPipelineServerContext): Promise<ITaskExecution[]> {
+        taskExecutions(_, __, context: PipelineServerContext): Promise<ITaskExecution[]> {
             return context.getTaskExecutions();
         },
-        taskExecutionsPage(_, args: ITaskExecutionPageArguments, context: IPipelineServerContext): Promise<ISimplePage<ITaskExecution>> {
+        taskExecutionsPage(_, args: ITaskExecutionPageArguments, context: PipelineServerContext): Promise<ISimplePage<ITaskExecution>> {
             return context.getTaskExecutionsPage(args.offset, args.limit, args.status);
         },
-        pipelineStagePerformance(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IPipelineStagePerformance> {
+        pipelineStagePerformance(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IPipelineStagePerformance> {
             return context.getPipelineStagePerformance(args.id);
         },
-        pipelineStagePerformances(_, __, context: IPipelineServerContext): Promise<IPipelineStagePerformance[]> {
+        pipelineStagePerformances(_, __, context: PipelineServerContext): Promise<IPipelineStagePerformance[]> {
             return context.getPipelineStagePerformances();
         },
-        projectPlaneTileStatus(_, args: IPipelinePlaneStatusArguments, context: IPipelineServerContext): Promise<any> {
+        projectPlaneTileStatus(_, args: IPipelinePlaneStatusArguments, context: PipelineServerContext): Promise<any> {
             return context.getProjectPlaneTileStatus(args.project_id, args.plane);
         },
-        tilesForStage(_, args: ITileStatusArguments, context: IPipelineServerContext): Promise<ITilePage> {
+        tilesForStage(_, args: ITileStatusArguments, context: PipelineServerContext): Promise<ITilePage> {
             return context.tilesForStage(args.pipelineStageId, args.status, args.offset, args.limit);
         },
-        scriptContents(_, args: ITaskDefinitionIdArguments, context: IPipelineServerContext): Promise<string> {
+        scriptContents(_, args: ITaskDefinitionIdArguments, context: PipelineServerContext): Promise<string> {
             return context.getScriptContents(args.task_definition_id);
         },
         pipelineVolume(): string {
@@ -146,102 +146,105 @@ let resolvers = {
         }
     },
     Mutation: {
-        createProject(_, args: ICreateProjectArguments, context: IPipelineServerContext): Promise<IProjectMutationOutput> {
+        createProject(_, args: ICreateProjectArguments, context: PipelineServerContext): Promise<IProjectMutationOutput> {
             return context.createProject(args.project);
         },
-        updateProject(_, args: IUpdateProjectArguments, context: IPipelineServerContext): Promise<IProjectMutationOutput> {
+        updateProject(_, args: IUpdateProjectArguments, context: PipelineServerContext): Promise<IProjectMutationOutput> {
             return context.updateProject(args.project);
         },
-        deleteProject(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IProjectDeleteOutput> {
+        duplicateProject(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IProjectMutationOutput> {
+            return context.duplicateProject(args.id);
+        },
+        deleteProject(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IProjectDeleteOutput> {
             return context.deleteProject(args.id);
         },
-        createPipelineStage(_, args: ICreatePipelineStageArguments, context: IPipelineServerContext): Promise<IPipelineStageMutationOutput> {
+        createPipelineStage(_, args: ICreatePipelineStageArguments, context: PipelineServerContext): Promise<IPipelineStageMutationOutput> {
             return context.createPipelineStage(args.pipelineStage);
         },
-        updatePipelineStage(_, args: IUpdatePipelineStageArguments, context: IPipelineServerContext): Promise<IPipelineStageMutationOutput> {
+        updatePipelineStage(_, args: IUpdatePipelineStageArguments, context: PipelineServerContext): Promise<IPipelineStageMutationOutput> {
             return context.updatePipelineStage(args.pipelineStage);
         },
-        deletePipelineStage(_, args: IIdOnlyArgument, context: IPipelineServerContext): Promise<IPipelineStageDeleteOutput> {
+        deletePipelineStage(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IPipelineStageDeleteOutput> {
             return context.deletePipelineStage(args.id);
         },
-        createTaskRepository(_, args: IMutateRepositoryArguments, context: IPipelineServerContext): Promise<ITaskRepositoryMutationOutput> {
+        createTaskRepository(_, args: IMutateRepositoryArguments, context: PipelineServerContext): Promise<ITaskRepositoryMutationOutput> {
             return context.createTaskRepository(args.taskRepository);
         },
-        updateTaskRepository(_, args: IMutateRepositoryArguments, context: IPipelineServerContext): Promise<ITaskRepositoryMutationOutput> {
+        updateTaskRepository(_, args: IMutateRepositoryArguments, context: PipelineServerContext): Promise<ITaskRepositoryMutationOutput> {
             return context.updateTaskRepository(args.taskRepository);
         },
-        deleteTaskRepository(_, args: IMutateRepositoryArguments, context: IPipelineServerContext): Promise<ITaskRepositoryDeleteOutput> {
+        deleteTaskRepository(_, args: IMutateRepositoryArguments, context: PipelineServerContext): Promise<ITaskRepositoryDeleteOutput> {
             return context.deleteTaskRepository(args.taskRepository);
         },
-        createTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: IPipelineServerContext): Promise<ITaskDefinitionMutationOutput> {
+        createTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: PipelineServerContext): Promise<ITaskDefinitionMutationOutput> {
             return context.createTaskDefinition(args.taskDefinition);
         },
-        updateTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: IPipelineServerContext): Promise<ITaskDefinitionMutationOutput> {
+        updateTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: PipelineServerContext): Promise<ITaskDefinitionMutationOutput> {
             return context.updateTaskDefinition(args.taskDefinition);
         },
-        deleteTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: IPipelineServerContext): Promise<ITaskDefinitionDeleteOutput> {
+        deleteTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: PipelineServerContext): Promise<ITaskDefinitionDeleteOutput> {
             return context.deleteTaskDefinition(args.taskDefinition);
         },
-        setTileStatus(_, args: ITileStatusArgs, context: IPipelineServerContext): Promise<IPipelineTile[]> {
+        setTileStatus(_, args: ITileStatusArgs, context: PipelineServerContext): Promise<IPipelineTile[]> {
             return context.setTileStatus(args.pipelineStageId, args.tileIds, args.status);
         },
-        updateWorker(_, args: IUpdateWorkerArguments, context: IPipelineServerContext): Promise<IWorkerMutationOutput> {
+        updateWorker(_, args: IUpdateWorkerArguments, context: PipelineServerContext): Promise<IWorkerMutationOutput> {
             return context.updateWorker(args.worker);
         },
-        setWorkerAvailability(_, args: IActiveWorkerArguments, context: IPipelineServerContext) {
+        setWorkerAvailability(_, args: IActiveWorkerArguments, context: PipelineServerContext) {
             return context.setWorkerAvailability(args.id, args.shouldBeInSchedulerPool);
         }
     },
     Project: {
-        stages(project, _, context: IPipelineServerContext): any {
+        stages(project, _, context: PipelineServerContext): any {
             return context.getPipelineStagesForProject(project.id);
         },
-        dashboard_json_status(project: IProject, _, context: IPipelineServerContext): boolean {
+        dashboard_json_status(project: IProject, _, context: PipelineServerContext): boolean {
             return context.getDashboardJsonStatusForProject(project);
         }
     },
     PipelineStage: {
-        performance(stage, _, context: IPipelineServerContext): any {
+        performance(stage, _, context: PipelineServerContext): any {
             return context.getForStage(stage.id);
         },
-        task(stage, _, context: IPipelineServerContext): any {
+        task(stage, _, context: PipelineServerContext): any {
             return context.getTaskDefinition(stage.task_id);
         },
-        project(stage, _, context: IPipelineServerContext): any {
+        project(stage, _, context: PipelineServerContext): any {
             return context.getProject(stage.project_id);
         },
-        previous_stage(stage, _, context: IPipelineServerContext): Promise<IPipelineStage> {
+        previous_stage(stage, _, context: PipelineServerContext): Promise<IPipelineStage> {
             return context.getPipelineStage(stage.previous_stage_id);
         },
-        child_stages(stage, _, context: IPipelineServerContext): Promise<IPipelineStage[]> {
+        child_stages(stage, _, context: PipelineServerContext): Promise<IPipelineStage[]> {
             return context.getPipelineStageChildren(stage.id);
         },
-        tile_status(stage, _, context: IPipelineServerContext): Promise<IPipelineStageTileStatus> {
+        tile_status(stage, _, context: PipelineServerContext): Promise<IPipelineStageTileStatus> {
             return context.getPipelineStageTileStatus(stage.id);
         }
     },
     TaskRepository: {
-        task_definitions(repository: ITaskRepository, _, context: IPipelineServerContext): any {
+        task_definitions(repository: ITaskRepository, _, context: PipelineServerContext): any {
             return context.getRepositoryTasks(repository.id);
         }
     },
     TaskDefinition: {
-        task_repository(taskDefinition: ITaskDefinition, _, context: IPipelineServerContext): any {
+        task_repository(taskDefinition: ITaskDefinition, _, context: PipelineServerContext): any {
             if (taskDefinition.task_repository_id) {
                 return context.getTaskRepository(taskDefinition.task_repository_id);
             }
 
             return null;
         },
-        pipeline_stages(taskDefinition: ITaskDefinition, _, context: IPipelineServerContext): any {
+        pipeline_stages(taskDefinition: ITaskDefinition, _, context: PipelineServerContext): any {
             return context.getPipelineStagesForTaskDefinition(taskDefinition.id);
         },
-        script_status(taskDefinition: ITaskDefinition, _, context: IPipelineServerContext): any {
+        script_status(taskDefinition: ITaskDefinition, _, context: PipelineServerContext): any {
             return context.getScriptStatusForTaskDefinition(taskDefinition);
         }
     },
     TaskExecution: {
-        task_definition(taskExecution, _, context: IPipelineServerContext) {
+        task_definition(taskExecution, _, context: PipelineServerContext) {
             return context.getTaskDefinition(taskExecution.task_definition_id);
         }
     }
