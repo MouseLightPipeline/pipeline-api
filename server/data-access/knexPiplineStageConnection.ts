@@ -176,6 +176,11 @@ async function createConnection(filename: string, requiredTable: string): Promis
     const knex = Knex(configuration);
 
     try {
+        const parent = path.resolve(path.join(filename, "/.."));
+
+        fse.ensureDirSync(parent);
+        fse.chmodSync(parent, 0o775);
+
         await knex.migrate.latest(configuration.migrations);
 
         if (!existed && fse.existsSync(filename)) {
