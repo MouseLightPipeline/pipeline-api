@@ -209,6 +209,8 @@ export class PipelineServerContext {
             input.id = undefined;
             input.name += " copy";
             input.root_path += "copy";
+            input.created_at = new Date();
+            input.updated_at = input.created_at;
 
             const project = await this._persistentStorageManager.Projects.create(input);
 
