@@ -241,6 +241,7 @@ export class PipelineServerContext {
 
             return {project, error: ""};
         } catch (err) {
+            console.log(err);
             return {project: null, error: err.message}
         }
     }
