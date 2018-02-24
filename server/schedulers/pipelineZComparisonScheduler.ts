@@ -161,18 +161,52 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
 
         let prev_status = TilePipelineStatus.DoesNotExist;
 
-        if ((inputTile.this_stage_status === TilePipelineStatus.Failed) || (nextLayerInputTile && (nextLayerInputTile.this_stage_status === TilePipelineStatus.Failed))) {
-            prev_status = TilePipelineStatus.Failed;
+        let this_status = TilePipelineStatus.Incomplete;
+
+        // We can only be in this block if the z layer tile exists.  If the z + 1 tile does not exist, the tile
+        // effectively does not exist for this stage.
+        if (nextLayerInputTile !== null) {
+            if ((inputTile.this_stage_status === TilePipelineStatus.Failed) || (nextLayerInputTile.this_stage_status === TilePipelineStatus.Failed)) {
+                prev_status = TilePipelineStatus.Failed;
+            } else if ((inputTile.this_stage_status === TilePipelineStatus.Canceled) || (nextLayerInputTile.this_stage_status === TilePipelineStatus.Canceled)) {
+                prev_status = TilePipelineStatus.Canceled;
+            } else {
+                // This works because once you drop failed and canceled, the highest value is complete.
+                prev_status = Math.min(inputTile.this_stage_status, nextLayerInputTile.this_stage_status);
+            }
         } else {
-            prev_status = Math.min(inputTile.this_stage_status, (nextLayerInputTile ? nextLayerInputTile.this_stage_status : TilePipelineStatus.DoesNotExist));
+            this_status = TilePipelineStatus.DoesNotExist;
         }
 
         if (existingOutput) {
+            // If the previous stage is in the middle of processing, maintain the current status - nothing has
+            // changed (we don't kill a running task because a tile has been curated - it will be removed when done).
+            // Otherwise. something reset on the last stage tile and need to go back to incomplete.
+            if (existingOutput.this_stage_status !== TilePipelineStatus.Processing) {
+                // In all cases but the above, if this has been marked does not exist above due to previous stage info
+                // that is the final answer.
+                if (this_status !== TilePipelineStatus.DoesNotExist) {
+                    if ((prev_status !== TilePipelineStatus.DoesNotExist) && (existingOutput.this_stage_status === TilePipelineStatus.DoesNotExist)) {
+                        // It was considered does not exist (maybe z + 1 had not been acquired yet), but now there is a
+                        // legit value for the previous stage, so upgrade to incomplete.
+                        this_status = TilePipelineStatus.Incomplete;
+                    } else if (inputTile.this_stage_status !== TilePipelineStatus.Complete) {
+                        // If this is a regression in the previous stage, this needs to be reverted to incomplete.
+                        this_status = TilePipelineStatus.Incomplete;
+                    } else {
+                        // Otherwise no change.
+                        this_status = existingOutput.this_stage_status;
+                    }
+                }
+            } else {
+                this_status = existingOutput.this_stage_status;
+            }
+
             if (existingOutput.prev_stage_status !== prev_status) {
                 muxUpdateLists.toUpdate.push({
                     relative_path: inputTile.relative_path,
                     prev_stage_status: prev_status,
-                    this_stage_status: (inputTile === TilePipelineStatus.Complete || existingOutput.this_stage_status === TilePipelineStatus.Processing) ? existingOutput.this_stage_status : TilePipelineStatus.Incomplete,
+                    this_stage_status: this_status,
                     // x: inputTile.x,
                     // y: inputTile.y,
                     // z: inputTile.z,
@@ -187,23 +221,25 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
             }
         } else {
             let now = new Date();
+
             muxUpdateLists.toInsert.push({
-                relative_path: inputTile.relative_path,
-                tile_name: inputTile.tile_name,
-                prev_stage_status: prev_status,
-                this_stage_status: TilePipelineStatus.Incomplete,
-                // x: inputTile.x,
-                // y: inputTile.y,
-                // z: inputTile.z,
-                lat_x: inputTile.lat_x,
-                lat_y: inputTile.lat_y,
-                lat_z: inputTile.lat_z,
-                // cut_offset: inputTile.cut_offset,
-                // z_offset: inputTile.z_offset,
-                // delta_z: inputTile.delta_z,
-                created_at: now,
-                updated_at: now
-            });
+                    relative_path: inputTile.relative_path,
+                    tile_name: inputTile.tile_name,
+                    prev_stage_status: prev_status,
+                    this_stage_status: this_status,
+                    // x: inputTile.x,
+                    // y: inputTile.y,
+                    // z: inputTile.z,
+                    lat_x: inputTile.lat_x,
+                    lat_y: inputTile.lat_y,
+                    lat_z: inputTile.lat_z,
+                    // cut_offset: inputTile.cut_offset,
+                    // z_offset: inputTile.z_offset,
+                    // delta_z: inputTile.delta_z,
+                    created_at: now,
+                    updated_at: now
+                }
+            );
         }
     }
 }
