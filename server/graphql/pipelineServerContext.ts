@@ -296,10 +296,10 @@ export class PipelineServerContext {
         try {
             let row = await this._persistentStorageManager.PipelineStages.findById(pipelineStage.id);
 
-            if (pipelineStage.previous_stage_id === null) {
+            if (row.previous_stage_id === null) {
                 pipelineStage.depth = 1;
             } else {
-                const stage = await this._persistentStorageManager.PipelineStages.findById(pipelineStage.previous_stage_id);
+                const stage = await this._persistentStorageManager.PipelineStages.findById(row.previous_stage_id);
                 pipelineStage.depth = stage.depth + 1;
             }
 
