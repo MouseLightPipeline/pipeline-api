@@ -76,10 +76,16 @@ interface ITileStatusArguments {
     limit: number;
 }
 
-interface ITileStatusArgs {
+interface ISetTileStatusArgs {
     pipelineStageId: string;
     tileIds: string[];
     status: TilePipelineStatus;
+}
+
+interface IConvertTileStatusArgs {
+    pipelineStageId: string;
+    currentStatus: TilePipelineStatus;
+    desiredStatus: TilePipelineStatus;
 }
 
 let resolvers = {
@@ -185,14 +191,17 @@ let resolvers = {
         deleteTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: PipelineServerContext): Promise<ITaskDefinitionDeleteOutput> {
             return context.deleteTaskDefinition(args.taskDefinition);
         },
-        setTileStatus(_, args: ITileStatusArgs, context: PipelineServerContext): Promise<IPipelineTile[]> {
-            return context.setTileStatus(args.pipelineStageId, args.tileIds, args.status);
-        },
         updateWorker(_, args: IUpdateWorkerArguments, context: PipelineServerContext): Promise<IWorkerMutationOutput> {
             return context.updateWorker(args.worker);
         },
         setWorkerAvailability(_, args: IActiveWorkerArguments, context: PipelineServerContext) {
             return context.setWorkerAvailability(args.id, args.shouldBeInSchedulerPool);
+        },
+        setTileStatus(_, args: ISetTileStatusArgs, context: PipelineServerContext): Promise<IPipelineTile[]> {
+            return context.setTileStatus(args.pipelineStageId, args.tileIds, args.status);
+        },
+        convertTileStatus(_, args: IConvertTileStatusArgs, context: PipelineServerContext): Promise<IPipelineTile[]> {
+            return context.convertTileStatus(args.pipelineStageId, args.currentStatus, args.desiredStatus);
         }
     },
     Project: {

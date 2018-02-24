@@ -611,7 +611,6 @@ export class PipelineServerContext {
         }
     }
 
-
     public async setTileStatus(pipelineStageId: string, tileIds: string[], status: TilePipelineStatus): Promise<IPipelineTile[]> {
         const pipelineStage = await this._persistentStorageManager.PipelineStages.findById(pipelineStageId);
 
@@ -625,9 +624,25 @@ export class PipelineServerContext {
 
         await connector(tableName).whereIn(DefaultPipelineIdKey, tileIds).update({this_stage_status: status});
 
-        const tiles = await connector(tableName).whereIn(DefaultPipelineIdKey, tileIds).select();
+        return await connector(tableName).whereIn(DefaultPipelineIdKey, tileIds).select();
+    }
 
-        return tiles;
+    public async convertTileStatus(pipelineStageId: string, currentStatus: TilePipelineStatus, desiredStatus: TilePipelineStatus): Promise<IPipelineTile[]> {
+        const pipelineStage = await this._persistentStorageManager.PipelineStages.findById(pipelineStageId);
+
+        if (!pipelineStage) {
+            return null;
+        }
+
+        const tableName = generatePipelineStageTableName(pipelineStage.id);
+
+        const connector = await connectorForFile(generatePipelineStateDatabaseName(pipelineStage.dst_path), tableName);
+
+        const tileIds = (await connector(tableName).where("this_stage_status", currentStatus).select(DefaultPipelineIdKey)).map(t => t[DefaultPipelineIdKey]);
+
+        await connector(tableName).whereIn(DefaultPipelineIdKey, tileIds).update({this_stage_status: desiredStatus});
+
+        return await connector(tableName).whereIn(DefaultPipelineIdKey, tileIds).select();
     }
 }
 

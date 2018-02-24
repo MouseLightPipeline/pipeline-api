@@ -389,6 +389,7 @@ type Mutation {
   updateWorker(worker: PipelineWorkerInput): MutatePipelineWorkerOutput
   
   setTileStatus(pipelineStageId: String, tileIds: [String], status: Int): [Tile]
+  convertTileStatus(pipelineStageId: String, currentStatus: Int, desiredStatus: Int): [Tile]
 }
 
 schema {
