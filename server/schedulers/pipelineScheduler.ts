@@ -609,7 +609,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                 if (knownInput.length > 0) {
                     debug(`updating known input tiles`);
 
-                    let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "prev_stage_status"]);
+                    let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "prev_stage_status", "this_stage_status"]);
 
                     let sorted = await this.muxInputOutputTiles(knownInput, knownOutput);
 
