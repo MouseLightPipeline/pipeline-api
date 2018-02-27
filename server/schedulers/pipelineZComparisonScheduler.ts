@@ -175,9 +175,6 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
                 prev_status = Math.min(inputTile.this_stage_status, nextLayerInputTile.this_stage_status);
             }
         } else {
-            if (inputTile.lat_z === 1954 && inputTile.lat_y === 121) {
-                debug(`should be setting status to does not exist ${inputTile.relative_path}`);
-            }
             this_status = TilePipelineStatus.DoesNotExist;
         }
 
@@ -198,28 +195,15 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
                         this_status = TilePipelineStatus.Incomplete;
                     } else {
                         // Otherwise no change.
-                        if (inputTile.lat_z === 1954 && inputTile.lat_y === 121) {
-                            debug(`1 maintaining ${existingOutput.this_stage_status} for ${inputTile.relative_path}`);
-                        }
                         this_status = existingOutput.this_stage_status;
                     }
                 } else {
-                    if (inputTile.lat_z === 1954 && inputTile.lat_y === 121) {
-                        debug(`maintaining does not exist ${inputTile.relative_path}`);
-                    }
                 }
             } else {
-                if (inputTile.lat_z === 1954 && inputTile.lat_y === 121) {
-                    debug(`2 maintaining ${existingOutput.this_stage_status} for ${inputTile.relative_path}`);
-                }
                 this_status = existingOutput.this_stage_status;
             }
 
-            if (inputTile.lat_z === 1954 && inputTile.lat_y === 121) {
-                debug(`settled on ${this_status} for ${inputTile.relative_path}`);
-            }
-
-            if (existingOutput.prev_stage_status !== prev_status/* || existingOutput.this_stage_status !== this_status*/) {
+            if (existingOutput.prev_stage_status !== prev_status || existingOutput.this_stage_status !== this_status) {
                 muxUpdateLists.toUpdate.push({
                     relative_path: inputTile.relative_path,
                     prev_stage_status: prev_status,
