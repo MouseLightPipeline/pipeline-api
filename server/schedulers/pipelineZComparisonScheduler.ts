@@ -198,6 +198,9 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
                         this_status = TilePipelineStatus.Incomplete;
                     } else {
                         // Otherwise no change.
+                        if (inputTile.lat_z === 1954 && inputTile.lat_y === 121) {
+                            debug(`1 maintaining ${existingOutput.this_stage_status} for ${inputTile.relative_path}`);
+                        }
                         this_status = existingOutput.this_stage_status;
                     }
                 } else {
@@ -206,6 +209,9 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
                     }
                 }
             } else {
+                if (inputTile.lat_z === 1954 && inputTile.lat_y === 121) {
+                    debug(`2 maintaining ${existingOutput.this_stage_status} for ${inputTile.relative_path}`);
+                }
                 this_status = existingOutput.this_stage_status;
             }
 
@@ -213,7 +219,7 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
                 debug(`settled on ${this_status} for ${inputTile.relative_path}`);
             }
 
-            if (existingOutput.prev_stage_status !== prev_status) {
+            if (existingOutput.prev_stage_status !== prev_status/* || existingOutput.this_stage_status !== this_status*/) {
                 muxUpdateLists.toUpdate.push({
                     relative_path: inputTile.relative_path,
                     prev_stage_status: prev_status,
