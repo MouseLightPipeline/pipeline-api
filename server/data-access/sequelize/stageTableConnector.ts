@@ -4,8 +4,7 @@ const debug = require("debug")("pipeline:coordinator-api:stage-database-connecto
 
 import {IPipelineStage} from "../../data-model/sequelize/pipelineStage";
 import {IProject} from "../../data-model/sequelize/project";
-import {TilePipelineStatus} from "../../schedulers/pipelineScheduler";
-import * as path from "path";
+import {DefaultPipelineIdKey, TilePipelineStatus} from "../../schedulers/pipelineScheduler";
 
 function generatePipelineCustomTableName(pipelineStageId: string, tableName) {
     return pipelineStageId + "_" + tableName;
@@ -31,7 +30,21 @@ export interface IPipelineTile {
     memory_high?: number;
     created_at?: Date;
     updated_at?: Date;
-    deleted_at?: Date;
+}
+
+export interface IInProcessTile {
+    relative_path: string;
+    worker_id: string;
+    worker_last_seen: Date;
+    task_execution_id: string;
+    created_at: Date;
+    updated_at: Date;
+}
+
+export interface IToProcessTile {
+    relative_path: string;
+    created_at: Date;
+    updated_at: Date;
 }
 
 const CreateChunkSize = 100;
@@ -44,8 +57,8 @@ export class StageTableConnector {
     private _tableBaseName: string;
 
     private _tileTable: Model<IPipelineTile, IPipelineTile> = null;
-    private _toProcessTable: Model<IPipelineTile, IPipelineTile> = null;
-    private _inProcessTable: Model<IPipelineTile, IPipelineTile> = null;
+    private _toProcessTable: Model<IToProcessTile, IToProcessTile> = null;
+    private _inProcessTable: Model<IInProcessTile, IInProcessTile> = null;
 
     public constructor(connection: Sequelize, stage: IProject | IPipelineStage) {
         this._connection = connection;
@@ -68,19 +81,71 @@ export class StageTableConnector {
         return this._tileTable.findAll({where: {"lat_z": zIndex}});
     }
 
-    public async batchCreate(table: any, inputToInsert: any[]) {
-        if (!inputToInsert || inputToInsert.length === 0) {
+    public async loadInProcess(): Promise<IInProcessTile[]> {
+        return this._inProcessTable.findAll();
+    }
+
+    public async loadToProcess(limit: number = null): Promise<IToProcessTile[]> {
+        return this._toProcessTable.findAll({order: [["relative_path", "ASC"]], limit: limit});
+    }
+
+    public async loadUnscheduled(): Promise<IPipelineTile[]> {
+        return this._tileTable.findAll({
+            where: {
+                prev_stage_status: TilePipelineStatus.Complete,
+                this_stage_status: TilePipelineStatus.Incomplete
+            }
+        });
+    }
+
+    public async countInProcess(): Promise<number> {
+        return this._inProcessTable.count();
+    }
+
+    public async countToProcess(): Promise<number> {
+        return this._toProcessTable.count();
+    }
+
+    public async updateTiles(objArray: IPipelineTile[]) {
+        if (!objArray || objArray.length === 0) {
             return;
         }
 
-        debug(`batch create ${inputToInsert.length} items`);
+        debug(`bulk update ${objArray.length} items`);
 
         // Operate on a shallow copy since splice is going to be destructive.
-        const toInsert = inputToInsert.slice();
+        const toUpdate = objArray.slice();
+
+        while (toUpdate.length > 0) {
+            await this.bulkUpdate(toUpdate.splice(0, UpdateChunkSize));
+        }
+    }
+
+    public async insertToProcess(toProcess: IToProcessTile[]) {
+        return this.bulkCreate(this._toProcessTable, toProcess);
+    }
+
+    private async bulkCreate(table: any, objArray: any[]) {
+        if (!objArray || objArray.length === 0) {
+            return;
+        }
+
+        debug(`bulk create ${objArray.length} items`);
+
+        // Operate on a shallow copy since splice is going to be destructive.
+        const toInsert = objArray.slice();
 
         while (toInsert.length > 0) {
             await table.bulkCreate(toInsert.splice(0, CreateChunkSize));
         }
+    }
+
+    private async bulkUpdate(objArray: any[]) {
+        return this._connection.transaction(t => {
+            return Promise.all(objArray.map(obj => {
+                obj.save({transaction: t});
+            }));
+        });
     }
 
     private defineTileTable(): any {

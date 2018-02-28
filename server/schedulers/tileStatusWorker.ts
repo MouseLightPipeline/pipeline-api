@@ -73,9 +73,9 @@ export class TileStatusWorker extends PipelineScheduler {
             return false;
         }
 
-        const databaseConnector = await connectorForProject(await this.Project());
+        const databaseConnector = await connectorForProject(this._project);
 
-        this._stageConnector = await databaseConnector.connectorForStage(this._project);
+        this._outputStageConnector = await databaseConnector.connectorForStage(this._project);
 
         return true;
     }

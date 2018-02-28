@@ -18,8 +18,11 @@ import {IProject} from "../data-model/sequelize/project";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 import {CompletionStatusCode, ExecutionStatusCode} from "../data-model/sequelize/taskExecution";
-import {connectorForProject, ProjectDatabaseConnector} from "../data-access/sequelize/projectDatabaseConnector";
-import {StageTableConnector} from "../data-access/sequelize/stageTableConnector";
+import {connectorForProject} from "../data-access/sequelize/projectDatabaseConnector";
+import {
+    IInProcessTile, IPipelineTile, IToProcessTile,
+    StageTableConnector
+} from "../data-access/sequelize/stageTableConnector";
 
 const MAX_KNOWN_INPUT_SKIP_COUNT = 10;
 
@@ -41,43 +44,6 @@ export enum TilePipelineStatus {
     Canceled = 6
 }
 
-export interface IPipelineTile {
-    relative_path?: string;
-    tile_name?: string;
-    prev_stage_status?: TilePipelineStatus;
-    this_stage_status?: TilePipelineStatus;
-    // x?: number;
-    // y?: number;
-    // z?: number;
-    lat_x?: number;
-    lat_y?: number;
-    lat_z?: number;
-    // cut_offset?: number;
-    // z_offset?: number;
-    // delta_z?: number;
-    duration?: number;
-    cpu_high?: number;
-    memory_high?: number;
-    created_at?: Date;
-    updated_at?: Date;
-    deleted_at?: Date;
-}
-
-export interface IInProcessTile {
-    relative_path: string;
-    worker_id: string;
-    worker_last_seen: Date;
-    task_execution_id: string;
-    created_at: Date;
-    updated_at: Date;
-}
-
-export interface IToProcessTile {
-    relative_path: string;
-    created_at: Date;
-
-    updated_at: Date;
-}
 
 export interface IMuxTileLists {
     toInsert: IPipelineTile[],
@@ -88,7 +54,8 @@ export interface IMuxTileLists {
 export abstract class PipelineScheduler implements ISchedulerInterface {
     protected _pipelineStage: IPipelineStage;
 
-    protected _stageConnector: StageTableConnector;
+    protected _inputStageConnector: StageTableConnector;
+    protected _outputStageConnector: StageTableConnector;
 
     private _isCancelRequested: boolean;
     private _isProcessingRequested: boolean;
@@ -121,6 +88,20 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         return this._isProcessingRequested;
     }
 
+    public get OutputPath(): string {
+        return this._pipelineStage.dst_path;
+    }
+
+    protected get StageId() {
+        return this._pipelineStage.id;
+    }
+
+    public async Project(): Promise<IProject> {
+        let projectManager = PersistentStorageManager.Instance().Projects;
+
+        return projectManager.findById(this._pipelineStage.project_id);
+    }
+
     public async run() {
         if (this._isInitialized) {
             return;
@@ -131,7 +112,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
     public async loadTileThumbnailPath(x: number, y: number, z: number): Promise<string> {
         try {
-            const tile = await this._stageConnector.loadTileThumbnailPath(x, y, z);
+            const tile = await this._outputStageConnector.loadTileThumbnailPath(x, y, z);
 
             if (tile) {
                 return path.join(this.OutputPath, tile.relative_path);
@@ -145,7 +126,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
     public async loadTileStatusForPlane(zIndex: number) {
 
-        let tiles = await this._stageConnector.loadTileStatusForPlane(zIndex);
+        let tiles = await this._outputStageConnector.loadTileStatusForPlane(zIndex);
 
         tiles = tiles.map(tile => {
             tile["stage_id"] = this.StageId;
@@ -156,64 +137,17 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         return tiles;
     }
 
-    public async Project(): Promise<IProject> {
-        let projectManager = PersistentStorageManager.Instance().Projects;
-
-        return projectManager.findById(this._pipelineStage.project_id);
-    }
-
-    public get OutputPath(): string {
-        return this._pipelineStage.dst_path;
-    }
-
-    protected get StageId() {
-        return this._pipelineStage.id;
-    }
-
-    /*
-    protected get inputTable() {
-        return this._inputKnexConnector(this._inputTableName);
-    }
-
-    protected get outputTable() {
-        return this._outputKnexConnector(this._outputTableName);
-    }
-
-    protected get inProcessTable() {
-        return this._outputKnexConnector(this._inProcessTableName);
-    }
-
-    protected get toProcessTable() {
-        return this._outputKnexConnector(this._toProcessTableName);
-    }
-    */
-
-    protected async loadInProcess(): Promise<IInProcessTile[]> {
-        return await this.inProcessTable.select();
-    }
-
-    protected async loadToProcess(limit: number = 0): Promise<IToProcessTile[]> {
-        if (limit > 0) {
-            return await this.toProcessTable.select().orderBy("relative_path", "asc").limit(limit);
-        } else {
-            return await this.toProcessTable.select().orderBy("relative_path", "asc");
-        }
-    }
-
     protected async updateToProcessQueue() {
         debug("looking for new to-process");
 
         let toProcessInsert: IToProcessTile[] = [];
 
-        const unscheduled: IPipelineTile[] = await this.outputTable.where({
-            prev_stage_status: TilePipelineStatus.Complete,
-            this_stage_status: TilePipelineStatus.Incomplete,
-        }).select();
+        const unscheduled = await this._outputStageConnector.loadUnscheduled();
 
         debug(`found ${unscheduled.length} unscheduled`);
 
         if (unscheduled.length > 0) {
-            let waitingToProcess = await this.loadToProcess();
+            let waitingToProcess = await this._outputStageConnector.loadToProcess();
 
             let projects = PersistentStorageManager.Instance().Projects;
 
@@ -274,34 +208,20 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                 return obj
             });
 
-            if (alreadyInToProcessTable.length > 0) {
-                await this.batchUpdate(this._outputKnexConnector, this._outputTableName, alreadyInToProcessTable);
-            }
-
             debug(`transitioning ${toSchedule.length} tiles to to-process queue`);
 
-            await this.batchInsert(this._outputKnexConnector, this._toProcessTableName, toProcessInsert);
+            await this._outputStageConnector.insertToProcess(toProcessInsert);
+            // await this.batchInsert(this._outputKnexConnector, this._toProcessTableName, toProcessInsert);
 
-            await this.batchUpdate(this._outputKnexConnector, this._outputTableName, toSchedule);
+            await this._outputStageConnector.updateTiles(toSchedule.concat(alreadyInToProcessTable));
+            // await this.batchUpdate(this._outputKnexConnector, this._outputTableName, toSchedule.concat(alreadyInToProcessTable));
         }
 
         return toProcessInsert;
     }
 
-    protected async countInProcess(): Promise<number> {
-        let rowsCount = await this._outputKnexConnector(this._inProcessTableName).count(DefaultPipelineIdKey);
-
-        return rowsCount[0][`count("${DefaultPipelineIdKey}")`];
-    }
-
-    protected async countToProcess(): Promise<number> {
-        let rowsCount = await this._outputKnexConnector(this._toProcessTableName).count(DefaultPipelineIdKey);
-
-        return rowsCount[0][`count("${DefaultPipelineIdKey}")`];
-    }
-
     protected async updateInProcessStatus() {
-        let inProcess = await this.loadInProcess();
+        let inProcess = await this._outputStageConnector.loadInProcess();
 
         let workerManager = new PipelineServerContext();
 
@@ -655,9 +575,17 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             return false;
         }
 
-        const databaseConnector = await connectorForProject(await this.Project());
+        const project = await this.Project();
 
-        this._stageConnector = await databaseConnector.connectorForStage(this._pipelineStage);
+        const databaseConnector = await connectorForProject(project);
+
+        this._outputStageConnector = await databaseConnector.connectorForStage(this._pipelineStage);
+
+        if (this._pipelineStage.previous_stage_id === null) {
+            this._inputStageConnector = await databaseConnector.connectorForStage(project);
+        } else {
+            this._inputStageConnector = await databaseConnector.connectorForStage(this._pipelineStage);
+        }
 
         return true;
     }
