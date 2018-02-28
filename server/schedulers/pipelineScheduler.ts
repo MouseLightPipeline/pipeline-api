@@ -24,6 +24,7 @@ import {IProject} from "../data-model/sequelize/project";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 import {CompletionStatusCode, ExecutionStatusCode} from "../data-model/sequelize/taskExecution";
+import {connectorForProject, ProjectDatabaseConnector} from "../data-access/sequelize/projectDatabaseConnector";
 
 
 const perfConf = performanceConfiguration();
@@ -95,6 +96,7 @@ export interface IMuxTileLists {
 export abstract class PipelineScheduler implements ISchedulerInterface {
     protected _pipelineStage: IPipelineStage;
 
+    /*
     protected _inputKnexConnector: any;
     protected _inputTableName: string;
 
@@ -103,6 +105,9 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
     protected _inProcessTableName: string;
     protected _toProcessTableName: string;
+    */
+
+    protected _databaseConnector: ProjectDatabaseConnector;
 
     private _isCancelRequested: boolean;
     private _isProcessingRequested: boolean;
@@ -181,6 +186,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         return this._pipelineStage.id;
     }
 
+    /*
     protected get inputTable() {
         return this._inputKnexConnector(this._inputTableName);
     }
@@ -196,6 +202,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
     protected get toProcessTable() {
         return this._outputKnexConnector(this._toProcessTableName);
     }
+    */
 
     protected async loadInProcess(): Promise<IInProcessTile[]> {
         return await this.inProcessTable.select();
@@ -664,6 +671,13 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             return false;
         }
 
+        let projectManager = PersistentStorageManager.Instance().Projects;
+
+        let project = await projectManager.findById(this._pipelineStage.project_id);
+
+        this._databaseConnector = await connectorForProject(project);
+
+        /*
         let srcPath = "";
 
         if (this._pipelineStage.previous_stage_id) {
@@ -749,7 +763,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                 debug(err);
             }
 
-        } */);
+        } *//*);
 
         this._toProcessTableName = generatePipelineStageToProcessTableName(this._pipelineStage.id);
 
@@ -757,6 +771,8 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             table.string(DefaultPipelineIdKey).primary().unique();
             table.timestamps();
         });
+
+        */
 
         return true;
     }
