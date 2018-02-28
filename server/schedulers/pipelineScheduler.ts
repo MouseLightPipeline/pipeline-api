@@ -10,12 +10,6 @@ import {
     updatePipelineStageCounts
 } from "../data-model/sequelize/pipelineStagePerformance";
 import {ISchedulerInterface} from "./schedulerHub";
-import performanceConfiguration from "../options/performanceOptions"
-import {
-    verifyTable, generatePipelineStageToProcessTableName,
-    generatePipelineStageInProcessTableName, generatePipelineStateDatabaseName, connectorForFile,
-    generatePipelineStageTableName, generateProjectRootTableName
-} from "../data-access/knexPiplineStageConnection";
 import {PipelineWorkerClient} from "../graphql/client/pipelineWorkerClient";
 import * as Knex from "knex";
 import {PipelineServerContext} from "../graphql/pipelineServerContext";
@@ -25,9 +19,7 @@ import {PersistentStorageManager} from "../data-access/sequelize/databaseConnect
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 import {CompletionStatusCode, ExecutionStatusCode} from "../data-model/sequelize/taskExecution";
 import {connectorForProject, ProjectDatabaseConnector} from "../data-access/sequelize/projectDatabaseConnector";
-
-
-const perfConf = performanceConfiguration();
+import {StageTableConnector} from "../data-access/sequelize/stageTableConnector";
 
 const MAX_KNOWN_INPUT_SKIP_COUNT = 10;
 
@@ -96,18 +88,7 @@ export interface IMuxTileLists {
 export abstract class PipelineScheduler implements ISchedulerInterface {
     protected _pipelineStage: IPipelineStage;
 
-    /*
-    protected _inputKnexConnector: any;
-    protected _inputTableName: string;
-
-    protected _outputKnexConnector: any;
-    protected _outputTableName: string;
-
-    protected _inProcessTableName: string;
-    protected _toProcessTableName: string;
-    */
-
-    protected _databaseConnector: ProjectDatabaseConnector;
+    protected _stageConnector: StageTableConnector;
 
     private _isCancelRequested: boolean;
     private _isProcessingRequested: boolean;
@@ -150,10 +131,10 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
     public async loadTileThumbnailPath(x: number, y: number, z: number): Promise<string> {
         try {
-            const tiles = await this.outputTable.where({"lat_x": x, "lat_y": y, "lat_z": z}).select("relative_path");
+            const tile = await this._stageConnector.loadTileThumbnailPath(x, y, z);
 
-            if (tiles.length > 0) {
-                return path.join(this.OutputPath, tiles[0].relative_path);
+            if (tile) {
+                return path.join(this.OutputPath, tile.relative_path);
             }
         } catch (err) {
             console.log(err);
@@ -163,14 +144,11 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
     }
 
     public async loadTileStatusForPlane(zIndex: number) {
-        if (!this._outputKnexConnector) {
-            return [];
-        }
 
-        let tiles = await this.outputTable.where("lat_z", zIndex).select("relative_path", "this_stage_status", "lat_x", "lat_y");
+        let tiles = await this._stageConnector.loadTileStatusForPlane(zIndex);
 
         tiles = tiles.map(tile => {
-            tile["stage_id"] = this.stageId;
+            tile["stage_id"] = this.StageId;
             tile["depth"] = this._pipelineStage ? this._pipelineStage.depth : 0;
             return tile;
         });
@@ -178,11 +156,17 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         return tiles;
     }
 
+    public async Project(): Promise<IProject> {
+        let projectManager = PersistentStorageManager.Instance().Projects;
+
+        return projectManager.findById(this._pipelineStage.project_id);
+    }
+
     public get OutputPath(): string {
         return this._pipelineStage.dst_path;
     }
 
-    protected get stageId() {
+    protected get StageId() {
         return this._pipelineStage.id;
     }
 
@@ -671,108 +655,9 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             return false;
         }
 
-        let projectManager = PersistentStorageManager.Instance().Projects;
+        const databaseConnector = await connectorForProject(await this.Project());
 
-        let project = await projectManager.findById(this._pipelineStage.project_id);
-
-        this._databaseConnector = await connectorForProject(project);
-
-        /*
-        let srcPath = "";
-
-        if (this._pipelineStage.previous_stage_id) {
-            let pipelineManager = PersistentStorageManager.Instance().PipelineStages;
-
-            let previousPipeline = await pipelineManager.findById(this._pipelineStage.previous_stage_id);
-
-            this._inputTableName = generatePipelineStageTableName(this._pipelineStage.previous_stage_id);
-
-            srcPath = previousPipeline.dst_path;
-        } else {
-            let projectManager = PersistentStorageManager.Instance().Projects;
-
-            let project = await projectManager.findById(this._pipelineStage.project_id);
-
-            this._inputTableName = generateProjectRootTableName(project.id);
-
-            srcPath = project.root_path;
-        }
-
-        try {
-            fse.ensureDirSync(srcPath);
-            fse.chmodSync(srcPath, 0o775);
-        } catch (err) {
-            if (err && err.code === "EACCES") {
-                debug("pipeline source directory permission denied");
-            } else {
-                debug(err);
-            }
-            return false;
-        }
-
-        try {
-            fse.ensureDirSync(this._pipelineStage.dst_path);
-            fse.chmodSync(srcPath, 0o775);
-        } catch (err) {
-            if (err && err.code === "EACCES") {
-                debug("pipeline output directory permission denied");
-            } else {
-                debug(err);
-            }
-            return false;
-        }
-
-        this._inputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(srcPath), this._inputTableName);
-
-        if (!this._inputKnexConnector) {
-            return false;
-        }
-
-        this._outputTableName = generatePipelineStageTableName(this._pipelineStage.id);
-
-        this._outputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(this._pipelineStage.dst_path), this._outputTableName);
-
-        if (!this._outputKnexConnector) {
-            return false;
-        }
-
-        this._inProcessTableName = generatePipelineStageInProcessTableName(this._pipelineStage.id);
-
-        await verifyTable(this._outputKnexConnector, this._inProcessTableName, (table) => {
-            table.string(DefaultPipelineIdKey).primary().unique();
-            table.string("tile_name");
-            table.uuid("worker_id");
-            table.timestamp("worker_last_seen");
-            table.uuid("task_execution_id");
-            // table.string("resolved_log_path");
-            // table.string("log_prefix");
-            table.timestamps();
-        }  /*, async (schema) => {
-
-            try {
-                const hasColumn = await schema.hasColumn(this._inProcessTableName, "resolved_log_path");
-                debug("checking for log columns");
-                if (!hasColumn) {
-                    debug("not found - adding");
-                    await schema.table(this._inProcessTableName, (table) => {
-                        table.string("resolved_log_path");
-                        table.string("log_prefix");
-                    })
-                }
-            } catch (err) {
-                debug(err);
-            }
-
-        } *//*);
-
-        this._toProcessTableName = generatePipelineStageToProcessTableName(this._pipelineStage.id);
-
-        await verifyTable(this._outputKnexConnector, this._toProcessTableName, (table) => {
-            table.string(DefaultPipelineIdKey).primary().unique();
-            table.timestamps();
-        });
-
-        */
+        this._stageConnector = await databaseConnector.connectorForStage(this._pipelineStage);
 
         return true;
     }
@@ -849,21 +734,6 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
     /*
      * Extensions to knex.js.  Don't particularly belong here, but convenient until properly mixed in.
      */
-
-    protected async batchInsert(connector: any, tableName: string, inputToInsert: any[]) {
-        if (!inputToInsert || inputToInsert.length === 0) {
-            return;
-        }
-
-        debug(`batch insert ${inputToInsert.length} items`);
-
-        // Operate on a shallow copy since splice is going to be destructive.
-        const toInsert = inputToInsert.slice();
-
-        while (toInsert.length > 0) {
-            await connector.batchInsert(tableName, toInsert.splice(0, perfConf.regenTileStatusSqliteChunkSize));
-        }
-    }
 
     protected async batchUpdate(connector: any, tableName: string, inputToUpdate: any[], idKey: string = DefaultPipelineIdKey) {
         if (!inputToUpdate || inputToUpdate.length === 0) {

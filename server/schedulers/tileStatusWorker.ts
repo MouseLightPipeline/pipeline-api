@@ -20,6 +20,7 @@ import {
     PipelineScheduler, DefaultPipelineIdKey, TilePipelineStatus, IPipelineTile, IMuxTileLists
 } from "./pipelineScheduler";
 import {IProject} from "../data-model/sequelize/project";
+import {connectorForProject} from "../data-access/sequelize/projectDatabaseConnector";
 
 const perfConf = performanceConfiguration();
 
@@ -54,42 +55,29 @@ export class TileStatusWorker extends PipelineScheduler {
         this.IsProcessingRequested = true;
     }
 
+    public async Project(): Promise<IProject> {
+        return this._project;
+    }
+
     public get OutputPath(): string {
         return this._project.root_path;
     }
 
-    protected get stageId() {
+    protected get StageId() {
         return this._project.id;
     }
 
     protected async createTables() {
         if (this.IsExitRequested) {
             debug("cancel request - early return");
-            return;
-        }
-
-        try {
-            fse.ensureDirSync(this._project.root_path);
-            fse.chmodSync(this._project.root_path, 0o775);
-        } catch (err) {
-            // Most likely drive/share is not present or failed permissions.
-            if (err && err.code === "EACCES") {
-                debug("tile status output directory permission denied");
-            } else {
-                debug(err);
-            }
             return false;
         }
 
-        this._inputTableName = null;
+        const databaseConnector = await connectorForProject(await this.Project());
 
-        this._inputKnexConnector = null;
+        this._stageConnector = await databaseConnector.connectorForStage(this._project);
 
-        this._outputTableName = generateProjectRootTableName(this._project.id);
-
-        this._outputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(this._project.root_path), this._outputTableName);
-
-        return !!this._outputKnexConnector;
+        return true;
     }
 
     protected async performWork() {
