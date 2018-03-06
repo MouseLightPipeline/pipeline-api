@@ -53,15 +53,12 @@ export interface IPipelineTile {
     tile_name?: string;
     prev_stage_status?: TilePipelineStatus;
     this_stage_status?: TilePipelineStatus;
-    // x?: number;
-    // y?: number;
-    // z?: number;
     lat_x?: number;
     lat_y?: number;
     lat_z?: number;
-    // cut_offset?: number;
-    // z_offset?: number;
-    // delta_z?: number;
+    step_x?: number;
+    step_y?: number;
+    step_z?: number;
     duration?: number;
     cpu_high?: number;
     memory_high?: number;
@@ -508,7 +505,6 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                             worker_id: worker.id,
                             worker_last_seen: now,
                             task_execution_id: taskExecution.id,
-                            // resolved_log_path: taskExecution.resolved_log_path,
                             created_at: now,
                             updated_at: now
                         });
