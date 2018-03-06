@@ -14,30 +14,51 @@ const lexer = moo.compile({
 
 const isLogging = true;
 
+const LITERAL = 0;
+const PARAMETER = 1;
+
 const log_inputs = (d, index) => {
-    if (!isLogging || index !== 2) return;
+    if (!isLogging) return;
 
     console.log(index);
     console.log(d);
+}
+
+const combineElements = (index) => {
+    return (d) => {
+        log_inputs(d, index);
+
+        if (d[1].length === 0) {
+            return [d[0].value];
+        }
+
+        return [d[0].value + " " + d[1].map(e => e[1].value).join(" ")];
+    }
+}
+
+const combineEntries = (index) => {
+    return (d) => {
+        log_inputs(d, index);
+
+        if (d[1].length === 0) {
+            return [d[0]];
+        }
+
+        return [d[0]].concat(d[1].map(e => e[1]));
+    }
 }
 %}
 
 # Pass your lexer object using the @lexer option:
 @lexer lexer
 
-main ->     row {% (d) => {log_inputs(d, 6); return d[0];} %}
+arg_list -> arg (_ arg):*  {% combineEntries(1) %}
 
-row         -> field {% (d) => {log_inputs(d, 4); return d[0];} %}
-             | row _ field:+      {% (d) => {log_inputs(d, 5); return d[0].concat(...d[2]);} %}
+arg -> parameter_arg {% (d) => { return {value: d[0][0], type: PARAMETER}} %}
+        | literal_arg {% (d) => { return {value: d[0][0], type: LITERAL}} %}
 
-field ->    simple {% (d) => {log_inputs(d, 1); return d;} %}
-            | complex {% (d) => {log_inputs(d, 2); return d[0];} %}
-            | object {% (d) => {log_inputs(d, 3); return d[0];} %}
+parameter_arg ->  "{" literal_arg "}" {% (d) => {return d[1];} %}
 
-object ->   _ "{" _ "}" _ {% (d) => {} %}
-            | _ "{" simple "}" _ {% (d) => {return [d[2]];} %}
-            | _ "{" complex "}" _ {% (d) => {return [d[2]];} %}
+literal_arg -> %word (%esc %word):* _  {% combineElements(0) %}
 
-complex -> simple %esc simple {% (d) => {log_inputs(d, 0); return  d[0] + " " + d[2];} %}
-
-simple -> %word {% (d) => {return d[0].value;} %}
+# simple -> %word {% (d) => {return d[0].value;} %}
