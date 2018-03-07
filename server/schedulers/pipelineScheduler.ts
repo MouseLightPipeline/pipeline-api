@@ -10,12 +10,6 @@ import {
     updatePipelineStageCounts
 } from "../data-model/sequelize/pipelineStagePerformance";
 import {ISchedulerInterface} from "./schedulerHub";
-import performanceConfiguration from "../options/performanceOptions"
-import {
-    verifyTable, generatePipelineStageToProcessTableName,
-    generatePipelineStageInProcessTableName, generatePipelineStateDatabaseName, connectorForFile,
-    generatePipelineStageTableName, generateProjectRootTableName
-} from "../data-access/knexPiplineStageConnection";
 import {PipelineWorkerClient} from "../graphql/client/pipelineWorkerClient";
 import * as Knex from "knex";
 import {PipelineServerContext} from "../graphql/pipelineServerContext";
@@ -24,9 +18,11 @@ import {IProject} from "../data-model/sequelize/project";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 import {CompletionStatusCode, ExecutionStatusCode} from "../data-model/sequelize/taskExecution";
-
-
-const perfConf = performanceConfiguration();
+import {connectorForProject} from "../data-access/sequelize/projectDatabaseConnector";
+import {
+    IInProcessTile, IPipelineTile, IToProcessTile,
+    StageTableConnector
+} from "../data-access/sequelize/stageTableConnector";
 
 const MAX_KNOWN_INPUT_SKIP_COUNT = 10;
 
@@ -48,40 +44,6 @@ export enum TilePipelineStatus {
     Canceled = 6
 }
 
-export interface IPipelineTile {
-    relative_path?: string;
-    tile_name?: string;
-    prev_stage_status?: TilePipelineStatus;
-    this_stage_status?: TilePipelineStatus;
-    lat_x?: number;
-    lat_y?: number;
-    lat_z?: number;
-    step_x?: number;
-    step_y?: number;
-    step_z?: number;
-    duration?: number;
-    cpu_high?: number;
-    memory_high?: number;
-    created_at?: Date;
-    updated_at?: Date;
-    deleted_at?: Date;
-}
-
-export interface IInProcessTile {
-    relative_path: string;
-    worker_id: string;
-    worker_last_seen: Date;
-    task_execution_id: string;
-    created_at: Date;
-    updated_at: Date;
-}
-
-export interface IToProcessTile {
-    relative_path: string;
-    created_at: Date;
-
-    updated_at: Date;
-}
 
 export interface IMuxTileLists {
     toInsert: IPipelineTile[],
@@ -92,14 +54,8 @@ export interface IMuxTileLists {
 export abstract class PipelineScheduler implements ISchedulerInterface {
     protected _pipelineStage: IPipelineStage;
 
-    protected _inputKnexConnector: any;
-    protected _inputTableName: string;
-
-    protected _outputKnexConnector: any;
-    protected _outputTableName: string;
-
-    protected _inProcessTableName: string;
-    protected _toProcessTableName: string;
+    protected _inputStageConnector: StageTableConnector;
+    protected _outputStageConnector: StageTableConnector;
 
     private _isCancelRequested: boolean;
     private _isProcessingRequested: boolean;
@@ -132,6 +88,20 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         return this._isProcessingRequested;
     }
 
+    public get OutputPath(): string {
+        return this._pipelineStage.dst_path;
+    }
+
+    protected get StageId() {
+        return this._pipelineStage.id;
+    }
+
+    public async Project(): Promise<IProject> {
+        let projectManager = PersistentStorageManager.Instance().Projects;
+
+        return projectManager.findById(this._pipelineStage.project_id);
+    }
+
     public async run() {
         if (this._isInitialized) {
             return;
@@ -142,10 +112,10 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
 
     public async loadTileThumbnailPath(x: number, y: number, z: number): Promise<string> {
         try {
-            const tiles = await this.outputTable.where({"lat_x": x, "lat_y": y, "lat_z": z}).select("relative_path");
+            const tile = await this._outputStageConnector.loadTileThumbnailPath(x, y, z);
 
-            if (tiles.length > 0) {
-                return path.join(this.OutputPath, tiles[0].relative_path);
+            if (tile) {
+                return path.join(this.OutputPath, tile.relative_path);
             }
         } catch (err) {
             console.log(err);
@@ -155,14 +125,11 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
     }
 
     public async loadTileStatusForPlane(zIndex: number) {
-        if (!this._outputKnexConnector) {
-            return [];
-        }
 
-        let tiles = await this.outputTable.where("lat_z", zIndex).select("relative_path", "this_stage_status", "lat_x", "lat_y");
+        let tiles = await this._outputStageConnector.loadTileStatusForPlane(zIndex);
 
         tiles = tiles.map(tile => {
-            tile["stage_id"] = this.stageId;
+            tile["stage_id"] = this.StageId;
             tile["depth"] = this._pipelineStage ? this._pipelineStage.depth : 0;
             return tile;
         });
@@ -170,56 +137,17 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
         return tiles;
     }
 
-    public get OutputPath(): string {
-        return this._pipelineStage.dst_path;
-    }
-
-    protected get stageId() {
-        return this._pipelineStage.id;
-    }
-
-    protected get inputTable() {
-        return this._inputKnexConnector(this._inputTableName);
-    }
-
-    protected get outputTable() {
-        return this._outputKnexConnector(this._outputTableName);
-    }
-
-    protected get inProcessTable() {
-        return this._outputKnexConnector(this._inProcessTableName);
-    }
-
-    protected get toProcessTable() {
-        return this._outputKnexConnector(this._toProcessTableName);
-    }
-
-    protected async loadInProcess(): Promise<IInProcessTile[]> {
-        return await this.inProcessTable.select();
-    }
-
-    protected async loadToProcess(limit: number = 0): Promise<IToProcessTile[]> {
-        if (limit > 0) {
-            return await this.toProcessTable.select().orderBy("relative_path", "asc").limit(limit);
-        } else {
-            return await this.toProcessTable.select().orderBy("relative_path", "asc");
-        }
-    }
-
     protected async updateToProcessQueue() {
         debug("looking for new to-process");
 
         let toProcessInsert: IToProcessTile[] = [];
 
-        const unscheduled: IPipelineTile[] = await this.outputTable.where({
-            prev_stage_status: TilePipelineStatus.Complete,
-            this_stage_status: TilePipelineStatus.Incomplete,
-        }).select();
+        const unscheduled = await this._outputStageConnector.loadUnscheduled();
 
         debug(`found ${unscheduled.length} unscheduled`);
 
         if (unscheduled.length > 0) {
-            let waitingToProcess = await this.loadToProcess();
+            let waitingToProcess = await this._outputStageConnector.loadToProcess();
 
             let projects = PersistentStorageManager.Instance().Projects;
 
@@ -280,34 +208,20 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                 return obj
             });
 
-            if (alreadyInToProcessTable.length > 0) {
-                await this.batchUpdate(this._outputKnexConnector, this._outputTableName, alreadyInToProcessTable);
-            }
-
             debug(`transitioning ${toSchedule.length} tiles to to-process queue`);
 
-            await this.batchInsert(this._outputKnexConnector, this._toProcessTableName, toProcessInsert);
+            await this._outputStageConnector.insertToProcess(toProcessInsert);
+            // await this.batchInsert(this._outputKnexConnector, this._toProcessTableName, toProcessInsert);
 
-            await this.batchUpdate(this._outputKnexConnector, this._outputTableName, toSchedule);
+            await this._outputStageConnector.updateTiles(toSchedule.concat(alreadyInToProcessTable));
+            // await this.batchUpdate(this._outputKnexConnector, this._outputTableName, toSchedule.concat(alreadyInToProcessTable));
         }
 
         return toProcessInsert;
     }
 
-    protected async countInProcess(): Promise<number> {
-        let rowsCount = await this._outputKnexConnector(this._inProcessTableName).count(DefaultPipelineIdKey);
-
-        return rowsCount[0][`count("${DefaultPipelineIdKey}")`];
-    }
-
-    protected async countToProcess(): Promise<number> {
-        let rowsCount = await this._outputKnexConnector(this._toProcessTableName).count(DefaultPipelineIdKey);
-
-        return rowsCount[0][`count("${DefaultPipelineIdKey}")`];
-    }
-
     protected async updateInProcessStatus() {
-        let inProcess = await this.loadInProcess();
+        let inProcess = await this._outputStageConnector.loadInProcess();
 
         let workerManager = new PipelineServerContext();
 
@@ -505,6 +419,7 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
                             worker_id: worker.id,
                             worker_last_seen: now,
                             task_execution_id: taskExecution.id,
+                            // resolved_log_path: taskExecution.resolved_log_path,
                             created_at: now,
                             updated_at: now
                         });
@@ -660,99 +575,17 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
             return false;
         }
 
-        let srcPath = "";
+        const project = await this.Project();
 
-        if (this._pipelineStage.previous_stage_id) {
-            let pipelineManager = PersistentStorageManager.Instance().PipelineStages;
+        const databaseConnector = await connectorForProject(project);
 
-            let previousPipeline = await pipelineManager.findById(this._pipelineStage.previous_stage_id);
+        this._outputStageConnector = await databaseConnector.connectorForStage(this._pipelineStage);
 
-            this._inputTableName = generatePipelineStageTableName(this._pipelineStage.previous_stage_id);
-
-            srcPath = previousPipeline.dst_path;
+        if (this._pipelineStage.previous_stage_id === null) {
+            this._inputStageConnector = await databaseConnector.connectorForStage(project);
         } else {
-            let projectManager = PersistentStorageManager.Instance().Projects;
-
-            let project = await projectManager.findById(this._pipelineStage.project_id);
-
-            this._inputTableName = generateProjectRootTableName(project.id);
-
-            srcPath = project.root_path;
+            this._inputStageConnector = await databaseConnector.connectorForStage(this._pipelineStage);
         }
-
-        try {
-            fse.ensureDirSync(srcPath);
-            fse.chmodSync(srcPath, 0o775);
-        } catch (err) {
-            if (err && err.code === "EACCES") {
-                debug("pipeline source directory permission denied");
-            } else {
-                debug(err);
-            }
-            return false;
-        }
-
-        try {
-            fse.ensureDirSync(this._pipelineStage.dst_path);
-            fse.chmodSync(srcPath, 0o775);
-        } catch (err) {
-            if (err && err.code === "EACCES") {
-                debug("pipeline output directory permission denied");
-            } else {
-                debug(err);
-            }
-            return false;
-        }
-
-        this._inputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(srcPath), this._inputTableName);
-
-        if (!this._inputKnexConnector) {
-            return false;
-        }
-
-        this._outputTableName = generatePipelineStageTableName(this._pipelineStage.id);
-
-        this._outputKnexConnector = await connectorForFile(generatePipelineStateDatabaseName(this._pipelineStage.dst_path), this._outputTableName);
-
-        if (!this._outputKnexConnector) {
-            return false;
-        }
-
-        this._inProcessTableName = generatePipelineStageInProcessTableName(this._pipelineStage.id);
-
-        await verifyTable(this._outputKnexConnector, this._inProcessTableName, (table) => {
-            table.string(DefaultPipelineIdKey).primary().unique();
-            table.string("tile_name");
-            table.uuid("worker_id");
-            table.timestamp("worker_last_seen");
-            table.uuid("task_execution_id");
-            // table.string("resolved_log_path");
-            // table.string("log_prefix");
-            table.timestamps();
-        }  /*, async (schema) => {
-
-            try {
-                const hasColumn = await schema.hasColumn(this._inProcessTableName, "resolved_log_path");
-                debug("checking for log columns");
-                if (!hasColumn) {
-                    debug("not found - adding");
-                    await schema.table(this._inProcessTableName, (table) => {
-                        table.string("resolved_log_path");
-                        table.string("log_prefix");
-                    })
-                }
-            } catch (err) {
-                debug(err);
-            }
-
-        } */);
-
-        this._toProcessTableName = generatePipelineStageToProcessTableName(this._pipelineStage.id);
-
-        await verifyTable(this._outputKnexConnector, this._toProcessTableName, (table) => {
-            table.string(DefaultPipelineIdKey).primary().unique();
-            table.timestamps();
-        });
 
         return true;
     }
@@ -829,21 +662,6 @@ export abstract class PipelineScheduler implements ISchedulerInterface {
     /*
      * Extensions to knex.js.  Don't particularly belong here, but convenient until properly mixed in.
      */
-
-    protected async batchInsert(connector: any, tableName: string, inputToInsert: any[]) {
-        if (!inputToInsert || inputToInsert.length === 0) {
-            return;
-        }
-
-        debug(`batch insert ${inputToInsert.length} items`);
-
-        // Operate on a shallow copy since splice is going to be destructive.
-        const toInsert = inputToInsert.slice();
-
-        while (toInsert.length > 0) {
-            await connector.batchInsert(tableName, toInsert.splice(0, perfConf.regenTileStatusSqliteChunkSize));
-        }
-    }
 
     protected async batchUpdate(connector: any, tableName: string, inputToUpdate: any[], idKey: string = DefaultPipelineIdKey) {
         if (!inputToUpdate || inputToUpdate.length === 0) {
