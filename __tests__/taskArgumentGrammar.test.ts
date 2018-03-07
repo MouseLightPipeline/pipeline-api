@@ -5,14 +5,14 @@ const nearley = require("nearley");
 const grammar = require("../server/argument-parser/taskArgumentGrammar.js");
 
 test("single argument", () => {
-    const value = `hello`;
+    const value = `Hello`;
     let parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar));
     parser.feed(value);
     expect(parser.results[0]).toEqual([{type: TaskArgumentType.Literal, value}]);
 });
 
 test("multiple argument", () => {
-    const value = `hello world again`;
+    const value = `hello World 1again`;
     let parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar));
     parser.feed(value);
     expect(parser.results[0]).toEqual(value.split(" ").map(value => {
@@ -21,7 +21,7 @@ test("multiple argument", () => {
 });
 
 test("single parameter", () => {
-    const value = `hello`;
+    const value = `heLLo`;
     let parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar));
     parser.feed(`{${value}}`);
     expect(parser.results[0]).toEqual([{type: TaskArgumentType.Parameter, value}]);
@@ -79,4 +79,36 @@ test("argument with space", () => {
     parser.feed(value);
     console.log(parser.results[0]);
     expect(parser.results[0]).toEqual([{value: "hello world", type: TaskArgumentType.Literal}]);
+});
+
+test("arguments with space", () => {
+    const value = [`arg1`, "world\\ again"];
+    let parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar));
+    parser.feed(value.join(" "));
+    console.log(parser.results[0]);
+    expect(parser.results[0]).toEqual([
+        {value: "arg1", type: TaskArgumentType.Literal},
+        {value: "world again", type: TaskArgumentType.Literal}]);
+});
+
+test("special argument with space", () => {
+    const value = `-R[select=broadwell\\ core(1)]`;
+    let parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar));
+    parser.feed(value);
+    console.log(parser.results[0]);
+    expect(parser.results[0]).toEqual([{value: "-R[select=broadwell core(1)]", type: TaskArgumentType.Literal}]);
+});
+
+test("full mix", () => {
+    const value = `-R[select=broadwell\\ core(1)] hello\\ world {some\\ arg} {something\\ else} last\\ time`;
+    let parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar));
+    parser.feed(value);
+    console.log(parser.results[0]);
+    expect(parser.results[0]).toEqual([
+        {value: "-R[select=broadwell core(1)]", type: TaskArgumentType.Literal},
+        {value: "hello world", type: TaskArgumentType.Literal},
+        {value: "some arg", type: TaskArgumentType.Parameter},
+        {value: "something else", type: TaskArgumentType.Parameter},
+        {value: "last time", type: TaskArgumentType.Literal}
+        ]);
 });

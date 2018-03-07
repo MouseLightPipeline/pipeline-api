@@ -4,7 +4,7 @@ const Sequelize = require("sequelize");
 const debug = require("debug")("pipeline:coordinator-api:database-connector");
 
 import {loadModels} from "./modelLoader";
-import {SequelizeDatabaseOptions} from "../../options/serverOptions";
+import {SequelizeOptions} from "../../options/coreServicesOptions";
 
 
 export interface IPipelineModels {
@@ -95,15 +95,13 @@ async function authenticate(database, name) {
 }
 
 async function createConnection<T>(models: T) {
-    let databaseConfig = SequelizeDatabaseOptions;
-
     let db: ISequelizeDatabase<T> = {
         connection: null,
         models: models,
         isConnected: false
     };
 
-    db.connection = new Sequelize(databaseConfig.database, databaseConfig.username, databaseConfig.password, databaseConfig);
+    db.connection = new Sequelize(SequelizeOptions.database, SequelizeOptions.username, SequelizeOptions.password, SequelizeOptions);
 
     return await loadModels(db, path.normalize(path.join(__dirname, "..", "..", "data-model", "sequelize")));
 }

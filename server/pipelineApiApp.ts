@@ -9,8 +9,11 @@ import {SocketIoServer} from "./io/ioServer";
 import {SchedulerHub} from "./schedulers/schedulerHub";
 import {ServiceOptions} from "./options/serverOptions";
 import {thumbnailParamQueryMiddleware, thumbnailQueryMiddleware} from "./middleware/thumbnailQueryMiddleware";
+import {MetricsConnector} from "./data-access/metrics/metricsConnector";
 
 const useChildProcessWorkers = (parseInt(process.env.USE_CHILD_PROCESS_WORKERS) === 1) || false;
+
+MetricsConnector.Instance().initialize().then();
 
 const app = express();
 

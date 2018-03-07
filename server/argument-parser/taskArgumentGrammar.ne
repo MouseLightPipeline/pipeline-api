@@ -5,14 +5,14 @@ const moo = require("moo");
 
 const lexer = moo.compile({
   ws:     /[ \t]+/,
-  word: /[a-z0-9]+/,
+  word: /[^\s}{]+/, // /[a-zA-Z0-9=_\-\[\]\(\)\/"]+/,
   times:  /\*|x/,
   '{': '{',
   '}': '}',
    esc: '\\ '
 });
 
-const isLogging = true;
+const isLogging = false;
 
 const LITERAL = 0;
 const PARAMETER = 1;

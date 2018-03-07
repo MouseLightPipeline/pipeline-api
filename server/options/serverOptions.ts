@@ -1,5 +1,3 @@
-import SequelizeOptions from "./sequelizeOptions";
-
 interface IServiceOptions {
     port: number;
     graphQlEndpoint: string;
@@ -30,4 +28,3 @@ function loadConfiguration(): IServiceOptions {
 
 export const ServiceOptions = loadConfiguration();
 
-export const SequelizeDatabaseOptions = SequelizeOptions;
