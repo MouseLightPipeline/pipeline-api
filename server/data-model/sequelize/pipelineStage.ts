@@ -1,9 +1,9 @@
-import {CompletionStatusCode} from "./taskExecution";
-
 export enum PipelineStageMethod {
     DashboardProjectRefresh = 1,
     MapTile = 2,
-    ZIndexTileComparison = 3
+    XAdjacentTileComparison = 3,
+    YAdjacentTileComparison = 4,
+    ZAdjacentTileComparison = 5
 }
 
 export interface IPipelineStage {
@@ -11,7 +11,7 @@ export interface IPipelineStage {
     name?: string;
     description?: string;
     dst_path?: string;
-    function_type?: number;
+    function_type?: PipelineStageMethod;
     depth?: number;
     is_processing?: boolean;
     project_id?: string;

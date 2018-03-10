@@ -7,16 +7,13 @@ import {PersistentStorageManager} from "../data-access/sequelize/databaseConnect
 import {ITaskDefinition} from "../data-model/sequelize/taskDefinition";
 import {ITaskRepository} from "../data-model/sequelize/taskRepository";
 import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
-import {IProject, IProjectInput, NO_BOUND, NO_SAMPLE} from "../data-model/sequelize/project";
+import {IProject, IProjectAttributes, IProjectInput, NO_BOUND, NO_SAMPLE} from "../data-model/sequelize/project";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 import {PipelineWorkerClient} from "./client/pipelineWorkerClient";
 import {CompletionStatusCode, ITaskExecution} from "../data-model/sequelize/taskExecution";
-import {DefaultPipelineIdKey, IPipelineTile, TilePipelineStatus} from "../schedulers/pipelineScheduler";
-import {
-    connectorForFile,
-    generatePipelineStageTableName,
-    generatePipelineStateDatabaseName
-} from "../data-access/knexPiplineStageConnection";
+import {IPipelineStageTileCounts, IPipelineTileAttributes} from "../data-access/sequelize/stageTableConnector";
+import {TilePipelineStatus} from "../schedulers/basePipelineScheduler";
+import {connectorForStage} from "../data-access/sequelize/projectDatabaseConnector";
 
 export interface IWorkerMutationOutput {
     worker: IPipelineWorker;
@@ -71,16 +68,7 @@ export interface ISimplePage<T> {
     items: T[]
 }
 
-export interface IPipelineStageTileStatus {
-    incomplete: number;
-    queued: number;
-    processing: number;
-    complete: number;
-    failed: number;
-    canceled: number;
-}
-
-export type ITilePage = ISimplePage<IPipelineTile>;
+export type ITilePage = ISimplePage<IPipelineTileAttributes>;
 
 export class PipelineServerContext {
     private _persistentStorageManager: PersistentStorageManager = PersistentStorageManager.Instance();
@@ -127,15 +115,15 @@ export class PipelineServerContext {
         return this._persistentStorageManager.PipelineWorkers.findById(id);
     }
 
-    public getDashboardJsonStatusForProject(project: IProject): boolean {
+    public static getDashboardJsonStatusForProject(project: IProjectAttributes): boolean {
         return fs.existsSync(path.join(project.root_path, "dashboard.json"));
     }
 
-    public getProject(id: string): Promise<IProject> {
+    public async getProject(id: string): Promise<IProject> {
         return this._persistentStorageManager.Projects.findById(id);
     }
 
-    public getProjects(): Promise<IProject[]> {
+    public async getProjects(): Promise<IProject[]> {
         return this._persistentStorageManager.Projects.findAll({order: [["sample_number", "ASC"], ["name", "ASC"]]});
     }
 
@@ -214,7 +202,10 @@ export class PipelineServerContext {
 
             const project = await this._persistentStorageManager.Projects.create(input);
 
-            const inputStages = await this._persistentStorageManager.PipelineStages.findAll({where: {project_id: id}, order: [["depth", "ASC"]]});
+            const inputStages = await this._persistentStorageManager.PipelineStages.findAll({
+                where: {project_id: id},
+                order: [["depth", "ASC"]]
+            });
 
             const duplicateMap = new Map<string, IPipelineStage>();
 
@@ -427,7 +418,7 @@ export class PipelineServerContext {
         }
     }
 
-    public async getScriptStatusForTaskDefinition(taskDefinition: ITaskDefinition): Promise<boolean> {
+    public static async getScriptStatusForTaskDefinition(taskDefinition: ITaskDefinition): Promise<boolean> {
         const scriptPath = await taskDefinition.getFullScriptPath();
 
         return fs.existsSync(scriptPath);
@@ -437,7 +428,7 @@ export class PipelineServerContext {
         const taskDefinition = await this.getTaskDefinition(taskDefinitionId);
 
         if (taskDefinition) {
-            const haveScript = await this.getScriptStatusForTaskDefinition(taskDefinition);
+            const haveScript = await PipelineServerContext.getScriptStatusForTaskDefinition(taskDefinition);
 
             if (haveScript) {
                 const scriptPath = await taskDefinition.getFullScriptPath();
@@ -504,7 +495,7 @@ export class PipelineServerContext {
         return this._persistentStorageManager.PipelineStagePerformances.findOne({where: {pipeline_stage_id}});
     }
 
-    public getProjectPlaneTileStatus(project_id: string, plane: number): Promise<any> {
+    public static getProjectPlaneTileStatus(project_id: string, plane: number): Promise<any> {
         return SchedulerHub.Instance.loadTileStatusForPlane(project_id, plane);
     }
 
@@ -531,8 +522,9 @@ export class PipelineServerContext {
         if (reqLimit !== null && reqLimit !== undefined) {
             limit = reqLimit;
         }
-        const tableName = generatePipelineStageTableName(pipelineStage.id);
 
+        /*
+        const tableName = generatePipelineStageTableName(pipelineStage.id);
         const connector = await connectorForFile(generatePipelineStateDatabaseName(pipelineStage.dst_path), tableName);
 
         const countObj = await connector(tableName).where({
@@ -546,107 +538,89 @@ export class PipelineServerContext {
             prev_stage_status: TilePipelineStatus.Complete,
             this_stage_status: status,
         }).limit(limit).offset(offset).select();
+        */
+
+        // TODO Use findAndCount
+        const stageConnector = await connectorForStage(pipelineStage);
+
+        const totalCount = await stageConnector.countTiles();
+
+        const items = await stageConnector.loadTiles({
+            where: {
+                prev_stage_status: TilePipelineStatus.Complete,
+                this_stage_status: status
+            },
+            offset,
+            limit
+        });
 
         return {
             offset: offset,
             limit: limit,
-            totalCount: count,
-            hasNextPage: offset + limit < count,
+            totalCount,
+            hasNextPage: offset + limit < totalCount,
             items
         }
     }
 
-    public async getPipelineStageTileStatus(pipeline_stage_id: string): Promise<IPipelineStageTileStatus> {
-        const pipelineStage = await this._persistentStorageManager.PipelineStages.findById(pipeline_stage_id);
-
-        if (!pipelineStage || !fs.existsSync(generatePipelineStateDatabaseName(pipelineStage.dst_path))) {
-            return PipelineStageStatusUnavailable;
-        }
-
+    public async getPipelineStageTileStatus(pipelineStageId: string): Promise<IPipelineStageTileCounts> {
         try {
-            // This could fail if we are checking for status before a project has been run for the first time and the
-            // output locations are accessible and/or permissions are bad.
-            const tableName = generatePipelineStageTableName(pipelineStage.id);
+            const pipelineStage = await this._persistentStorageManager.PipelineStages.findById(pipelineStageId);
 
-            const connector = await connectorForFile(generatePipelineStateDatabaseName(pipelineStage.dst_path), tableName);
+            if (!pipelineStage) {
+                return null;
+            }
 
-            const countObj = await connector(tableName).select("this_stage_status").groupBy("this_stage_status").count();
+            const stageConnector = await connectorForStage(pipelineStage);
 
-            return countObj.reduce((prev, curr) => {
-                switch (curr.this_stage_status) {
-                    case TilePipelineStatus.Incomplete:
-                        prev.incomplete = curr["count(*)"];
-                        break;
-                    case TilePipelineStatus.Queued:
-                        prev.queued = curr["count(*)"];
-                        break;
-                    case TilePipelineStatus.Processing:
-                        prev.processing = curr["count(*)"];
-                        break;
-
-                    case TilePipelineStatus.Complete:
-                        prev.complete = curr["count(*)"];
-                        break;
-
-                    case TilePipelineStatus.Failed:
-                        prev.failed = curr["count(*)"];
-                        break;
-
-                    case TilePipelineStatus.Canceled:
-                        prev.canceled = curr["count(*)"];
-                        break;
-                }
-
-                return prev;
-            }, {
-                incomplete: 0,
-                queued: 0,
-                processing: 0,
-                complete: 0,
-                failed: 0,
-                canceled: 0
-            });
+            return stageConnector.getTileCounts();
         } catch (err) {
             return PipelineStageStatusUnavailable;
         }
     }
 
-    public async setTileStatus(pipelineStageId: string, tileIds: string[], status: TilePipelineStatus): Promise<IPipelineTile[]> {
+    /***
+     * Set specific tiles (by id) to a specific status.
+     *
+     * @param {string} pipelineStageId
+     * @param {string[]} tileIds
+     * @param {TilePipelineStatus} status
+     * @returns {Promise<IPipelineTileAttributes[]>}
+     */
+    public async setTileStatus(pipelineStageId: string, tileIds: string[], status: TilePipelineStatus): Promise<IPipelineTileAttributes[]> {
         const pipelineStage = await this._persistentStorageManager.PipelineStages.findById(pipelineStageId);
 
         if (!pipelineStage) {
             return null;
         }
 
-        const tableName = generatePipelineStageTableName(pipelineStage.id);
+        const stageConnector = await connectorForStage(pipelineStage);
 
-        const connector = await connectorForFile(generatePipelineStateDatabaseName(pipelineStage.dst_path), tableName);
-
-        await connector(tableName).whereIn(DefaultPipelineIdKey, tileIds).update({this_stage_status: status});
-
-        return await connector(tableName).whereIn(DefaultPipelineIdKey, tileIds).select();
+        return stageConnector.setTileStatus(tileIds, status);
     }
 
-    public async convertTileStatus(pipelineStageId: string, currentStatus: TilePipelineStatus, desiredStatus: TilePipelineStatus): Promise<IPipelineTile[]> {
+    /***
+     * Set all tiles with one status to another status.
+     *
+     * @param {string} pipelineStageId
+     * @param {TilePipelineStatus} currentStatus
+     * @param {TilePipelineStatus} desiredStatus
+     * @returns {Promise<IPipelineTileAttributes[]>}
+     */
+    public async convertTileStatus(pipelineStageId: string, currentStatus: TilePipelineStatus, desiredStatus: TilePipelineStatus): Promise<IPipelineTileAttributes[]> {
         const pipelineStage = await this._persistentStorageManager.PipelineStages.findById(pipelineStageId);
 
         if (!pipelineStage) {
             return null;
         }
 
-        const tableName = generatePipelineStageTableName(pipelineStage.id);
+        const stageConnector = await connectorForStage(pipelineStage);
 
-        const connector = await connectorForFile(generatePipelineStateDatabaseName(pipelineStage.dst_path), tableName);
-
-        const tileIds = (await connector(tableName).where("this_stage_status", currentStatus).select(DefaultPipelineIdKey)).map(t => t[DefaultPipelineIdKey]);
-
-        await connector(tableName).whereIn(DefaultPipelineIdKey, tileIds).update({this_stage_status: desiredStatus});
-
-        return await connector(tableName).whereIn(DefaultPipelineIdKey, tileIds).select();
+        return stageConnector.convertTileStatus(currentStatus, desiredStatus);
     }
 }
 
-const PipelineStageStatusUnavailable: IPipelineStageTileStatus = {
+const PipelineStageStatusUnavailable: IPipelineStageTileCounts = {
     incomplete: 0,
     queued: 0,
     processing: 0,

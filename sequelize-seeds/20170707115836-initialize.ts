@@ -60,11 +60,11 @@ function createTaskDefinitions(when: Date) {
             script: "axon-uint16.sh",
             interpreter: "none",
             script_args: JSON.stringify({arguments: ["/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps/axon-classifier"]}),
-            cluster_args: {arguments: []},
+            cluster_args: JSON.stringify({arguments: [""]}),
             expected_exit_code: 0,
             work_units: 4,
             cluster_work_units: 1,
-            log_prefix: "ax-",
+            log_prefix: "ax",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }, {
@@ -74,11 +74,11 @@ function createTaskDefinitions(when: Date) {
             script: "dogDescriptor.sh",
             interpreter: "none",
             script_args: JSON.stringify({arguments: ["/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps", "/groups/mousebrainmicro/mousebrainmicro/Software/mcr/v90"]}),
-            cluster_args: JSON.stringify({arguments: []}),
+            cluster_args: JSON.stringify({arguments: [""]}),
             expected_exit_code: 0,
             work_units: 2,
             cluster_work_units: 1,
-            log_prefix: "dd-",
+            log_prefix: "dd",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }, {
@@ -88,11 +88,11 @@ function createTaskDefinitions(when: Date) {
             script: "pointMatch.sh",
             interpreter: "none",
             script_args: JSON.stringify({arguments: ["/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps", "/groups/mousebrainmicro/mousebrainmicro/Software/mcr/v92"]}),
-            cluster_args: JSON.stringify({arguments: []}),
+            cluster_args: JSON.stringify({arguments: [""]}),
             expected_exit_code: 0,
             work_units: 1,
             cluster_work_units: 1,
-            log_prefix: "pm-",
+            log_prefix: "pm",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }];
@@ -104,11 +104,11 @@ function createTaskDefinitions(when: Date) {
             script: "echo.sh",
             interpreter: "none",
             script_args: JSON.stringify({arguments: [`"custom arg 1"`, `"custom arg 2"`]}),
-            cluster_args: JSON.stringify({arguments: []}),
+            cluster_args: JSON.stringify({arguments: [""]}),
             expected_exit_code: 0,
             work_units: 0,
             cluster_work_units: 1,
-            log_prefix: "ec-",
+            log_prefix: "ec",
             task_repository_id: "f22c6e43-782c-4e0e-b0ca-b34fcec3340a",
             created_at: when
         }, {
@@ -118,11 +118,11 @@ function createTaskDefinitions(when: Date) {
             script: "pixel_shell.sh",
             interpreter: "none",
             script_args: JSON.stringify({arguments: ["test/pixel_classifier_test"]}),
-            cluster_args: JSON.stringify({arguments: []}),
+            cluster_args: JSON.stringify({arguments: [""]}),
             expected_exit_code: 0,
             work_units: 4,
             cluster_work_units: 1,
-            log_prefix: "ax-",
+            log_prefix: "ax",
             task_repository_id: "f22c6e43-782c-4e0e-b0ca-b34fcec3340a",
             created_at: when
         }, {
@@ -132,11 +132,11 @@ function createTaskDefinitions(when: Date) {
             script: "dogDescriptor.sh",
             interpreter: "none",
             script_args: JSON.stringify({arguments: ["/Volumes/Spare/Projects/MouseLight/Apps/Pipeline/dogDescriptor"]}),
-            cluster_args: JSON.stringify({arguments: []}),
+            cluster_args: JSON.stringify({arguments: [""]}),
             expected_exit_code: 0,
             work_units: 2,
             cluster_work_units: 1,
-            log_prefix: "dd-",
+            log_prefix: "dd",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }, {
@@ -146,11 +146,11 @@ function createTaskDefinitions(when: Date) {
             script: "getDescriptorPerTile.sh",
             interpreter: "none",
             script_args: JSON.stringify({arguments: ["/Volumes/Spare/Projects/MouseLight/Apps/Pipeline/dogDescriptor/getDescriptorPerTile"]}),
-            cluster_args: JSON.stringify({arguments: []}),
+            cluster_args: JSON.stringify({arguments: [""]}),
             expected_exit_code: 0,
             work_units: 1,
             cluster_work_units: 1,
-            log_prefix: "pm-",
+            log_prefix: "pm",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }];

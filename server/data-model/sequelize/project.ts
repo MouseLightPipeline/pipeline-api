@@ -1,4 +1,7 @@
-export const NO_BOUND: number = -1;
+import {IToProcessTile, IToProcessTileAttributes} from "../../data-access/sequelize/stageTableConnector";
+import {Instance} from "sequelize";
+
+export const NO_BOUND: number = null;
 export const NO_SAMPLE: number = -1;
 
 export interface IProjectGridRegion {
@@ -20,7 +23,7 @@ export interface IProjectInput {
     region_bounds?: IProjectGridRegion;
 }
 
-export interface IProject {
+export interface IProjectAttributes {
     id?: string;
     name?: string;
     description?: string;
@@ -44,6 +47,8 @@ export interface IProject {
     updated_at?: Date;
     deleted_at?: Date;
 }
+
+export interface IProject extends Instance<IProjectAttributes>, IProjectAttributes {}
 
 export const TableName = "Projects";
 

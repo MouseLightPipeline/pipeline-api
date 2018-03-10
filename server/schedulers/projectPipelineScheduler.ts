@@ -4,7 +4,7 @@ const fse = require("fs-extra");
 const path = require("path");
 import * as _ from "lodash";
 
-const debug = require("debug")("pipeline:coordinator-api:tile-status-worker");
+const debug = require("debug")("pipeline:coordinator-api:project-pipeline-scheduler");
 
 const pipelineInputJsonFile = "pipeline-input.json";
 const dashboardJsonFile = "dashboard.json";
@@ -12,17 +12,12 @@ const tileStatusJsonFile = "pipeline-storage.json";
 const tileStatusLastJsonFile = tileStatusJsonFile + ".last";
 
 import {
-    connectorForFile, generatePipelineStateDatabaseName, generateProjectRootTableName
-} from "../data-access/knexPiplineStageConnection";
-
-import performanceConfiguration from "../options/performanceOptions"
-import {
-    PipelineScheduler, DefaultPipelineIdKey, TilePipelineStatus, IPipelineTile, IMuxTileLists
-} from "./pipelineScheduler";
-import {IProject} from "../data-model/sequelize/project";
-import {connectorForProject} from "../data-access/sequelize/projectDatabaseConnector";
-
-const perfConf = performanceConfiguration();
+    BasePipelineScheduler, DefaultPipelineIdKey, TilePipelineStatus, IMuxTileLists
+} from "./basePipelineScheduler";
+import {IProject, IProjectAttributes} from "../data-model/sequelize/project";
+import {IPipelineTileAttributes, StageTableConnector} from "../data-access/sequelize/stageTableConnector";
+import {isNullOrUndefined} from "util";
+import {ProjectDatabaseConnector} from "../data-access/sequelize/projectDatabaseConnector";
 
 interface IPosition {
     x: number;
@@ -31,7 +26,7 @@ interface IPosition {
 }
 
 interface IDashboardJsonTile {
-    id: string;
+    index: string;
     name: string;
     relative_path: string;
     status: number;
@@ -39,77 +34,60 @@ interface IDashboardJsonTile {
     lattice_step: IPosition;
 }
 
-export class TileStatusWorker extends PipelineScheduler {
-    private _project: any;
+export class ProjectPipelineScheduler extends BasePipelineScheduler {
 
     public constructor(project: IProject) {
-        super(null);
-
-        this._project = project;
+        super(project);
 
         this.IsExitRequested = false;
 
         this.IsProcessingRequested = true;
     }
 
-    public async Project(): Promise<IProject> {
-        return this._project;
-    }
-
-    public get OutputPath(): string {
+    protected getOutputPath(): string {
         return this._project.root_path;
     }
 
-    protected get StageId() {
+    protected getStageId(): string {
         return this._project.id;
     }
 
-    protected async createTables() {
-        if (this.IsExitRequested) {
-            debug("cancel request - early return");
-            return false;
+    protected getDepth(): number {
+        return 0;
+    }
+
+    protected async createOutputStageConnector(connector: ProjectDatabaseConnector): Promise<StageTableConnector> {
+        return await connector.connectorForProject(this._project);
+    }
+
+    protected async refreshTileStatus(): Promise<boolean> {
+        // For the tile status stage (project "0" depth stage), refreshing the tile status _is_ the work.
+
+        debug(`dashboard update for project ${this._project.name}`);
+
+        const knownInput = await this.performJsonUpdate();
+
+        /*
+        if (knownInput.length > 0) {
+
+            const knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "prev_stage_status"]);
+
+            const sorted = await this.muxInputOutputTiles(knownInput, knownOutput);
+
+            await this.batchInsert(this._outputKnexConnector, this._outputTableName, sorted.toInsert);
+
+            await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdate, DefaultPipelineIdKey);
+
+            await this.batchDelete(this._outputKnexConnector, this._outputTableName, sorted.toDelete, DefaultPipelineIdKey);
         }
+        */
 
-        const databaseConnector = await connectorForProject(this._project);
-
-        this._outputStageConnector = await databaseConnector.connectorForStage(this._project);
+        await this.refreshWithKnownInput(knownInput);
 
         return true;
     }
 
-    protected async performWork() {
-        if (this.IsExitRequested) {
-            debug("cancel request - early return");
-            return;
-        }
-
-        if (this.IsProcessingRequested) {
-            try {
-                debug(`dashboard update for project ${this._project.name}`);
-
-                const knownInput = await this.performJsonUpdate();
-
-                if (knownInput.length > 0) {
-
-                    const knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "prev_stage_status"]);
-
-                    const sorted = await this.muxInputOutputTiles(knownInput, knownOutput);
-
-                    await this.batchInsert(this._outputKnexConnector, this._outputTableName, sorted.toInsert);
-
-                    await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdate, DefaultPipelineIdKey);
-
-                    await this.batchDelete(this._outputKnexConnector, this._outputTableName, sorted.toDelete, DefaultPipelineIdKey);
-                }
-            } catch (err) {
-                console.log(err);
-            }
-        }
-
-        setTimeout(() => this.performWork(), perfConf.pipelineSchedulerIntervalSeconds * 5 * 1000)
-    }
-
-    protected async muxInputOutputTiles(knownInput: IDashboardJsonTile[], knownOutput: IPipelineTile[]): Promise<IMuxTileLists> {
+    protected async muxInputOutputTiles(knownInput: IDashboardJsonTile[], knownOutput: IPipelineTileAttributes[]): Promise<IMuxTileLists> {
         const sorted = {
             toInsert: [],
             toUpdate: [],
@@ -127,6 +105,7 @@ export class TileStatusWorker extends PipelineScheduler {
 
             return {
                 relative_path: inputTile.relative_path,
+                index: inputTile.index,
                 tile_name: inputTile.name,
                 prev_stage_status: inputTile.status,
                 this_stage_status: inputTile.status,
@@ -155,18 +134,19 @@ export class TileStatusWorker extends PipelineScheduler {
             const existingTile = knownOutput[existingTileIdx];
 
             if (existingTile.prev_stage_status !== inputTile.status) {
-                return {
-                    relative_path: inputTile.relative_path,
-                    prev_stage_status: inputTile.status,
-                    this_stage_status: inputTile.status,
-                    lat_x: inputTile.lattice_position.x,
-                    lat_y: inputTile.lattice_position.y,
-                    lat_z: inputTile.lattice_position.z,
-                    step_x: inputTile.lattice_step.x,
-                    step_y: inputTile.lattice_step.y,
-                    step_z: inputTile.lattice_step.z,
-                    updated_at: new Date()
-                };
+                existingTile.tile_name = inputTile.name;
+                existingTile.index = inputTile.index;
+                existingTile.prev_stage_status = inputTile.status;
+                existingTile.this_stage_status = inputTile.status;
+                existingTile.lat_x = inputTile.lattice_position.x;
+                existingTile.lat_y = inputTile.lattice_position.y;
+                existingTile.lat_z = inputTile.lattice_position.z;
+                existingTile.step_x = inputTile.lattice_step.x;
+                existingTile.step_y = inputTile.lattice_step.y;
+                existingTile.step_z = inputTile.lattice_step.z;
+                existingTile.updated_at = new Date();
+
+                return existingTile;
             } else {
                 return null;
             }
@@ -176,7 +156,7 @@ export class TileStatusWorker extends PipelineScheduler {
     }
 
     private async performJsonUpdate(): Promise<IDashboardJsonTile[]> {
-        const projectUpdate: IProject = {
+        const projectUpdate: IProjectAttributes = {
             id: this._project.id
         };
 
@@ -226,12 +206,12 @@ export class TileStatusWorker extends PipelineScheduler {
                     let normalizedPath = tile.relativePath.replace(new RegExp("\\" + "\\", "g"), "/");
                     let tileName = path.basename(normalizedPath);
                     tiles.push({
-                        id: tile.id,
-                        name: tileName,
+                        index: isNullOrUndefined(tile.id) ? null : tile.id,
+                        name: tileName || "",
                         relative_path: normalizedPath,
                         status: tile.isComplete ? TilePipelineStatus.Complete : TilePipelineStatus.Incomplete,
-                        lattice_position: tile.contents.latticePosition,
-                        lattice_step: tile.contents.latticeStep
+                        lattice_position: tile.contents.latticePosition || {x: null, y: null, z: null},
+                        lattice_step: tile.contents.latticeStep || {x: null, y: null, z: null}
                     });
                 });
             }

@@ -1,5 +1,6 @@
 import {PipelineZComparisonScheduler} from "./pipelineZComparisonScheduler";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
+import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 
 const debug = require("debug")("pipeline:coordinator-api:pipeline-z-comparison-worker-process");
 
@@ -33,14 +34,14 @@ export async function startZComparisonPipelineStageWorker(stageId) {
     let pipelineWorker = null;
 
     try {
-        let pipelineStagesManager = PersistentStorageManager.Instance().PipelineStages;
-
-        let stage = await pipelineStagesManager.findById(stageId);
+        let stage: IPipelineStage = await PersistentStorageManager.Instance().PipelineStages.findById(stageId);
 
         if (stage) {
-            pipelineWorker = new PipelineZComparisonScheduler(stage);
+            let project = await PersistentStorageManager.Instance().Projects.findById(stage.project_id);
 
-            pipelineWorker.run();
+            pipelineWorker = new PipelineZComparisonScheduler(stage, project);
+
+            await pipelineWorker.run();
         }
     } catch (err) {
         debug(err);

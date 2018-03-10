@@ -8,7 +8,7 @@ const debug = require("debug")("pipeline:coordinator-api:scheduler-hub");
 import {startTileStatusFileWorker} from "./tileStatusWorkerChildProcess";
 import {startMapPipelineStageWorker} from "./pipelineMapSchedulerChildProcess";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
-import {IProject} from "../data-model/sequelize/project";
+import {IProjectAttributes} from "../data-model/sequelize/project";
 import {IPipelineStage, PipelineStageMethod} from "../data-model/sequelize/pipelineStage";
 import {isNullOrUndefined} from "util";
 
@@ -196,7 +196,7 @@ export class SchedulerHub {
             if (PersistentStorageManager.Instance() && PersistentStorageManager.Instance().IsConnected) {
                 const projectsManager = PersistentStorageManager.Instance().Projects;
 
-                const projects: IProject[] = await projectsManager.findAll({});
+                const projects: IProjectAttributes[] = await projectsManager.findAll({});
 
                 const pipelineStagesManager = PersistentStorageManager.Instance().PipelineStages;
 
@@ -228,7 +228,7 @@ export class SchedulerHub {
         setTimeout(() => this.manageAllWorkers(), 10 * 1000);
     }
 
-    private async resumeStagesForProject(pipelineStagesManager: any, project: IProject) {
+    private async resumeStagesForProject(pipelineStagesManager: any, project: IProjectAttributes) {
         const stages: IPipelineStage[] = await pipelineStagesManager.getForProject(project.id);
 
         await this.addWorker(project, startTileStatusFileWorker, "/tileStatusWorkerChildProcess.js");
@@ -237,14 +237,14 @@ export class SchedulerHub {
     }
 
     private async resumeStage(stage: IPipelineStage): Promise<boolean> {
-        if (stage.function_type === PipelineStageMethod.ZIndexTileComparison) {
+        if (stage.function_type === PipelineStageMethod.ZAdjacentTileComparison) {
             return this.addWorker(stage, startZComparisonPipelineStageWorker, "/pipelineZComparisonSchedulerChildProcess.js");
         } else {
             return this.addWorker(stage, startMapPipelineStageWorker, "/pipelineMapSchedulerChildProcess.js");
         }
     }
 
-    private async pauseStagesForProject(pipelineStagesManager: any, project: IProject) {
+    private async pauseStagesForProject(pipelineStagesManager: any, project: IProjectAttributes) {
         const stages: IPipelineStage[] = await pipelineStagesManager.getForProject(project.id);
 
         await this.removeWorker(project/*, this._tileStatusWorkers*/);
@@ -272,7 +272,7 @@ export class SchedulerHub {
         });
     }
 
-    private async addWorker(item: IProject | IPipelineStage, inProcessFunction, childProcessModuleName): Promise<boolean> {
+    private async addWorker(item: IProjectAttributes | IPipelineStage, inProcessFunction, childProcessModuleName): Promise<boolean> {
         let worker = this._pipelineStageWorkers.get(item.id);
 
         if (!worker) {
@@ -291,7 +291,7 @@ export class SchedulerHub {
         return false;
     }
 
-    private removeWorker(item: IProject | IPipelineStage): boolean {
+    private removeWorker(item: IProjectAttributes | IPipelineStage): boolean {
         const worker = this._pipelineStageWorkers.get(item.id);
 
         if (worker) {

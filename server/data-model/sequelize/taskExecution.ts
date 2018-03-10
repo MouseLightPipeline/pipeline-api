@@ -133,7 +133,7 @@ export function sequelizeImport(sequelize, DataTypes) {
         createdAt: "created_at",
         updatedAt: "updated_at",
         deletedAt: "deleted_at",
-        paranoid: false
+        paranoid: true
     });
 
     TaskExecution.associate = models => {

@@ -1,88 +1,76 @@
 import * as _ from "lodash";
 
-const debug = require("debug")("pipeline:coordinator-api:pipeline-z-comp-worker");
-
 import {
-    PipelineScheduler, TilePipelineStatus, DefaultPipelineIdKey, IPipelineTile,
+    TilePipelineStatus,
+    DefaultPipelineIdKey,
     IMuxTileLists
-} from "./pipelineScheduler";
-import {verifyTable, generatePipelineCustomTableName} from "../data-access/knexPiplineStageConnection";
-import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
+} from "./basePipelineScheduler";
+import {IPipelineStage, PipelineStageMethod} from "../data-model/sequelize/pipelineStage";
+import {IPipelineTile, IPipelineTileAttributes} from "../data-access/sequelize/stageTableConnector";
+import {PipelineScheduler} from "./stagePipelineScheduler";
+import {AdjacentTileStageConnector, IAdjacentTileAttributes} from "../data-access/sequelize/adjacentTileStageConnector";
+import {IProject} from "../data-model/sequelize/project";
 
 /***
  TODO should include extents from monitor info in dashboard json to determine whether there will ever be a z - 1 tile.
  Otherwise, we'll always have incomplete tiles for the first z-plane.
  ***/
 
-interface IPreviousLayerMap {
-    relative_path: string,
-    relative_path_z_plus_1: string;
-    tile_name_z_plus_1: string;
-}
-
 interface IMuxUpdateLists extends IMuxTileLists {
-    toInsertZMapIndex: IPreviousLayerMap[];
+    toInsertZMapIndex: IAdjacentTileAttributes[];
     toDeleteZMapIndex: string[];
 }
 
 export class PipelineZComparisonScheduler extends PipelineScheduler {
 
-    protected _zIndexMapTableName: string;
-
-    public constructor(pipelineStage: IPipelineStage) {
-        super(pipelineStage);
-
-        this._pipelineStage = pipelineStage;
+    public constructor(pipelineStage: IPipelineStage, project: IProject) {
+        super(pipelineStage, project);
     }
 
-    protected get zIndexMapTable() {
-        return this._outputKnexConnector(this._zIndexMapTableName);
+    public get OutputStageConnector(): AdjacentTileStageConnector {
+        return this._outputStageConnector as AdjacentTileStageConnector;
     }
 
-    protected async createTables() {
-        await super.createTables();
-
-        this._zIndexMapTableName = generatePipelineCustomTableName(this._pipelineStage.id, "ZIndexMap");
-
-        await verifyTable(this._outputKnexConnector, this._zIndexMapTableName, (table) => {
-            table.string(DefaultPipelineIdKey).primary().unique();
-            table.string("relative_path_z_plus_1");
-            table.string("tile_name_z_plus_1");
-        });
-
-        return true;
+    protected async getTaskContext(tile: IPipelineTileAttributes): Promise<IAdjacentTileAttributes> {
+        return this.OutputStageConnector.loadAdjacentTile(tile.relative_path);
     }
 
-    protected async getTaskContext(tile: IPipelineTile): Promise<any> {
-        let rows = await this.zIndexMapTable.where(DefaultPipelineIdKey, tile.relative_path).select();
-
-        if (rows && rows.length > 0) {
-            return rows[0];
-        } else {
-            return null;
-        }
-    }
-
-    protected getTaskArguments(tile: IPipelineTile, context: any): string[] {
+    protected getTaskArguments(tile: IPipelineTileAttributes, context: IAdjacentTileAttributes): string[] {
         if (context === null) {
             return [];
         }
 
-        return [context.relative_path_z_plus_1, context.tile_name_z_plus_1];
+        return [context.adjacent_relative_path, context.adjacent_tile_name];
     }
 
-    private async findPreviousLayerTile(inputTile: IPipelineTile): Promise<IPipelineTile> {
-        const rows = await this.inputTable.where({
-            lat_x: inputTile.lat_x,
-            lat_y: inputTile.lat_y,
-            lat_z: inputTile.lat_z + 1
-        });
+    private async findPreviousLayerTile(inputTile: IPipelineTileAttributes): Promise<IPipelineTile> {
+        let where = null;
 
-        if (rows && rows.length > 0) {
-            return rows[0];
-        } else {
-            return null;
+        switch (this._pipelineStage.function_type) {
+            case PipelineStageMethod.XAdjacentTileComparison:
+                where = {
+                    lat_x: inputTile.lat_x + 1,
+                    lat_y: inputTile.lat_y,
+                    lat_z: inputTile.lat_z
+                };
+                break;
+            case PipelineStageMethod.YAdjacentTileComparison:
+                where = {
+                    lat_x: inputTile.lat_x,
+                    lat_y: inputTile.lat_y + 1,
+                    lat_z: inputTile.lat_z
+                };
+                break;
+            case PipelineStageMethod.ZAdjacentTileComparison:
+                where = {
+                    lat_x: inputTile.lat_x,
+                    lat_y: inputTile.lat_y,
+                    lat_z: inputTile.lat_z + 1
+                };
+                break;
         }
+
+        return where ? this._inputStageConnector.loadTile(where) : null;
     }
 
     protected async muxInputOutputTiles(knownInput: IPipelineTile[], knownOutput: IPipelineTile[]) {
@@ -99,7 +87,8 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
         const knownInputIdLookup = knownInput.map(obj => obj[DefaultPipelineIdKey]);
 
         // List of tiles where we already know the previous layer tile id.
-        const nextLayerMapRows = await this.zIndexMapTable.select();
+        // const nextLayerMapRows = await this.zIndexMapTable.select();
+        const nextLayerMapRows = await this.OutputStageConnector.loadAdjacentTiles();
         const nextLayerMapIdLookup = nextLayerMapRows.map(obj => obj[DefaultPipelineIdKey]);
 
         muxUpdateLists.toDelete = _.differenceBy(knownOutput, knownInput, DefaultPipelineIdKey).map(t => t.relative_path);
@@ -111,15 +100,17 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
             });
         }, Promise.resolve());
 
-        await this.batchInsert(this._outputKnexConnector, this._zIndexMapTableName, muxUpdateLists.toInsertZMapIndex);
+        // await this.batchInsert(this._outputKnexConnector, this._zIndexMapTableName, muxUpdateLists.toInsertZMapIndex);
+        await this.OutputStageConnector.insertAdjacent(muxUpdateLists.toInsertZMapIndex);
 
-        await this.batchDelete(this._outputKnexConnector, this._zIndexMapTableName, muxUpdateLists.toDeleteZMapIndex);
+        // await this.batchDelete(this._outputKnexConnector, this._zIndexMapTableName, muxUpdateLists.toDeleteZMapIndex);
+        await this.OutputStageConnector.deleteAdjacent(muxUpdateLists.toDeleteZMapIndex);
 
         // Insert, update, delete handled by base.
         return muxUpdateLists;
     }
 
-    private async muxUpdateTile(inputTile: IPipelineTile, knownInput: IPipelineTile[], knownOutput: IPipelineTile[], nextLayerMapRows: IPreviousLayerMap[],
+    private async muxUpdateTile(inputTile: IPipelineTile, knownInput: IPipelineTile[], knownOutput: IPipelineTile[], nextLayerMapRows: IAdjacentTileAttributes[],
                                 knownInputIdLookup: string[], knownOutputIdLookup: string[], nextLayerMapIdLookup: string[], toDelete: string[],
                                 muxUpdateLists: IMuxUpdateLists): Promise<void> {
         const idx = knownOutputIdLookup.indexOf(inputTile[DefaultPipelineIdKey]);
@@ -128,15 +119,15 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
 
         const nextLayerLookupIndex = nextLayerMapIdLookup.indexOf(inputTile[DefaultPipelineIdKey]);
 
-        let nextLayerMap: IPreviousLayerMap = nextLayerLookupIndex > -1 ? nextLayerMapRows[nextLayerLookupIndex] : null;
+        let nextLayerMap: IAdjacentTileAttributes = nextLayerLookupIndex > -1 ? nextLayerMapRows[nextLayerLookupIndex] : null;
 
         let tile = null;
 
         if (nextLayerMap === null) {
             tile = await this.findPreviousLayerTile(inputTile);
         } else {
-            // Assert the existing map is still valid given any curation/deletion.
-            const index = toDelete.indexOf(nextLayerMap.relative_path_z_plus_1);
+            // Assert the existing map is still valid given something is curated/deleted.
+            const index = toDelete.indexOf(nextLayerMap.adjacent_relative_path);
 
             // Remove entry.  If a replacement exists, will be captured next time around.
             if (index >= 0) {
@@ -147,8 +138,8 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
         if (tile !== null) {
             nextLayerMap = {
                 relative_path: inputTile.relative_path,
-                relative_path_z_plus_1: tile.relative_path,
-                tile_name_z_plus_1: tile.tile_name
+                adjacent_relative_path: tile.relative_path,
+                adjacent_tile_name: tile.tile_name
             };
 
             muxUpdateLists.toInsertZMapIndex.push(nextLayerMap);
@@ -156,7 +147,7 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
 
         // This really shouldn't fail since we should have already seen the tile at some point to have created the
         // mapping.
-        const nextLayerInputTileIdx = nextLayerMap ? knownInputIdLookup.indexOf(nextLayerMap.relative_path_z_plus_1) : -1;
+        const nextLayerInputTileIdx = nextLayerMap ? knownInputIdLookup.indexOf(nextLayerMap.adjacent_relative_path) : -1;
         const nextLayerInputTile = nextLayerInputTileIdx > -1 ? knownInput[nextLayerInputTileIdx] : null;
 
         let prev_status = TilePipelineStatus.DoesNotExist;
@@ -204,21 +195,14 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
             }
 
             if (existingOutput.prev_stage_status !== prev_status || existingOutput.this_stage_status !== this_status) {
-                muxUpdateLists.toUpdate.push({
-                    relative_path: inputTile.relative_path,
-                    prev_stage_status: prev_status,
-                    this_stage_status: this_status,
-                    // x: inputTile.x,
-                    // y: inputTile.y,
-                    // z: inputTile.z,
-                    lat_x: inputTile.lat_x,
-                    lat_y: inputTile.lat_y,
-                    lat_z: inputTile.lat_z,
-                    // cut_offset: inputTile.cut_offset,
-                    // z_offset: inputTile.z_offset,
-                    // delta_z: inputTile.delta_z,
-                    updated_at: new Date()
-                });
+                existingOutput.prev_stage_status = prev_status;
+                existingOutput.this_stage_status = this_status;
+                existingOutput.lat_x = inputTile.lat_x;
+                existingOutput.lat_y = inputTile.lat_y;
+                existingOutput.lat_z = inputTile.lat_z;
+                existingOutput.updated_at = new Date();
+
+                muxUpdateLists.toUpdate.push(existingOutput);
             }
         } else {
             let now = new Date();
@@ -228,15 +212,9 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
                     tile_name: inputTile.tile_name,
                     prev_stage_status: prev_status,
                     this_stage_status: this_status,
-                    // x: inputTile.x,
-                    // y: inputTile.y,
-                    // z: inputTile.z,
                     lat_x: inputTile.lat_x,
                     lat_y: inputTile.lat_y,
                     lat_z: inputTile.lat_z,
-                    // cut_offset: inputTile.cut_offset,
-                    // z_offset: inputTile.z_offset,
-                    // delta_z: inputTile.delta_z,
                     created_at: now,
                     updated_at: now
                 }

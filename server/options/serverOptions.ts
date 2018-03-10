@@ -11,7 +11,7 @@ interface IServerEnvDefinitions {
 
 const configurations: IServerEnvDefinitions = {
     production: {
-        port: 3000,
+        port: 6001,
         graphQlEndpoint: "/graphql",
         graphiQlEndpoint: "/graphiql",
         machineId: "1BCC812D-97CE-4B14-AD48-5C3C9B9B416E".toLocaleLowerCase()
