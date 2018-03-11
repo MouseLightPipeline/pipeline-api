@@ -48,7 +48,7 @@ export abstract class PipelineScheduler extends BasePipelineScheduler {
     }
 
     protected async createTables(connector: ProjectDatabaseConnector) {
-        if (super.createTables(connector)) {
+        if (await super.createTables(connector)) {
             if (this._pipelineStage.previous_stage_id === null) {
                 this._inputStageConnector = await connector.connectorForProject(this._project);
             } else {
