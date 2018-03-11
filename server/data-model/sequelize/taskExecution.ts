@@ -49,6 +49,7 @@ export interface ITaskExecution {
     exit_code: number;
     sync_status?: SyncStatus;
     synchronized_at?: Date;
+    submitted_at: Date;
     started_at: Date;
     completed_at: Date;
     created_at: Date;
@@ -115,6 +116,9 @@ export function sequelizeImport(sequelize, DataTypes) {
         },
         exit_code: {
             type: DataTypes.INTEGER,
+        },
+        submitted_at: {
+            type: DataTypes.DATE,
         },
         started_at: {
             type: DataTypes.DATE,
