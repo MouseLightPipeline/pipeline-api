@@ -1,4 +1,4 @@
-import {PipelineZComparisonScheduler} from "./pipelineZComparisonScheduler";
+import {PipelineAdjacentScheduler} from "./pipelineAdjacentScheduler";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 
@@ -17,7 +17,7 @@ if (stageId) {
 }
 
 async function startWorkerForProcess(stageId) {
-    let worker = await startZComparisonPipelineStageWorker(stageId);
+    let worker = await startAdjacentPipelineStageWorker(stageId);
 
     process.on("message", msg => {
         if (msg && msg.isCancelRequest) {
@@ -30,7 +30,7 @@ async function startWorkerForProcess(stageId) {
     debug("completed pipeline z comparison child process");
 }
 
-export async function startZComparisonPipelineStageWorker(stageId) {
+export async function startAdjacentPipelineStageWorker(stageId) {
     let pipelineWorker = null;
 
     try {
@@ -39,7 +39,7 @@ export async function startZComparisonPipelineStageWorker(stageId) {
         if (stage) {
             let project = await PersistentStorageManager.Instance().Projects.findById(stage.project_id);
 
-            pipelineWorker = new PipelineZComparisonScheduler(stage, project);
+            pipelineWorker = new PipelineAdjacentScheduler(stage, project);
 
             await pipelineWorker.run();
         }

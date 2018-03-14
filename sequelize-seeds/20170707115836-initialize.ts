@@ -5,6 +5,11 @@ const isProduction = seedEnv === "production";
 
 const taskLocationPrefix = process.env.PIPELINE_VOLUME || "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/pipeline-task-definitions/default";
 
+enum TaskArgumentType {
+    Literal = 0,
+    Parameter = 1
+}
+
 export = {
     up: async (queryInterface, Sequelize) => {
         const when = new Date();
@@ -59,7 +64,12 @@ function createTaskDefinitions(when: Date) {
             description: "Axon UInt16",
             script: "axon-uint16.sh",
             interpreter: "none",
-            script_args: JSON.stringify({arguments: ["/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps/axon-classifier"]}),
+            script_args: JSON.stringify({
+                arguments: [{
+                    value: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps/axon-classifier",
+                    type: TaskArgumentType.Literal
+                }]
+            }),
             cluster_args: JSON.stringify({arguments: [""]}),
             expected_exit_code: 0,
             work_units: 4,
@@ -73,7 +83,12 @@ function createTaskDefinitions(when: Date) {
             description: "",
             script: "dogDescriptor.sh",
             interpreter: "none",
-            script_args: JSON.stringify({arguments: ["/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps", "/groups/mousebrainmicro/mousebrainmicro/Software/mcr/v90"]}),
+            script_args: JSON.stringify({
+                arguments: [{
+                    value: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps",
+                    type: TaskArgumentType.Literal
+                }, {value: "/groups/mousebrainmicro/mousebrainmicro/Software/mcr/v90", type: TaskArgumentType.Literal}]
+            }),
             cluster_args: JSON.stringify({arguments: [""]}),
             expected_exit_code: 0,
             work_units: 2,
@@ -87,7 +102,12 @@ function createTaskDefinitions(when: Date) {
             description: "",
             script: "pointMatch.sh",
             interpreter: "none",
-            script_args: JSON.stringify({arguments: ["/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps", "/groups/mousebrainmicro/mousebrainmicro/Software/mcr/v92"]}),
+            script_args: JSON.stringify({
+                arguments: [{
+                    value: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps",
+                    type: TaskArgumentType.Literal
+                }, {value: "/groups/mousebrainmicro/mousebrainmicro/Software/mcr/v92", type: TaskArgumentType.Literal}]
+            }),
             cluster_args: JSON.stringify({arguments: [""]}),
             expected_exit_code: 0,
             work_units: 1,
@@ -103,7 +123,12 @@ function createTaskDefinitions(when: Date) {
             description: "Simple command to test shell worker execution.  Will echo all arguments.",
             script: "echo.sh",
             interpreter: "none",
-            script_args: JSON.stringify({arguments: [`"custom arg 1"`, `"custom arg 2"`]}),
+            script_args: JSON.stringify({
+                arguments: [{
+                    value: `"custom arg 1"`,
+                    type: TaskArgumentType.Literal
+                }, {value: `"custom arg 2"`, type: TaskArgumentType.Literal}]
+            }),
             cluster_args: JSON.stringify({arguments: [""]}),
             expected_exit_code: 0,
             work_units: 0,
@@ -117,7 +142,12 @@ function createTaskDefinitions(when: Date) {
             description: "Calls ilastik with test project.",
             script: "pixel_shell.sh",
             interpreter: "none",
-            script_args: JSON.stringify({arguments: ["test/pixel_classifier_test"]}),
+            script_args: JSON.stringify({
+                arguments: [{
+                    value: "test/pixel_classifier_test",
+                    type: TaskArgumentType.Literal
+                }]
+            }),
             cluster_args: JSON.stringify({arguments: [""]}),
             expected_exit_code: 0,
             work_units: 4,
@@ -131,7 +161,12 @@ function createTaskDefinitions(when: Date) {
             description: "",
             script: "dogDescriptor.sh",
             interpreter: "none",
-            script_args: JSON.stringify({arguments: ["/Volumes/Spare/Projects/MouseLight/Apps/Pipeline/dogDescriptor"]}),
+            script_args: JSON.stringify({
+                arguments: [{
+                    value: "/Volumes/Spare/Projects/MouseLight/Apps/Pipeline/dogDescriptor",
+                    type: TaskArgumentType.Literal
+                }]
+            }),
             cluster_args: JSON.stringify({arguments: [""]}),
             expected_exit_code: 0,
             work_units: 2,
@@ -145,7 +180,12 @@ function createTaskDefinitions(when: Date) {
             description: "",
             script: "getDescriptorPerTile.sh",
             interpreter: "none",
-            script_args: JSON.stringify({arguments: ["/Volumes/Spare/Projects/MouseLight/Apps/Pipeline/dogDescriptor/getDescriptorPerTile"]}),
+            script_args: JSON.stringify({
+                arguments: [{
+                    value: "/Volumes/Spare/Projects/MouseLight/Apps/Pipeline/dogDescriptor/getDescriptorPerTile",
+                    type: TaskArgumentType.Literal
+                }]
+            }),
             cluster_args: JSON.stringify({arguments: [""]}),
             expected_exit_code: 0,
             work_units: 1,

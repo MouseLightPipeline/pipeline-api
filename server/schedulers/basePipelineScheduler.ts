@@ -163,13 +163,17 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
         if (unscheduled.length > 0) {
             let waitingToProcess = await this._outputStageConnector.loadToProcess();
 
+            debug(`found ${waitingToProcess.length} waitingToProcess`);
+
             // Only items that are ready to queue, but aren't actually in the toProcess table yet.  There appear to be
             // some resubmit situations where these are out of sync temporarily.
             const notAlreadyInToProcessTable = _.differenceBy(unscheduled, waitingToProcess, "relative_path");
+            debug(`found ${notAlreadyInToProcessTable.length} notAlreadyInToProcessTable`);
 
             // Items that are already queued in toProcess table, but for some reason are listed as incomplete rather
             // than queued in the main table.
             let alreadyInToProcessTable = _.intersectionBy(unscheduled, waitingToProcess, "relative_path");
+            debug(`found ${alreadyInToProcessTable.length} alreadyInToProcessTable`);
 
             let toSchedule = notAlreadyInToProcessTable.filter(tile => {
                 if (!isNullOrUndefined(this._project.region_x_min) && tile.lat_x < this._project.region_x_min) {
@@ -192,10 +196,14 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
                     return false;
                 }
 
-                return !(!isNullOrUndefined(this._project.region_z_max) && tile.lat_z > this._project.region_z_max);
+                if (!isNullOrUndefined(this._project.region_z_max) && tile.lat_z > this._project.region_z_max) {
+                    return false;
+                }
+
+                return true;
             });
 
-            debug(`have ${unscheduled.length} unscheduled after region filtering`);
+            debug(`have ${toSchedule.length} unscheduled after region filtering`);
 
             toSchedule = toSchedule.map(obj => {
                 obj.this_stage_status = TilePipelineStatus.Queued;
@@ -218,12 +226,17 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
                 return obj
             });
 
-            debug(`transitioning ${toSchedule.length} tiles to to-process queue`);
+            debug(`transitioning ${toProcessInsert.length} tiles to to-process queue`);
+            debug(`${toProcessInsert.map(t => t.relative_path).join(", ")}`);
 
             await this._outputStageConnector.insertToProcess(toProcessInsert);
             // await this.batchInsert(this._outputKnexConnector, this._toProcessTableName, toProcessInsert);
 
-            await this._outputStageConnector.updateTiles(toSchedule.concat(alreadyInToProcessTable));
+            const updateList = toSchedule.concat(alreadyInToProcessTable);
+            debug(`updating ${updateList.length}`);
+            debug(`${updateList.map(t => t.relative_path).join(", ")}`);
+
+            await this._outputStageConnector.updateTiles(updateList);
             // await this.batchUpdate(this._outputKnexConnector, this._outputTableName, toSchedule.concat(alreadyInToProcessTable));
         }
 
@@ -346,10 +359,10 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
             await this._outputStageConnector.deleteToProcess(sorted.toDelete);
 
             // Remove any queued whose previous stage have been reverted.
-            const previousStageRegression = sorted.toUpdate.filter(t => t.prev_stage_status !== TilePipelineStatus.Complete).map(t => t[DefaultPipelineIdKey]);
+            const previousStageRegression = sorted.toUpdate.filter(t => t.prev_stage_status !== TilePipelineStatus.Complete && t.this_stage_status === TilePipelineStatus.Queued).map(t => t[DefaultPipelineIdKey]);
 
             if (previousStageRegression.length > 0) {
-                debug(`${previousStageRegression.length} tiles have reverted their status and should be removed.`);
+                debug(`${previousStageRegression.length} tiles have reverted their status and should be removed from to-process`);
                 // await this.batchDelete(this._outputKnexConnector, this._toProcessTableName, previousStageRegression, DefaultPipelineIdKey);
                 await this._outputStageConnector.deleteToProcess(previousStageRegression);
             }

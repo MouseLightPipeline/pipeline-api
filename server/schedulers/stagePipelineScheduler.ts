@@ -62,6 +62,36 @@ export abstract class PipelineScheduler extends BasePipelineScheduler {
         return true;
     }
 
+    protected async refreshTileStatus(): Promise<boolean> {
+        // Check and update the status of anything in-process
+        await this.updateInProcessStatus();
+
+        // Look if anything is already in the to-process queue
+        let available: boolean = (await this._outputStageConnector.countToProcess()) > 0;
+
+        // If not, search database for newly available to-process and put in to-process queue.  Skip count is used
+        // to periodically force an update even if there are some in queue so that displayed counts get updated.
+        if (!available || this._knownInputSkipCheckCount >= MAX_KNOWN_INPUT_SKIP_COUNT) {
+            let knownInput = await this._inputStageConnector.loadTiles();
+
+            // Update the database with the completion status of tiles from the previous stage.  This essentially
+            // converts this_stage_status from the previous stage id table to prev_stage_status for this stage.
+            // Load all tiles to find ones new, changed, and ones that have been removed upstream.
+            await this.refreshWithKnownInput(knownInput);
+
+            available = await this.updateToProcessQueue();
+
+            this._knownInputSkipCheckCount = 0;
+        } else {
+            debug(`skipping new to queue check with available to process (skip count ${this._knownInputSkipCheckCount} of ${MAX_KNOWN_INPUT_SKIP_COUNT})`);
+            this._knownInputSkipCheckCount++;
+        }
+
+        updatePipelineStageCounts(this.StageId, await this._outputStageConnector.countInProcess(), await this._outputStageConnector.countToProcess());
+
+        return available;
+    }
+
     protected async performProcessing(): Promise<void> {
         let pipelineStages = PersistentStorageManager.Instance().PipelineStages;
 
@@ -134,22 +164,6 @@ export abstract class PipelineScheduler extends BasePipelineScheduler {
             let stillLookingForTilesForWorker = await this.queue(waitingToProcess, async (toProcessTile: IToProcessTileAttributes) => {
                 // Return true to continue searching for an available worker and false if the task is launched.
                 try {
-                    /*
-                    const pipelineTiles = (await this.outputTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]));
-
-                    const inputTiles = (await this.inputTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]));
-
-                    if (pipelineTiles.length === 0 || inputTiles.length === 0) {
-                        // Something is not right - can not find tile in the input and/or output tables.
-                        debug("missing input or output tile upon scheduling");
-                        return false;
-                    }
-
-                    const inputTile = inputTiles[0];
-
-                    const pipelineTile = pipelineTiles[0];
-                    */
-
                     const pipelineTile = await this._outputStageConnector.loadTile({relative_path: toProcessTile[DefaultPipelineIdKey]});
 
                     const inputTile = await this._inputStageConnector.loadTile({relative_path: toProcessTile[DefaultPipelineIdKey]});
@@ -256,65 +270,6 @@ export abstract class PipelineScheduler extends BasePipelineScheduler {
 
             return Promise.resolve(!stillLookingForTilesForWorker);
         });
-    }
-
-    protected async refreshTileStatus(): Promise<boolean> {
-        // Check and update the status of anything in-process
-        await this.updateInProcessStatus();
-
-        // Look if anything is already in the to-process queue
-        let available: boolean = (await this._outputStageConnector.countToProcess()) > 0;
-
-        // If not, search database for newly available to-process and put in to-process queue.  Skip count is used
-        // to periodically force an update even if there are some in queue so that displayed counts get updated.
-        if (!available || this._knownInputSkipCheckCount >= MAX_KNOWN_INPUT_SKIP_COUNT) {
-            // Update the database with the completion status of tiles from the previous stage.  This essentially
-            // converts this_stage_status from the previous stage id table to prev_stage_status for this stage.
-            // Load all tiles to find ones new, changed, and ones that have been removed upstream.
-            let knownInput = await this._inputStageConnector.loadTiles();
-
-            /*
-            if (knownInput.length > 0) {
-                debug(`updating known input tiles`);
-
-                let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "prev_stage_status", "this_stage_status"]);
-
-                let sorted = await this.muxInputOutputTiles(knownInput, knownOutput);
-
-                await this.batchInsert(this._outputKnexConnector, this._outputTableName, sorted.toInsert);
-
-                await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdate, DefaultPipelineIdKey);
-
-                await this.batchDelete(this._outputKnexConnector, this._outputTableName, sorted.toDelete, DefaultPipelineIdKey);
-
-                // Also remove any queued to process.
-                await this.batchDelete(this._outputKnexConnector, this._toProcessTableName, sorted.toDelete, DefaultPipelineIdKey);
-
-                // Remove any queued whose previous stage have been reverted.
-                const previousStageRegression = sorted.toUpdate.filter(t => t.prev_stage_status !== TilePipelineStatus.Complete).map(t => t[DefaultPipelineIdKey]);
-
-                if (previousStageRegression.length > 0) {
-                    debug(`${previousStageRegression.length} tiles have reverted their status and should be removed.`);
-                    await this.batchDelete(this._outputKnexConnector, this._toProcessTableName, previousStageRegression, DefaultPipelineIdKey);
-                }
-            } else {
-                debug("no input from previous stage yet");
-            }
-            */
-
-            await this.refreshWithKnownInput(knownInput);
-
-            available = await this.updateToProcessQueue();
-
-            this._knownInputSkipCheckCount = 0;
-        } else {
-            debug(`skipping new to queue check with available to process (skip count ${this._knownInputSkipCheckCount} of ${MAX_KNOWN_INPUT_SKIP_COUNT})`);
-            this._knownInputSkipCheckCount++;
-        }
-
-        updatePipelineStageCounts(this.StageId, await this._outputStageConnector.countInProcess(), await this._outputStageConnector.countToProcess());
-
-        return available;
     }
 
     /*

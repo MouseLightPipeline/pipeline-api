@@ -40,6 +40,9 @@ export class PipelineMapScheduler extends PipelineScheduler {
                 lat_x: inputTile.lat_x,
                 lat_y: inputTile.lat_y,
                 lat_z: inputTile.lat_z,
+                step_x: inputTile.step_x,
+                step_y: inputTile.step_y,
+                step_z: inputTile.step_z,
                 duration: 0,
                 cpu_high: 0,
                 memory_high: 0,
@@ -59,12 +62,14 @@ export class PipelineMapScheduler extends PipelineScheduler {
             const existingTile = knownOutput[existingTileIdx];
 
             if (existingTile.prev_stage_status !== inputTile.this_stage_status) {
-                existingTile.relative_path = inputTile.relative_path;
+                existingTile.tile_name = inputTile.tile_name;
                 existingTile.prev_stage_status = inputTile.this_stage_status;
-                existingTile.this_stage_status = (inputTile === TilePipelineStatus.Complete || existingTile.this_stage_status === TilePipelineStatus.Processing) ? existingTile.this_stage_status : TilePipelineStatus.Incomplete;
                 existingTile.lat_x = inputTile.lat_x;
                 existingTile.lat_y = inputTile.lat_y;
                 existingTile.lat_z = inputTile.lat_z;
+                existingTile.step_x = inputTile.step_x;
+                existingTile.step_y = inputTile.step_y;
+                existingTile.step_z = inputTile.step_z;
                 existingTile.updated_at = new Date();
 
                 return existingTile;

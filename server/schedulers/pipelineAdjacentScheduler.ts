@@ -11,17 +11,12 @@ import {PipelineScheduler} from "./stagePipelineScheduler";
 import {AdjacentTileStageConnector, IAdjacentTileAttributes} from "../data-access/sequelize/adjacentTileStageConnector";
 import {IProject} from "../data-model/sequelize/project";
 
-/***
- TODO should include extents from monitor info in dashboard json to determine whether there will ever be a z - 1 tile.
- Otherwise, we'll always have incomplete tiles for the first z-plane.
- ***/
-
 interface IMuxUpdateLists extends IMuxTileLists {
-    toInsertZMapIndex: IAdjacentTileAttributes[];
-    toDeleteZMapIndex: string[];
+    toInsertAdjacentMapIndex: IAdjacentTileAttributes[];
+    toDeleteAdjacentMapIndex: string[];
 }
 
-export class PipelineZComparisonScheduler extends PipelineScheduler {
+export class PipelineAdjacentScheduler extends PipelineScheduler {
 
     public constructor(pipelineStage: IPipelineStage, project: IProject) {
         super(pipelineStage, project);
@@ -78,8 +73,8 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
             toInsert: [],
             toUpdate: [],
             toDelete: [],
-            toInsertZMapIndex: [],
-            toDeleteZMapIndex: []
+            toInsertAdjacentMapIndex: [],
+            toDeleteAdjacentMapIndex: []
         };
 
         // Flatten input and and output for faster searching.
@@ -87,24 +82,24 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
         const knownInputIdLookup = knownInput.map(obj => obj[DefaultPipelineIdKey]);
 
         // List of tiles where we already know the previous layer tile id.
-        // const nextLayerMapRows = await this.zIndexMapTable.select();
-        const nextLayerMapRows = await this.OutputStageConnector.loadAdjacentTiles();
-        const nextLayerMapIdLookup = nextLayerMapRows.map(obj => obj[DefaultPipelineIdKey]);
+        // const adjacentMapRows = await this.zIndexMapTable.select();
+        const adjacentMapRows = await this.OutputStageConnector.loadAdjacentTiles();
+        const adjacentMapIdLookup = adjacentMapRows.map(obj => obj[DefaultPipelineIdKey]);
 
         muxUpdateLists.toDelete = _.differenceBy(knownOutput, knownInput, DefaultPipelineIdKey).map(t => t.relative_path);
 
         // Force serial execution of each tile given async calls within function.
         await knownInput.reduce(async (promiseChain, inputTile) => {
             return promiseChain.then(() => {
-                return this.muxUpdateTile(inputTile, knownInput, knownOutput, nextLayerMapRows, knownInputIdLookup, knownOutputIdLookup, nextLayerMapIdLookup, muxUpdateLists.toDelete, muxUpdateLists);
+                return this.muxUpdateTile(inputTile, knownInput, knownOutput, adjacentMapRows, knownInputIdLookup, knownOutputIdLookup, adjacentMapIdLookup, muxUpdateLists.toDelete, muxUpdateLists);
             });
         }, Promise.resolve());
 
-        // await this.batchInsert(this._outputKnexConnector, this._zIndexMapTableName, muxUpdateLists.toInsertZMapIndex);
-        await this.OutputStageConnector.insertAdjacent(muxUpdateLists.toInsertZMapIndex);
+        // await this.batchInsert(this._outputKnexConnector, this._zIndexMapTableName, muxUpdateLists.toInsertAdjacentMapIndex);
+        await this.OutputStageConnector.insertAdjacent(muxUpdateLists.toInsertAdjacentMapIndex);
 
-        // await this.batchDelete(this._outputKnexConnector, this._zIndexMapTableName, muxUpdateLists.toDeleteZMapIndex);
-        await this.OutputStageConnector.deleteAdjacent(muxUpdateLists.toDeleteZMapIndex);
+        // await this.batchDelete(this._outputKnexConnector, this._zIndexMapTableName, muxUpdateLists.toDeleteAdjacentMapIndex);
+        await this.OutputStageConnector.deleteAdjacent(muxUpdateLists.toDeleteAdjacentMapIndex);
 
         // Insert, update, delete handled by base.
         return muxUpdateLists;
@@ -117,53 +112,53 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
 
         const existingOutput: IPipelineTile = idx > -1 ? knownOutput[idx] : null;
 
-        const nextLayerLookupIndex = nextLayerMapIdLookup.indexOf(inputTile[DefaultPipelineIdKey]);
+        const adjacentLookupIndex = nextLayerMapIdLookup.indexOf(inputTile[DefaultPipelineIdKey]);
 
-        let nextLayerMap: IAdjacentTileAttributes = nextLayerLookupIndex > -1 ? nextLayerMapRows[nextLayerLookupIndex] : null;
+        let adjacentMap: IAdjacentTileAttributes = adjacentLookupIndex > -1 ? nextLayerMapRows[adjacentLookupIndex] : null;
 
         let tile = null;
 
-        if (nextLayerMap === null) {
+        if (adjacentMap === null) {
             tile = await this.findPreviousLayerTile(inputTile);
         } else {
             // Assert the existing map is still valid given something is curated/deleted.
-            const index = toDelete.indexOf(nextLayerMap.adjacent_relative_path);
+            const index = toDelete.indexOf(adjacentMap.adjacent_relative_path);
 
             // Remove entry.  If a replacement exists, will be captured next time around.
             if (index >= 0) {
-                muxUpdateLists.toDeleteZMapIndex.push(inputTile.relative_path);
+                muxUpdateLists.toDeleteAdjacentMapIndex.push(inputTile.relative_path);
             }
         }
 
         if (tile !== null) {
-            nextLayerMap = {
+            adjacentMap = {
                 relative_path: inputTile.relative_path,
                 adjacent_relative_path: tile.relative_path,
                 adjacent_tile_name: tile.tile_name
             };
 
-            muxUpdateLists.toInsertZMapIndex.push(nextLayerMap);
+            muxUpdateLists.toInsertAdjacentMapIndex.push(adjacentMap);
         }
 
         // This really shouldn't fail since we should have already seen the tile at some point to have created the
         // mapping.
-        const nextLayerInputTileIdx = nextLayerMap ? knownInputIdLookup.indexOf(nextLayerMap.adjacent_relative_path) : -1;
-        const nextLayerInputTile = nextLayerInputTileIdx > -1 ? knownInput[nextLayerInputTileIdx] : null;
+        const adjacentInputTileIdx = adjacentMap ? knownInputIdLookup.indexOf(adjacentMap.adjacent_relative_path) : -1;
+        const adjacentInputTile = adjacentInputTileIdx > -1 ? knownInput[adjacentInputTileIdx] : null;
 
         let prev_status = TilePipelineStatus.DoesNotExist;
 
         let this_status = TilePipelineStatus.Incomplete;
 
-        // We can only be in this block if the z layer tile exists.  If the z + 1 tile does not exist, the tile
+        // We can only be in this block if the adjacent tile exists.  If the adjacent tile does not exist, the tile
         // effectively does not exist for this stage.
-        if (nextLayerInputTile !== null) {
-            if ((inputTile.this_stage_status === TilePipelineStatus.Failed) || (nextLayerInputTile.this_stage_status === TilePipelineStatus.Failed)) {
+        if (adjacentInputTile !== null) {
+            if ((inputTile.this_stage_status === TilePipelineStatus.Failed) || (adjacentInputTile.this_stage_status === TilePipelineStatus.Failed)) {
                 prev_status = TilePipelineStatus.Failed;
-            } else if ((inputTile.this_stage_status === TilePipelineStatus.Canceled) || (nextLayerInputTile.this_stage_status === TilePipelineStatus.Canceled)) {
+            } else if ((inputTile.this_stage_status === TilePipelineStatus.Canceled) || (adjacentInputTile.this_stage_status === TilePipelineStatus.Canceled)) {
                 prev_status = TilePipelineStatus.Canceled;
             } else {
                 // This works because once you drop failed and canceled, the highest value is complete.
-                prev_status = Math.min(inputTile.this_stage_status, nextLayerInputTile.this_stage_status);
+                prev_status = Math.min(inputTile.this_stage_status, adjacentInputTile.this_stage_status);
             }
         } else {
             this_status = TilePipelineStatus.DoesNotExist;
@@ -178,7 +173,7 @@ export class PipelineZComparisonScheduler extends PipelineScheduler {
                 // that is the final answer.
                 if (this_status !== TilePipelineStatus.DoesNotExist) {
                     if ((prev_status !== TilePipelineStatus.DoesNotExist) && (existingOutput.this_stage_status === TilePipelineStatus.DoesNotExist)) {
-                        // It was considered does not exist (maybe z + 1 had not been acquired yet), but now there is a
+                        // It was considered does not exist (maybe the adjacent tile had not been acquired yet), but now there is a
                         // legit value for the previous stage, so upgrade to incomplete.
                         this_status = TilePipelineStatus.Incomplete;
                     } else if (inputTile.this_stage_status !== TilePipelineStatus.Complete) {

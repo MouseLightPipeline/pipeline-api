@@ -1,5 +1,6 @@
 // import * as nearley from "nearley";
-import {TaskArgumentType} from "../server/argument-parser/taskArguments";
+
+import {TaskArgumentType} from "../server/data-model/taskArgument";
 
 const nearley = require("nearley");
 const grammar = require("../server/argument-parser/taskArgumentGrammar.js");

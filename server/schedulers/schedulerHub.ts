@@ -1,11 +1,11 @@
-import {startZComparisonPipelineStageWorker} from "./pipelineZComparisonSchedulerChildProcess";
+import {startAdjacentPipelineStageWorker} from "./pipelineAdjacentSchedulerChildProcess";
 
 const path = require("path");
 const child_process = require("child_process");
 
 const debug = require("debug")("pipeline:coordinator-api:scheduler-hub");
 
-import {startTileStatusFileWorker} from "./tileStatusWorkerChildProcess";
+import {startTileStatusFileWorker} from "./projectPipelineSchedulerChildProcess";
 import {startMapPipelineStageWorker} from "./pipelineMapSchedulerChildProcess";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {IProjectAttributes} from "../data-model/sequelize/project";
@@ -231,14 +231,14 @@ export class SchedulerHub {
     private async resumeStagesForProject(pipelineStagesManager: any, project: IProjectAttributes) {
         const stages: IPipelineStage[] = await pipelineStagesManager.getForProject(project.id);
 
-        await this.addWorker(project, startTileStatusFileWorker, "/tileStatusWorkerChildProcess.js");
+        await this.addWorker(project, startTileStatusFileWorker, "/projectPipelineSchedulerChildProcess.js");
 
         await Promise.all(stages.map(stage => this.resumeStage(stage)));
     }
 
     private async resumeStage(stage: IPipelineStage): Promise<boolean> {
-        if (stage.function_type === PipelineStageMethod.ZAdjacentTileComparison) {
-            return this.addWorker(stage, startZComparisonPipelineStageWorker, "/pipelineZComparisonSchedulerChildProcess.js");
+        if (stage.function_type !== PipelineStageMethod.MapTile) {
+            return this.addWorker(stage, startAdjacentPipelineStageWorker, "/pipelineAdjacentSchedulerChildProcess.js");
         } else {
             return this.addWorker(stage, startMapPipelineStageWorker, "/pipelineMapSchedulerChildProcess.js");
         }
