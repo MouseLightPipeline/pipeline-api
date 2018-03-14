@@ -14,7 +14,7 @@ import {BasePipelineScheduler, DefaultPipelineIdKey, TilePipelineStatus} from ".
 import {ProjectDatabaseConnector} from "../data-access/sequelize/projectDatabaseConnector";
 import {updatePipelineStageCounts} from "../data-model/sequelize/pipelineStagePerformance";
 
-const MAX_KNOWN_INPUT_SKIP_COUNT = 10;
+const MAX_KNOWN_INPUT_SKIP_COUNT = 1;
 const MAX_ASSIGN_PER_ITERATION = 50;
 
 export abstract class PipelineScheduler extends BasePipelineScheduler {
@@ -179,6 +179,7 @@ export abstract class PipelineScheduler extends BasePipelineScheduler {
                     let outputPath = path.join(this._pipelineStage.dst_path, pipelineTile.relative_path);
 
                     fse.ensureDirSync(outputPath);
+                    debug(`ensureDir ${outputPath}`);
                     fse.chmodSync(outputPath, 0o775);
 
                     const log_root_path = this._project.log_root_path || this._pipelineStage.dst_path;

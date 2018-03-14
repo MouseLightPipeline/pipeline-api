@@ -72,6 +72,7 @@ export class PipelineAdjacentScheduler extends PipelineScheduler {
         const muxUpdateLists: IMuxUpdateLists = {
             toInsert: [],
             toUpdate: [],
+            toReset: [],
             toDelete: [],
             toInsertAdjacentMapIndex: [],
             toDeleteAdjacentMapIndex: []
@@ -188,11 +189,20 @@ export class PipelineAdjacentScheduler extends PipelineScheduler {
             }
 
             if (existingOutput.prev_stage_status !== prev_status || existingOutput.this_stage_status !== this_status) {
+                if (existingOutput.this_stage_status === TilePipelineStatus.Queued && inputTile.this_stage_status !== TilePipelineStatus.Complete) {
+                    muxUpdateLists.toReset.push(existingOutput);
+                }
+
+                existingOutput.index = inputTile.index;
+                existingOutput.tile_name = inputTile.tile_name;
                 existingOutput.prev_stage_status = prev_status;
                 existingOutput.this_stage_status = this_status;
                 existingOutput.lat_x = inputTile.lat_x;
                 existingOutput.lat_y = inputTile.lat_y;
                 existingOutput.lat_z = inputTile.lat_z;
+                existingOutput.step_x = inputTile.step_x;
+                existingOutput.step_y = inputTile.step_y;
+                existingOutput.step_z = inputTile.step_z;
                 existingOutput.updated_at = new Date();
 
                 muxUpdateLists.toUpdate.push(existingOutput);
@@ -202,12 +212,19 @@ export class PipelineAdjacentScheduler extends PipelineScheduler {
 
             muxUpdateLists.toInsert.push({
                     relative_path: inputTile.relative_path,
+                    index: inputTile.index,
                     tile_name: inputTile.tile_name,
                     prev_stage_status: prev_status,
                     this_stage_status: this_status,
                     lat_x: inputTile.lat_x,
                     lat_y: inputTile.lat_y,
                     lat_z: inputTile.lat_z,
+                    step_x: inputTile.step_x,
+                    step_y: inputTile.step_y,
+                    step_z: inputTile.step_z,
+                    duration: 0,
+                    cpu_high: 0,
+                    memory_high: 0,
                     created_at: now,
                     updated_at: now
                 }

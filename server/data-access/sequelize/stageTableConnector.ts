@@ -338,6 +338,10 @@ export class StageTableConnector {
                 type: this._connection.Sequelize.INTEGER,
                 defaultValue: null
             },
+            duration: {
+                type: this._connection.Sequelize.DOUBLE,
+                defaultValue: 0
+            },
             cpu_high: {
                 type: this._connection.Sequelize.DOUBLE,
                 defaultValue: 0

@@ -64,6 +64,7 @@ export class ProjectPipelineScheduler extends BasePipelineScheduler {
         const sorted: IMuxTileLists = {
             toInsert: [],
             toUpdate: [],
+            toReset: [],
             toDelete: []
         };
 

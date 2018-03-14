@@ -19,6 +19,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
         let sorted: IMuxTileLists = {
             toInsert: [],
             toUpdate: [],
+            toReset: [],
             toDelete: []
         };
 
@@ -62,7 +63,12 @@ export class PipelineMapScheduler extends PipelineScheduler {
             const existingTile = knownOutput[existingTileIdx];
 
             if (existingTile.prev_stage_status !== inputTile.this_stage_status) {
+                if (existingTile.this_stage_status === TilePipelineStatus.Queued && inputTile.this_stage_status !== TilePipelineStatus.Complete) {
+                    sorted.toReset.push(existingTile);
+                }
+
                 existingTile.tile_name = inputTile.tile_name;
+                existingTile.index = inputTile.index;
                 existingTile.prev_stage_status = inputTile.this_stage_status;
                 existingTile.lat_x = inputTile.lat_x;
                 existingTile.lat_y = inputTile.lat_y;

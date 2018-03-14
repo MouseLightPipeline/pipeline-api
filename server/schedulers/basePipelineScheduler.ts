@@ -37,6 +37,7 @@ export enum TilePipelineStatus {
 export interface IMuxTileLists {
     toInsert: IPipelineTileAttributes[],
     toUpdate: IPipelineTile[],
+    toReset: IPipelineTile[],
     toDelete: string[]
 }
 
@@ -310,6 +311,7 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
         return {
             toInsert: [],
             toUpdate: [],
+            toReset: [],
             toDelete: []
         };
     }
@@ -332,12 +334,19 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
             await this._outputStageConnector.deleteToProcess(sorted.toDelete);
 
             // Remove any queued whose previous stage have been reverted.
-            const previousStageRegression = sorted.toUpdate.filter(t => t.prev_stage_status !== TilePipelineStatus.Complete && t.this_stage_status === TilePipelineStatus.Queued).map(t => t[DefaultPipelineIdKey]);
 
-            if (previousStageRegression.length > 0) {
-                debug(`${previousStageRegression.length} tiles have reverted their status and should be removed from to-process`);
-                await this._outputStageConnector.deleteToProcess(previousStageRegression);
+            if (sorted.toReset.length > 0) {
+                debug(`${sorted.toReset.length} tiles have reverted their status and should be removed from to-process`);
+                await this._outputStageConnector.deleteToProcess(sorted.toReset.map(t => t.relative_path));
             }
+            /*
+             const previousStageRegression = sorted.toUpdate.filter(t => t.prev_stage_status !== TilePipelineStatus.Complete && t.this_stage_status === TilePipelineStatus.Queued).map(t => t[DefaultPipelineIdKey]);
+
+             if (previousStageRegression.length > 0) {
+                 debug(`${previousStageRegression.length} tiles have reverted their status and should be removed from to-process`);
+                 await this._outputStageConnector.deleteToProcess(previousStageRegression);
+             }
+             */
         } else {
             debug("no input from previous stage");
         }
