@@ -16,7 +16,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
     }
 
     protected async muxInputOutputTiles(knownInput: IPipelineTile[], knownOutput: IPipelineTile[]): Promise<IMuxTileLists> {
-        let sorted = {
+        let sorted: IMuxTileLists = {
             toInsert: [],
             toUpdate: [],
             toDelete: []
@@ -24,7 +24,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
 
         const toInsert = _.differenceBy(knownInput, knownOutput, DefaultPipelineIdKey);
 
-        const toUpdate = _.intersectionBy(knownInput, knownOutput, DefaultPipelineIdKey);
+        const toUpdate = _.intersectionBy(knownInput, DefaultPipelineIdKey);
 
         sorted.toDelete = _.differenceBy(knownOutput, knownInput, DefaultPipelineIdKey).map(t => t.relative_path);
 

@@ -213,10 +213,8 @@ export abstract class PipelineScheduler extends BasePipelineScheduler {
 
                         pipelineTile.this_stage_status = TilePipelineStatus.Processing;
 
-                        // await this.outputTable.where(DefaultPipelineIdKey, pipelineTile[DefaultPipelineIdKey]).update(pipelineTile);
                         await pipelineTile.save();
 
-                        // await this.toProcessTable.where(DefaultPipelineIdKey, toProcessTile[DefaultPipelineIdKey]).del();
                         await this._outputStageConnector.deleteToProcessTile(toProcessTile);
 
                         const completeFile = path.join(`${taskExecution.resolved_log_path}-done.txt`);

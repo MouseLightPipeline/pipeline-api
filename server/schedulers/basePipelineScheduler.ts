@@ -168,12 +168,10 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
             // Only items that are ready to queue, but aren't actually in the toProcess table yet.  There appear to be
             // some resubmit situations where these are out of sync temporarily.
             const notAlreadyInToProcessTable = _.differenceBy(unscheduled, waitingToProcess, "relative_path");
-            debug(`found ${notAlreadyInToProcessTable.length} notAlreadyInToProcessTable`);
 
             // Items that are already queued in toProcess table, but for some reason are listed as incomplete rather
             // than queued in the main table.
             let alreadyInToProcessTable = _.intersectionBy(unscheduled, waitingToProcess, "relative_path");
-            debug(`found ${alreadyInToProcessTable.length} alreadyInToProcessTable`);
 
             let toSchedule = notAlreadyInToProcessTable.filter(tile => {
                 if (!isNullOrUndefined(this._project.region_x_min) && tile.lat_x < this._project.region_x_min) {
@@ -196,11 +194,7 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
                     return false;
                 }
 
-                if (!isNullOrUndefined(this._project.region_z_max) && tile.lat_z > this._project.region_z_max) {
-                    return false;
-                }
-
-                return true;
+                return !(!isNullOrUndefined(this._project.region_z_max) && tile.lat_z > this._project.region_z_max);
             });
 
             debug(`have ${toSchedule.length} unscheduled after region filtering`);
@@ -226,18 +220,11 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
                 return obj
             });
 
-            debug(`transitioning ${toProcessInsert.length} tiles to to-process queue`);
-            debug(`${toProcessInsert.map(t => t.relative_path).join(", ")}`);
-
             await this._outputStageConnector.insertToProcess(toProcessInsert);
-            // await this.batchInsert(this._outputKnexConnector, this._toProcessTableName, toProcessInsert);
 
             const updateList = toSchedule.concat(alreadyInToProcessTable);
-            debug(`updating ${updateList.length}`);
-            debug(`${updateList.map(t => t.relative_path).join(", ")}`);
 
             await this._outputStageConnector.updateTiles(updateList);
-            // await this.batchUpdate(this._outputKnexConnector, this._outputTableName, toSchedule.concat(alreadyInToProcessTable));
         }
 
         return toProcessInsert.length > 0;
@@ -290,19 +277,12 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
                     }
 
                     // Tile should be marked with status and not be present in any intermediate tables.
-
-                    // await this.outputTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]).update({this_stage_status: tileStatus});
                     updateList.update(tile[DefaultPipelineIdKey], tileStatus);
 
                     if (tileStatus === TilePipelineStatus.Complete) {
                         updatePipelineStagePerformance(this.StageId, executionInfo);
 
-                        // const inProcessTiles = (await this.inProcessTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]));
-
-                        // if (inProcessTiles.length > 0) {
-                        //     const inProcessTile = inProcessTiles[0];
                         fse.appendFileSync(`${executionInfo.resolved_log_path}-done.txt`, `Complete ${(new Date()).toUTCString()}`);
-                        //  }
                     }
 
                     // await this.inProcessTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]).del();
@@ -311,10 +291,8 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
             } else {
                 // If the worker responded and has no knowledge of this task id, it may have cleared on the worker side
                 // prematurely via the worker UI.  Mark as canceled since the status is unknown.
-                // await this.outputTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]).update({this_stage_status: TilePipelineStatus.Canceled});
                 updateList.update(tile[DefaultPipelineIdKey], TilePipelineStatus.Canceled);
 
-                // await this.inProcessTable.where(DefaultPipelineIdKey, tile[DefaultPipelineIdKey]).del();
                 updateList.remove(tile[DefaultPipelineIdKey])
             }
         }
@@ -340,22 +318,17 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
         if (knownInput.length > 0) {
             debug(`updating known input tiles`);
 
-            // let knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "prev_stage_status", "this_stage_status"]);
             let knownOutput = await this._outputStageConnector.loadTiles({attributes: [DefaultPipelineIdKey, "prev_stage_status", "this_stage_status"]});
 
             let sorted = await this.muxInputOutputTiles(knownInput, knownOutput);
 
-            // await this.batchInsert(this._outputKnexConnector, this._outputTableName, sorted.toInsert);
             await this._outputStageConnector.insertTiles(sorted.toInsert);
 
-            // await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdate, DefaultPipelineIdKey);
             await this._outputStageConnector.updateTiles(sorted.toUpdate);
 
-            // await this.batchDelete(this._outputKnexConnector, this._outputTableName, sorted.toDelete, DefaultPipelineIdKey);
             await this._outputStageConnector.deleteTiles(sorted.toDelete);
 
             // Also remove any queued to process.
-            // await this.batchDelete(this._outputKnexConnector, this._toProcessTableName, sorted.toDelete, DefaultPipelineIdKey);
             await this._outputStageConnector.deleteToProcess(sorted.toDelete);
 
             // Remove any queued whose previous stage have been reverted.
@@ -363,7 +336,6 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
 
             if (previousStageRegression.length > 0) {
                 debug(`${previousStageRegression.length} tiles have reverted their status and should be removed from to-process`);
-                // await this.batchDelete(this._outputKnexConnector, this._toProcessTableName, previousStageRegression, DefaultPipelineIdKey);
                 await this._outputStageConnector.deleteToProcess(previousStageRegression);
             }
         } else {
@@ -414,8 +386,6 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
         try {
             this._isInitialized = true;
 
-            // debug(`transitioning ${this._pipelineStage.id} to establish data connection`);
-
             setImmediate(() => this.transitionToEstablishDataConnection());
         } catch (err) {
             debug(err);
@@ -425,7 +395,6 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
     private async transitionToEstablishDataConnection() {
         try {
             if (this.IsExitRequested) {
-                // debug(`exit requested for ${this._pipelineStage.id} during transition to establish data connection`);
                 return;
             }
 
@@ -434,11 +403,8 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
             const connected = await this.createTables(connector);
 
             if (connected) {
-                // debug(`transitioning ${this._pipelineStage.id} to establish data connection`);
-
                 await this.transitionToProcessStage()
             } else {
-                // debug(`failed to establish data connection for ${this._pipelineStage.id} setting timeout retry`);
                 setTimeout(() => this.transitionToEstablishDataConnection(), 15 * 1000);
             }
         } catch (err) {
@@ -449,11 +415,9 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
     private async transitionToProcessStage() {
         try {
             if (this.IsExitRequested) {
-                // debug(`exit requested for ${this._pipelineStage.id} during transition to process stage`);
                 return;
             }
 
-            // debug(`transitioning ${this._pipelineStage.id} to perform work`);
             await this.performWork();
         } catch (err) {
             debug(err);

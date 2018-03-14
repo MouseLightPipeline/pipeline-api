@@ -95,10 +95,8 @@ export class PipelineAdjacentScheduler extends PipelineScheduler {
             });
         }, Promise.resolve());
 
-        // await this.batchInsert(this._outputKnexConnector, this._zIndexMapTableName, muxUpdateLists.toInsertAdjacentMapIndex);
         await this.OutputStageConnector.insertAdjacent(muxUpdateLists.toInsertAdjacentMapIndex);
 
-        // await this.batchDelete(this._outputKnexConnector, this._zIndexMapTableName, muxUpdateLists.toDeleteAdjacentMapIndex);
         await this.OutputStageConnector.deleteAdjacent(muxUpdateLists.toDeleteAdjacentMapIndex);
 
         // Insert, update, delete handled by base.

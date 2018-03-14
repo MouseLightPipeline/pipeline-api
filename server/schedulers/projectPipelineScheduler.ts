@@ -15,24 +15,12 @@ import {
     BasePipelineScheduler, DefaultPipelineIdKey, TilePipelineStatus, IMuxTileLists
 } from "./basePipelineScheduler";
 import {IProject, IProjectAttributes} from "../data-model/sequelize/project";
-import {IPipelineTileAttributes, StageTableConnector} from "../data-access/sequelize/stageTableConnector";
+import {
+    IPipelineTile, IPipelineTileAttributes,
+    StageTableConnector
+} from "../data-access/sequelize/stageTableConnector";
 import {isNullOrUndefined} from "util";
 import {ProjectDatabaseConnector} from "../data-access/sequelize/projectDatabaseConnector";
-
-interface IPosition {
-    x: number;
-    y: number;
-    z: number;
-}
-
-interface IDashboardJsonTile {
-    index: string;
-    name: string;
-    relative_path: string;
-    status: number;
-    lattice_position: IPosition;
-    lattice_step: IPosition;
-}
 
 export class ProjectPipelineScheduler extends BasePipelineScheduler {
 
@@ -63,67 +51,46 @@ export class ProjectPipelineScheduler extends BasePipelineScheduler {
     protected async refreshTileStatus(): Promise<boolean> {
         // For the tile status stage (project "0" depth stage), refreshing the tile status _is_ the work.
 
-        debug(`dashboard update for project ${this._project.name}`);
+        debug(`pipeline input update for project ${this._project.name}`);
 
         const knownInput = await this.performJsonUpdate();
-
-        /*
-        if (knownInput.length > 0) {
-
-            const knownOutput = await this.outputTable.select([DefaultPipelineIdKey, "prev_stage_status"]);
-
-            const sorted = await this.muxInputOutputTiles(knownInput, knownOutput);
-
-            await this.batchInsert(this._outputKnexConnector, this._outputTableName, sorted.toInsert);
-
-            await this.batchUpdate(this._outputKnexConnector, this._outputTableName, sorted.toUpdate, DefaultPipelineIdKey);
-
-            await this.batchDelete(this._outputKnexConnector, this._outputTableName, sorted.toDelete, DefaultPipelineIdKey);
-        }
-        */
 
         await this.refreshWithKnownInput(knownInput);
 
         return true;
     }
 
-    protected async muxInputOutputTiles(knownInput: IDashboardJsonTile[], knownOutput: IPipelineTileAttributes[]): Promise<IMuxTileLists> {
-        const sorted = {
+    protected async muxInputOutputTiles(knownInput: IPipelineTileAttributes[], knownOutput: IPipelineTile[]): Promise<IMuxTileLists> {
+        const sorted: IMuxTileLists = {
             toInsert: [],
             toUpdate: [],
             toDelete: []
         };
 
-        const toInsert = _.differenceBy(knownInput, knownOutput, DefaultPipelineIdKey);
+        if (knownOutput.length - knownInput.length > 1000) {
+            debug(`input has greater than 1000 fewer tiles than last check (${knownOutput.length - knownInput.length}) - skipping update`);
+            return;
+        }
 
-        const toUpdate = _.intersectionBy(knownInput, knownOutput, DefaultPipelineIdKey);
+        const toInsert: IPipelineTileAttributes[] = _.differenceBy(knownInput, knownOutput, DefaultPipelineIdKey);
+
+        const toUpdate: IPipelineTileAttributes[] = _.intersectionBy(knownInput, knownOutput, DefaultPipelineIdKey);
 
         sorted.toDelete = _.differenceBy(knownOutput, knownInput, DefaultPipelineIdKey).map(t => t.relative_path);
 
         sorted.toInsert = toInsert.map(inputTile => {
             const now = new Date();
 
-            return {
-                relative_path: inputTile.relative_path,
-                index: inputTile.index,
-                tile_name: inputTile.name,
-                prev_stage_status: inputTile.status,
-                this_stage_status: inputTile.status,
-                lat_x: inputTile.lattice_position.x,
-                lat_y: inputTile.lattice_position.y,
-                lat_z: inputTile.lattice_position.z,
-                step_x: inputTile.lattice_step.x,
-                step_y: inputTile.lattice_step.y,
-                step_z: inputTile.lattice_step.z,
+            return Object.assign({}, inputTile, {
                 duration: 0,
                 cpu_high: 0,
                 memory_high: 0,
                 created_at: now,
                 updated_at: now
-            };
+            });
         });
 
-        sorted.toUpdate = toUpdate.map(inputTile => {
+        sorted.toUpdate = toUpdate.map<IPipelineTile>((inputTile: IPipelineTileAttributes) => {
             const existingTileIdx = _.findIndex(knownOutput, t => t.relative_path === inputTile.relative_path);
 
             if (existingTileIdx < 0) {
@@ -133,17 +100,17 @@ export class ProjectPipelineScheduler extends BasePipelineScheduler {
 
             const existingTile = knownOutput[existingTileIdx];
 
-            if (existingTile.prev_stage_status !== inputTile.status) {
-                existingTile.tile_name = inputTile.name;
+            if (existingTile.prev_stage_status !== inputTile.this_stage_status) {
+                existingTile.tile_name = inputTile.tile_name;
                 existingTile.index = inputTile.index;
-                existingTile.prev_stage_status = inputTile.status;
-                existingTile.this_stage_status = inputTile.status;
-                existingTile.lat_x = inputTile.lattice_position.x;
-                existingTile.lat_y = inputTile.lattice_position.y;
-                existingTile.lat_z = inputTile.lattice_position.z;
-                existingTile.step_x = inputTile.lattice_step.x;
-                existingTile.step_y = inputTile.lattice_step.y;
-                existingTile.step_z = inputTile.lattice_step.z;
+                existingTile.prev_stage_status = inputTile.prev_stage_status;
+                existingTile.this_stage_status = inputTile.this_stage_status;
+                existingTile.lat_x = inputTile.lat_x;
+                existingTile.lat_y = inputTile.lat_y;
+                existingTile.lat_z = inputTile.lat_z;
+                existingTile.step_x = inputTile.step_x;
+                existingTile.step_y = inputTile.step_y;
+                existingTile.step_z = inputTile.step_z;
                 existingTile.updated_at = new Date();
 
                 return existingTile;
@@ -155,23 +122,28 @@ export class ProjectPipelineScheduler extends BasePipelineScheduler {
         return sorted;
     }
 
-    private async performJsonUpdate(): Promise<IDashboardJsonTile[]> {
-        const projectUpdate: IProjectAttributes = {
+    private async performJsonUpdate(): Promise<IPipelineTileAttributes[]> {
+        let projectUpdate: IProjectAttributes = {
             id: this._project.id
         };
 
-        let tiles: IDashboardJsonTile[] = [];
+        let tiles: IProjectAttributes[] = [];
 
         let dataFile = path.join(this._project.root_path, pipelineInputJsonFile);
 
         if (!fse.existsSync(dataFile)) {
             debug(`${pipelineInputJsonFile} does not exist in the project root path - moving on to ${dashboardJsonFile}`);
+
             dataFile = path.join(this._project.root_path, dashboardJsonFile);
 
             if (!fse.existsSync(dataFile)) {
                 debug(`${dashboardJsonFile} also does not exist in the project root path ${dataFile} - skipping tile update`);
                 return;
             }
+
+            [projectUpdate, tiles] = await this.parseDashboardInput(dataFile, projectUpdate);
+        } else {
+            [projectUpdate, tiles] = await this.parsePipelineInput(dataFile, projectUpdate);
         }
 
         let outputFile = path.join(this._project.root_path, tileStatusJsonFile);
@@ -181,6 +153,63 @@ export class ProjectPipelineScheduler extends BasePipelineScheduler {
         if (fse.existsSync(outputFile)) {
             fse.copySync(outputFile, backupFile, {clobber: true});
         }
+
+        if (fse.existsSync(outputFile)) {
+            fse.unlinkSync(outputFile);
+        }
+
+        fse.outputJSONSync(outputFile, tiles);
+
+        return tiles;
+    }
+
+    private async parsePipelineInput(dataFile: string, projectUpdate: IProjectAttributes): Promise<[IProjectAttributes, IPipelineTileAttributes[]]> {
+        let tiles: IPipelineTileAttributes[] = [];
+
+        let contents = fse.readFileSync(dataFile);
+
+        let jsonContent = JSON.parse(contents);
+
+        if (jsonContent.extents) {
+            projectUpdate.sample_x_min = jsonContent.extents.minimumX;
+            projectUpdate.sample_x_max = jsonContent.extents.maximumX;
+            projectUpdate.sample_y_min = jsonContent.extents.minimumY;
+            projectUpdate.sample_y_max = jsonContent.extents.maximumY;
+            projectUpdate.sample_z_min = jsonContent.extents.minimumZ;
+            projectUpdate.sample_z_max = jsonContent.extents.maximumZ;
+
+            await this._project.update(projectUpdate);
+
+            this._project = await PersistentStorageManager.Instance().Projects.findById(this._project.id);
+        }
+
+        jsonContent.tiles.forEach(tile => {
+            // Normalize paths to posix
+            let normalizedPath = tile.relativePath.replace(new RegExp("\\" + "\\", "g"), "/");
+            let tileName = path.basename(normalizedPath);
+            let position = tile.position || {x: null, y: null, z: null};
+            let step = tile.step || {x: null, y: null, z: null};
+
+            tiles.push({
+                relative_path: normalizedPath,
+                index: isNullOrUndefined(tile.id) ? null : tile.id,
+                tile_name: tileName || "",
+                prev_stage_status: tile.isComplete ? TilePipelineStatus.Complete : TilePipelineStatus.Incomplete,
+                this_stage_status: tile.isComplete ? TilePipelineStatus.Complete : TilePipelineStatus.Incomplete,
+                lat_x: position.x,
+                lat_y: position.y,
+                lat_z: position.z,
+                step_x: step.x,
+                step_y: step.y,
+                step_z: step.z,
+            });
+        });
+
+        return [projectUpdate, tiles];
+    }
+
+    private async parseDashboardInput(dataFile: string, projectUpdate: IProjectAttributes): Promise<[IProjectAttributes, IPipelineTileAttributes[]]> {
+        let tiles: IPipelineTileAttributes[] = [];
 
         let contents = fse.readFileSync(dataFile);
 
@@ -205,24 +234,26 @@ export class ProjectPipelineScheduler extends BasePipelineScheduler {
                     // Normalize paths to posix
                     let normalizedPath = tile.relativePath.replace(new RegExp("\\" + "\\", "g"), "/");
                     let tileName = path.basename(normalizedPath);
+                    let position = tile.contents.latticePosition || {x: null, y: null, z: null};
+                    let step = tile.contents.latticeStep || {x: null, y: null, z: null};
+
                     tiles.push({
-                        index: isNullOrUndefined(tile.id) ? null : tile.id,
-                        name: tileName || "",
                         relative_path: normalizedPath,
-                        status: tile.isComplete ? TilePipelineStatus.Complete : TilePipelineStatus.Incomplete,
-                        lattice_position: tile.contents.latticePosition || {x: null, y: null, z: null},
-                        lattice_step: tile.contents.latticeStep || {x: null, y: null, z: null}
+                        index: isNullOrUndefined(tile.id) ? null : tile.id,
+                        tile_name: tileName || "",
+                        prev_stage_status: tile.isComplete ? TilePipelineStatus.Complete : TilePipelineStatus.Incomplete,
+                        this_stage_status: tile.isComplete ? TilePipelineStatus.Complete : TilePipelineStatus.Incomplete,
+                        lat_x: position.x,
+                        lat_y: position.y,
+                        lat_z: position.z,
+                        step_x: step.x,
+                        step_y: step.y,
+                        step_z: step.z,
                     });
                 });
             }
         }
 
-        if (fse.existsSync(outputFile)) {
-            fse.unlinkSync(outputFile);
-        }
-
-        fse.outputJSONSync(outputFile, tiles);
-
-        return tiles;
+        return [projectUpdate, tiles];
     }
 }
