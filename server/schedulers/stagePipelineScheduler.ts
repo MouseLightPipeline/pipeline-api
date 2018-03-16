@@ -5,7 +5,7 @@ const debug = require("debug")("pipeline:coordinator-api:stage-pipeline-schedule
 
 import {PipelineWorkerClient} from "../graphql/client/pipelineWorkerClient";
 import {PipelineServerContext} from "../graphql/pipelineServerContext";
-import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
+import {IPipelineWorker, QueueType} from "../data-model/sequelize/pipelineWorker";
 import {IProject} from "../data-model/sequelize/project";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
@@ -134,13 +134,18 @@ export abstract class PipelineScheduler extends BasePipelineScheduler {
                 return true;
             }
 
-            const task = await PipelineWorkerClient.Instance().queryTaskDefinition(worker, this._pipelineStage.task_id);
+            const task = await PersistentStorageManager.Instance().TaskDefinitions.findById(this._pipelineStage.task_id);
 
-            if (!task) {
+            /*
+            const clientTask = await PipelineWorkerClient.Instance().queryTaskDefinition(worker, this._pipelineStage.task_id);
+
+            if (!clientTask) {
                 debug(`could not get task definition ${this._pipelineStage.task_id} from worker ${worker.id}`);
                 return true;
             }
+            */
 
+            // TODO Get worker value for work units for this task, if applicable.
             const workUnits = worker.is_cluster_proxy ? 1 : task.work_units;
 
             let capacity = worker.work_unit_capacity - taskLoad;
@@ -179,30 +184,47 @@ export abstract class PipelineScheduler extends BasePipelineScheduler {
                     let outputPath = path.join(this._pipelineStage.dst_path, pipelineTile.relative_path);
 
                     fse.ensureDirSync(outputPath);
-                    debug(`ensureDir ${outputPath}`);
                     fse.chmodSync(outputPath, 0o775);
 
-                    const log_root_path = this._project.log_root_path || this._pipelineStage.dst_path;
+                    const log_root_path = this._project.log_root_path || this._pipelineStage.dst_path || `/tmp/${this._pipelineStage.id}`;
 
-                    let args = [this._project.name, this._project.root_path, src_path, this._pipelineStage.dst_path, pipelineTile.relative_path, pipelineTile.tile_name, log_root_path];
+                    const logFile = path.join(log_root_path, pipelineTile.relative_path, ".log", `${task.log_prefix}-${pipelineTile.tile_name}`);
 
-                    let context = await this.getTaskContext(pipelineTile);
+                    let args = [src_path, this._pipelineStage.dst_path, pipelineTile.relative_path, pipelineTile.tile_name];
 
-                    args = args.concat(this.getTaskArguments(pipelineTile, context));
+                    const context = await this.getTaskContext(pipelineTile);
 
-                    let taskExecution = await PipelineWorkerClient.Instance().startTaskExecution(worker, this._pipelineStage.task_id, this._pipelineStage.id, pipelineTile.relative_path, args);
+                    args = args.concat(this.mapTaskArguments(task.user_arguments, pipelineTile, context));
 
-                    if (taskExecution != null) {
+                    // let taskExecution = await PipelineWorkerClient.Instance().startTaskExecution(worker, this._pipelineStage.task_id, this._pipelineStage.id, pipelineTile.relative_path, args);
+
+                    let taskExecution = await this._outputStageConnector.createTaskExecution(worker.id, worker.is_cluster_proxy ? QueueType.Cluster : QueueType.Local, task, {
+                        taskDefinitionId: task.id,
+                        pipelineStageId: this._pipelineStage.id,
+                        tileId: pipelineTile.relative_path,
+                        logFile,
+                        scriptArgs: args
+                    });
+
+                    let taskResponse = await PipelineWorkerClient.Instance().startTaskExecution(worker, taskExecution.get({plain: true}));
+
+                    if (taskResponse != null) {
                         let now = new Date();
 
-                        // this.inProcessTable.insert
                         await this._outputStageConnector.insertInProcessTile({
                             relative_path: pipelineTile.relative_path,
                             worker_id: worker.id,
                             worker_last_seen: now,
                             task_execution_id: taskExecution.id,
+                            worker_task_execution_id: taskResponse.id,
                             created_at: now,
                             updated_at: now
+                        });
+
+                        await taskExecution.update({
+                            submitted_at: taskResponse.submitted_at,
+                            started_at: taskResponse.started_at,
+                            completed_at: taskResponse.completed_at
                         });
 
                         // TODO: Should use value returned from taskExecution in case it is worker-dependent

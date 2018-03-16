@@ -9,11 +9,11 @@ import {
     ITaskRepositoryDeleteOutput,
     ITaskRepositoryMutationOutput, ITilePage, IWorkerMutationOutput, PipelineServerContext
 } from "./pipelineServerContext";
-import {ITaskDefinition} from "../data-model/sequelize/taskDefinition";
+import {ITaskDefinition, ITaskDefinitionAttributes} from "../data-model/sequelize/taskDefinition";
 import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {IProjectAttributes, IProjectInput} from "../data-model/sequelize/project";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
-import {CompletionStatusCode, ITaskExecution} from "../data-model/sequelize/taskExecution";
+import {CompletionResult, ITaskExecutionAttributes} from "../data-model/taskExecution";
 import {IPipelineStageTileCounts, IPipelineTileAttributes} from "../data-access/sequelize/stageTableConnector";
 import {TilePipelineStatus} from "../schedulers/basePipelineScheduler";
 
@@ -51,7 +51,7 @@ interface IMutateRepositoryArguments {
 }
 
 interface IMutateTaskDefinitionArguments {
-    taskDefinition: ITaskDefinition;
+    taskDefinition: ITaskDefinitionAttributes;
 }
 
 interface IPipelinePlaneStatusArguments {
@@ -67,7 +67,7 @@ interface IActiveWorkerArguments {
 interface ITaskExecutionPageArguments {
     offset: number;
     limit: number;
-    status: CompletionStatusCode;
+    status: CompletionResult;
 }
 
 interface ITileStatusArguments {
@@ -112,10 +112,10 @@ let resolvers = {
         pipelineStagesForProject(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IPipelineStage[]> {
             return context.getPipelineStagesForProject(args.id);
         },
-        taskDefinition(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskDefinition> {
+        taskDefinition(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskDefinitionAttributes> {
             return context.getTaskDefinition(args.id);
         },
-        taskDefinitions(_, __, context: PipelineServerContext): Promise<ITaskDefinition[]> {
+        taskDefinitions(_, __, context: PipelineServerContext): Promise<ITaskDefinitionAttributes[]> {
             return context.getTaskDefinitions();
         },
         taskRepository(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskRepository> {
@@ -124,13 +124,13 @@ let resolvers = {
         taskRepositories(_, __, context: PipelineServerContext): Promise<ITaskRepository[]> {
             return context.getTaskRepositories();
         },
-        taskExecution(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskExecution> {
+        taskExecution(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskExecutionAttributes> {
             return context.getTaskExecution(args.id);
         },
-        taskExecutions(_, __, context: PipelineServerContext): Promise<ITaskExecution[]> {
+        taskExecutions(_, __, context: PipelineServerContext): Promise<ITaskExecutionAttributes[]> {
             return context.getTaskExecutions();
         },
-        taskExecutionsPage(_, args: ITaskExecutionPageArguments, context: PipelineServerContext): Promise<ISimplePage<ITaskExecution>> {
+        taskExecutionsPage(_, args: ITaskExecutionPageArguments, context: PipelineServerContext): Promise<ISimplePage<ITaskExecutionAttributes>> {
             return context.getTaskExecutionsPage(args.offset, args.limit, args.status);
         },
         pipelineStagePerformance(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IPipelineStagePerformance> {

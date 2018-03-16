@@ -1,6 +1,6 @@
 const AsyncLock = require("async");
 
-import {CompletionStatusCode, ITaskExecution} from "./taskExecution";
+import {CompletionResult, ITaskExecutionAttributes} from "../taskExecution";
 
 enum PerformanceQueueActions {
     Reset = 0,
@@ -21,7 +21,7 @@ interface IUpdateCountsQueueItem {
 
 interface IUpdateStatsQueueItem {
     pipeline_stage_id: string;
-    status: CompletionStatusCode;
+    status: CompletionResult;
     memory_mb: number;
     cpu_percent: number;
     duration_ms: number;
@@ -172,13 +172,13 @@ export function sequelizeImport(sequelize, DataTypes) {
         }
 
         switch (updateTask.status) {
-            case CompletionStatusCode.Cancel:
+            case CompletionResult.Cancel:
                 performance.num_cancel++;
                 break;
-            case CompletionStatusCode.Error:
+            case CompletionResult.Error:
                 performance.num_error++;
                 break;
-            case CompletionStatusCode.Success:
+            case CompletionResult.Success:
                 updatePerformanceStatistics(performance, updateTask.cpu_percent, updateTask.memory_mb, updateTask.duration_ms);
                 performance.num_complete++;
                 break;
@@ -271,7 +271,7 @@ export function updatePipelineStageCounts(pipelineStageId: string, inProcess: nu
     });
 }
 
-export function updatePipelineStagePerformance(pipelineStageId: string, taskExecution: ITaskExecution) {
+export function updatePipelineStagePerformance(pipelineStageId: string, taskExecution: ITaskExecutionAttributes) {
     if (!PipelineStagePerformanceAccess) {
         return;
     }

@@ -4,14 +4,22 @@ import "isomorphic-fetch";
 
 const debug = require("debug")("pipeline:coordinator-api:pipeline-worker-client");
 
-import {ITaskDefinition} from "../../data-model/sequelize/taskDefinition";
+import {ITaskDefinitionAttributes} from "../../data-model/sequelize/taskDefinition";
 import {IPipelineWorker, PipelineWorkerStatus} from "../../data-model/sequelize/pipelineWorker";
 import {IWorkerMutationOutput, PipelineServerContext} from "../pipelineServerContext";
-import {ITaskExecution} from "../../data-model/sequelize/taskExecution";
+import {ITaskExecutionAttributes} from "../../data-model/taskExecution";
+
+export interface IStartTaskInput {
+    taskDefinitionId: string;
+    pipelineStageId: string;
+    tileId: string;
+    logFile: string;
+    scriptArgs: string[];
+}
 
 export interface ITaskExecutionStatus {
     workerResponded: boolean;
-    taskExecution: ITaskExecution;
+    taskExecution: ITaskExecutionAttributes;
 }
 
 export class PipelineWorkerClient {
@@ -66,7 +74,7 @@ export class PipelineWorkerClient {
         row.status = PipelineWorkerStatus.Unavailable;
     }
 
-    public async queryTaskDefinition(worker: IPipelineWorker, taskId: string): Promise<ITaskDefinition> {
+    public async queryTaskDefinition(worker: IPipelineWorker, taskId: string): Promise<ITaskDefinitionAttributes> {
         const client = this.getClient(worker);
 
         if (client === null) {
@@ -148,7 +156,7 @@ export class PipelineWorkerClient {
         return taskExecutionStatus;
     }
 
-    public async startTaskExecution(worker: IPipelineWorker, taskId: string, pipelineStageId: string, tileId: string, baseArgs: string[] = []): Promise<ITaskExecution> {
+    public async startTaskExecution(worker: IPipelineWorker, taskInput: ITaskExecutionAttributes): Promise<ITaskExecutionAttributes> {
         const client = this.getClient(worker);
 
         if (client === null) {
@@ -158,23 +166,20 @@ export class PipelineWorkerClient {
         try {
             let response = await client.mutate({
                 mutation: gql`
-                mutation startTask($taskId: String!, $pipelineStageId: String!, $tileId: String!, $args: [String!]) {
-                    startTask(taskDefinitionId: $taskId, pipelineStageId: $pipelineStageId, tileId: $tileId, scriptArgs: $args) {
+                mutation startTask($taskInput: String!) {
+                    startTask(taskInput: $taskInput) {
                         id
-                        last_process_status_code
                         completion_status_code
                         execution_status_code
+                        last_process_status_code
                         work_units
-                        resolved_log_path
+                        submitted_at
                         started_at
                         completed_at
                     }
                 }`,
                 variables: {
-                    taskId,
-                    pipelineStageId,
-                    tileId,
-                    args: baseArgs
+                    taskInput: JSON.stringify(taskInput)
                 }
             });
 

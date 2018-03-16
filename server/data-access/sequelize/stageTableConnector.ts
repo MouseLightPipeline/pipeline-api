@@ -3,6 +3,14 @@ import {Instance, Model, Sequelize} from "sequelize";
 const debug = require("debug")("pipeline:coordinator-api:stage-database-connector");
 
 import {TilePipelineStatus} from "../../schedulers/basePipelineScheduler";
+import {
+    augmentTaskExecutionModel,
+    createTaskExecutionTable, ITaskExecution,
+    ITaskExecutionModel
+} from "../../data-model/taskExecution";
+import {IStartTaskInput} from "../../graphql/client/pipelineWorkerClient";
+import {QueueType} from "../../data-model/sequelize/pipelineWorker";
+import {ITaskDefinition} from "../../data-model/sequelize/taskDefinition";
 
 export function generatePipelineCustomTableName(pipelineStageId: string, tableName) {
     return pipelineStageId + "_" + tableName;
@@ -14,6 +22,10 @@ function generatePipelineStageInProcessTableName(pipelineStageId: string) {
 
 function generatePipelineStageToProcessTableName(pipelineStageId: string) {
     return generatePipelineCustomTableName(pipelineStageId, "ToProcess");
+}
+
+function generatePipelineStageTaskExecutionTableName(pipelineStageId: string) {
+    return generatePipelineCustomTableName(pipelineStageId, "TaskExecutions");
 }
 
 export interface IPipelineStageTileCounts {
@@ -49,6 +61,7 @@ export interface IInProcessTileAttributes {
     worker_id?: string;
     worker_last_seen?: Date;
     task_execution_id?: string;
+    worker_task_execution_id?: string;
     created_at?: Date;
     updated_at?: Date;
 }
@@ -62,10 +75,19 @@ export interface IToProcessTileAttributes {
 export interface IPipelineTile extends Instance<IPipelineTileAttributes>, IPipelineTileAttributes {
 }
 
+export interface IPipelineTileModel extends Model<IPipelineTile, IPipelineTileAttributes> {
+}
+
 export interface IInProcessTile extends Instance<IInProcessTileAttributes>, IInProcessTileAttributes {
 }
 
+export interface IInProcessTileModel extends Model<IInProcessTile, IInProcessTileAttributes> {
+}
+
 export interface IToProcessTile extends Instance<IToProcessTileAttributes>, IToProcessTileAttributes {
+}
+
+export interface IToProcessTileModel extends Model<IToProcessTile, IToProcessTileAttributes> {
 }
 
 const CreateChunkSize = 100;
@@ -76,9 +98,10 @@ export class StageTableConnector {
     protected _connection: Sequelize;
     protected _tableBaseName: string;
 
-    private _tileTable: Model<IPipelineTile, IPipelineTileAttributes> = null;
-    private _toProcessTable: Model<IToProcessTile, IToProcessTileAttributes> = null;
-    private _inProcessTable: Model<IInProcessTile, IInProcessTileAttributes> = null;
+    private _tileTable: IPipelineTileModel = null;
+    private _toProcessTable: IInProcessTileModel = null;
+    private _inProcessTable: IToProcessTileModel = null;
+    private _taskExecutionTable: ITaskExecutionModel = null;
 
     public constructor(connection: Sequelize, id: string) {
         this._connection = connection;
@@ -129,6 +152,10 @@ export class StageTableConnector {
 
     public async loadToProcess(limit: number = null): Promise<IToProcessTile[]> {
         return this._toProcessTable.findAll({order: [["relative_path", "ASC"]], limit: limit});
+    }
+
+    public async loadTaskExecution(id: string): Promise<ITaskExecution> {
+        return this._taskExecutionTable.findById(id);
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -209,13 +236,19 @@ export class StageTableConnector {
     }
 
     public async setTileStatus(tileIds: string[], status: TilePipelineStatus): Promise<IPipelineTileAttributes[]> {
-        const [affectedCount, affectedRows] = await this._tileTable.update({this_stage_status: status}, {where: {relative_path: {$in: tileIds}}, returning: true});
+        const [affectedCount, affectedRows] = await this._tileTable.update({this_stage_status: status}, {
+            where: {relative_path: {$in: tileIds}},
+            returning: true
+        });
 
         return affectedRows;
     }
 
     public async convertTileStatus(currentStatus: TilePipelineStatus, desiredStatus: TilePipelineStatus): Promise<IPipelineTileAttributes[]> {
-        const [affectedCount, affectedRows] = await this._tileTable.update({this_stage_status: desiredStatus}, {where: {this_stage_status: currentStatus}, returning: true});
+        const [affectedCount, affectedRows] = await this._tileTable.update({this_stage_status: desiredStatus}, {
+            where: {this_stage_status: currentStatus},
+            returning: true
+        });
 
         return affectedRows;
     }
@@ -258,6 +291,12 @@ export class StageTableConnector {
 
     // -----------------------------------------------------------------------------------------------------------------
 
+    public async createTaskExecution(workerId: string, queueType: QueueType, taskDefinition: ITaskDefinition, startTaskInput: IStartTaskInput): Promise<ITaskExecution> {
+        return this._taskExecutionTable.createTaskExecution(workerId, queueType, taskDefinition, startTaskInput);
+    };
+
+    // -----------------------------------------------------------------------------------------------------------------
+
     protected static async bulkCreate(table: any, objArray: any[]) {
         if (!objArray || objArray.length === 0) {
             return;
@@ -288,86 +327,96 @@ export class StageTableConnector {
     // -----------------------------------------------------------------------------------------------------------------
 
     protected defineTables() {
-        this._tileTable = this.defineTileTable();
-        this._toProcessTable = this.defineToProcessTable();
-        this._inProcessTable = this.defineInProcessTable();
+        this._tileTable = this.defineTileTable(this._connection.Sequelize);
+
+        this._toProcessTable = this.defineToProcessTable(this._connection.Sequelize);
+
+        this._inProcessTable = this.defineInProcessTable(this._connection.Sequelize);
+
+        this._taskExecutionTable = createTaskExecutionTable(this._connection, generatePipelineStageTaskExecutionTableName(this._tableBaseName));
+        augmentTaskExecutionModel(this._taskExecutionTable);
     }
 
-    private defineTileTable(): any {
+    private defineTileTable(DataTypes): any {
         return this._connection.define(this._tableBaseName, {
             relative_path: {
                 primaryKey: true,
                 unique: true,
-                type: this._connection.Sequelize.TEXT
+                type: DataTypes.TEXT
             },
             index: {
-                type: this._connection.Sequelize.INTEGER
+                type: DataTypes.INTEGER
             },
             tile_name: {
-                type: this._connection.Sequelize.TEXT
+                type: DataTypes.TEXT
             },
             prev_stage_status: {
-                type: this._connection.Sequelize.INTEGER,
+                type: DataTypes.INTEGER,
                 defaultValue: null
             },
             this_stage_status: {
-                type: this._connection.Sequelize.INTEGER,
+                type: DataTypes.INTEGER,
                 defaultValue: null
             },
             lat_x: {
-                type: this._connection.Sequelize.INTEGER,
+                type: DataTypes.INTEGER,
                 defaultValue: null
             },
             lat_y: {
-                type: this._connection.Sequelize.INTEGER,
+                type: DataTypes.INTEGER,
                 defaultValue: null
             },
             lat_z: {
-                type: this._connection.Sequelize.INTEGER,
+                type: DataTypes.INTEGER,
                 defaultValue: null
             },
             step_x: {
-                type: this._connection.Sequelize.INTEGER,
+                type: DataTypes.INTEGER,
                 defaultValue: null
             },
             step_y: {
-                type: this._connection.Sequelize.INTEGER,
+                type: DataTypes.INTEGER,
                 defaultValue: null
             },
             step_z: {
-                type: this._connection.Sequelize.INTEGER,
+                type: DataTypes.INTEGER,
                 defaultValue: null
             },
             duration: {
-                type: this._connection.Sequelize.DOUBLE,
+                type: DataTypes.DOUBLE,
                 defaultValue: 0
             },
             cpu_high: {
-                type: this._connection.Sequelize.DOUBLE,
+                type: DataTypes.DOUBLE,
                 defaultValue: 0
             },
             memory_high: {
-                type: this._connection.Sequelize.DOUBLE,
+                type: DataTypes.DOUBLE,
                 defaultValue: 0
             },
             user_data: {
-                type: this._connection.Sequelize.TEXT,
+                type: DataTypes.TEXT,
                 defaultValue: null
             }
         }, {
             timestamps: true,
             createdAt: "created_at",
             updatedAt: "updated_at",
-            paranoid: false
+            paranoid: false,
+            indexes: [{
+                fields: ["prev_stage_status"]
+            }, {
+                fields: ["this_stage_status"]
+            }]
         });
     }
 
-    private defineToProcessTable(): any {
+    private defineToProcessTable(DataTypes): any {
         return this._connection.define(generatePipelineStageToProcessTableName(this._tableBaseName), {
             relative_path: {
                 primaryKey: true,
                 unique: true,
-                type: this._connection.Sequelize.TEXT
+                type: DataTypes.TEXT
             }
         }, {
             timestamps: true,
@@ -377,30 +426,37 @@ export class StageTableConnector {
         });
     }
 
-    private defineInProcessTable(): any {
+    private defineInProcessTable(DataTypes): any {
         return this._connection.define(generatePipelineStageInProcessTableName(this._tableBaseName), {
             relative_path: {
                 primaryKey: true,
                 unique: true,
-                type: this._connection.Sequelize.TEXT
+                type: DataTypes.TEXT
             },
             task_execution_id: {
-                type: this._connection.Sequelize.UUID,
+                type: DataTypes.UUID,
                 defaultValue: null
             },
             worker_id: {
-                type: this._connection.Sequelize.UUID,
+                type: DataTypes.UUID,
+                defaultValue: null
+            },
+            worker_task_execution_id: {
+                type: DataTypes.UUID,
                 defaultValue: null
             },
             worker_last_seen: {
-                type: this._connection.Sequelize.DATE,
+                type: DataTypes.DATE,
                 defaultValue: null
             }
         }, {
             timestamps: true,
             createdAt: "created_at",
             updatedAt: "updated_at",
-            paranoid: false
+            paranoid: false,
+            indexes: [{
+                fields: ["worker_id"]
+            }]
         });
     }
 }

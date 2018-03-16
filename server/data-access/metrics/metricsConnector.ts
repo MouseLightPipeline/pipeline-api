@@ -1,7 +1,7 @@
 const Influx = require("influx");
 
 import {MetricsOptions} from "../../options/coreServicesOptions";
-import {CompletionStatusCode} from "../../data-model/sequelize/taskExecution";
+import {CompletionResult} from "../../data-model/taskExecution";
 
 const debug = require("debug")("ndb:search:database-connector");
 
@@ -22,7 +22,7 @@ export class MetricsConnector {
         this.createTaskExecutionConnection();
     }
 
-    public async writeTaskExecution(completion_status_code: CompletionStatusCode, duration: number) {
+    public async writeTaskExecution(completion_status_code: CompletionResult, duration: number) {
         try {
             if (this.taskExecutionDatabase) {
                 this.taskExecutionDatabase.writePoints([

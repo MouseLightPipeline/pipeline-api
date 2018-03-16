@@ -5,15 +5,15 @@ const debug = require("debug")("pipeline:coordinator-api:database-connector");
 
 import {loadModels} from "./modelLoader";
 import {SequelizeOptions} from "../../options/coreServicesOptions";
-import {Model} from "sequelize";
-import {IProject, IProjectAttributes} from "../../data-model/sequelize/project";
+import {IProjectModel} from "../../data-model/sequelize/project";
+import {ITaskDefinitionModel} from "../../data-model/sequelize/taskDefinition";
 
 export interface IPipelineModels {
-    TaskDefinitions?: any;
+    TaskDefinitions?: ITaskDefinitionModel;
     TaskRepositories?: any;
-    TaskExecutions?: any;
+    // TaskExecutions?: any;
     PipelineWorkers?: any;
-    Projects?: Model<IProject, IProjectAttributes>;
+    Projects?: IProjectModel;
     PipelineStages?: any;
     PipelineStagePerformances?: any;
 }
@@ -47,11 +47,11 @@ export class PersistentStorageManager {
     public get TaskDefinitions() {
         return this.pipelineDatabase.models.TaskDefinitions;
     }
-
+    /*
     public get TaskExecutions() {
         return this.pipelineDatabase.models.TaskExecutions;
     }
-
+    */
     public get PipelineWorkers() {
         return this.pipelineDatabase.models.PipelineWorkers;
     }

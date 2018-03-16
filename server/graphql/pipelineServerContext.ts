@@ -4,13 +4,13 @@ import * as fs from "fs";
 import {IPipelineStagePerformance} from "../data-model/sequelize/pipelineStagePerformance";
 import {SchedulerHub} from "../schedulers/schedulerHub";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
-import {ITaskDefinition} from "../data-model/sequelize/taskDefinition";
+import {ITaskDefinition, ITaskDefinitionAttributes} from "../data-model/sequelize/taskDefinition";
 import {ITaskRepository} from "../data-model/sequelize/taskRepository";
 import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {IProject, IProjectAttributes, IProjectInput, NO_BOUND, NO_SAMPLE} from "../data-model/sequelize/project";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 import {PipelineWorkerClient} from "./client/pipelineWorkerClient";
-import {CompletionStatusCode, ITaskExecution} from "../data-model/sequelize/taskExecution";
+import {CompletionResult, ITaskExecutionAttributes} from "../data-model/taskExecution";
 import {IPipelineStageTileCounts, IPipelineTileAttributes} from "../data-access/sequelize/stageTableConnector";
 import {TilePipelineStatus} from "../schedulers/basePipelineScheduler";
 import {connectorForStage} from "../data-access/sequelize/projectDatabaseConnector";
@@ -51,7 +51,7 @@ export interface ITaskRepositoryDeleteOutput {
 }
 
 export interface ITaskDefinitionMutationOutput {
-    taskDefinition: ITaskDefinition;
+    taskDefinition: ITaskDefinitionAttributes;
     error: string;
 }
 
@@ -326,7 +326,7 @@ export class PipelineServerContext {
         return this._persistentStorageManager.TaskRepositories.findAll({});
     }
 
-    public async getRepositoryTasks(id: string): Promise<ITaskDefinition[]> {
+    public async getRepositoryTasks(id: string): Promise<ITaskDefinitionAttributes[]> {
         return this._persistentStorageManager.TaskDefinitions.findAll({where: {task_repository_id: id}});
     }
 
@@ -371,15 +371,15 @@ export class PipelineServerContext {
         }
     }
 
-    public getTaskDefinition(id: string): Promise<ITaskDefinition> {
-        return this._persistentStorageManager.TaskDefinitions.findById(id);
+    public async getTaskDefinition(id: string): Promise<ITaskDefinition> {
+        return await this._persistentStorageManager.TaskDefinitions.findById(id);
     }
 
-    public getTaskDefinitions(): Promise<ITaskDefinition[]> {
-        return this._persistentStorageManager.TaskDefinitions.findAll({});
+    public async getTaskDefinitions(): Promise<ITaskDefinition[]> {
+        return await this._persistentStorageManager.TaskDefinitions.findAll({});
     }
 
-    public async createTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionMutationOutput> {
+    public async createTaskDefinition(taskDefinition: ITaskDefinitionAttributes): Promise<ITaskDefinitionMutationOutput> {
         try {
             const result = await this._persistentStorageManager.TaskDefinitions.create(taskDefinition);
 
@@ -389,7 +389,7 @@ export class PipelineServerContext {
         }
     }
 
-    public async updateTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionMutationOutput> {
+    public async updateTaskDefinition(taskDefinition: ITaskDefinitionAttributes): Promise<ITaskDefinitionMutationOutput> {
         try {
             // return {taskDefinition: await this._taskDefinitions.updateTaskDefinition(taskDefinition), error: ""};
             let row = await this._persistentStorageManager.TaskDefinitions.findById(taskDefinition.id);
@@ -404,7 +404,7 @@ export class PipelineServerContext {
         }
     }
 
-    public async deleteTaskDefinition(taskDefinition: ITaskDefinition): Promise<ITaskDefinitionDeleteOutput> {
+    public async deleteTaskDefinition(taskDefinition: ITaskDefinitionAttributes): Promise<ITaskDefinitionDeleteOutput> {
         try {
             const affectedRowCount = await this._persistentStorageManager.TaskDefinitions.destroy({where: {id: taskDefinition.id}});
 
@@ -419,7 +419,7 @@ export class PipelineServerContext {
     }
 
     public static async getScriptStatusForTaskDefinition(taskDefinition: ITaskDefinition): Promise<boolean> {
-        const scriptPath = await taskDefinition.getFullScriptPath();
+        const scriptPath = await taskDefinition.getFullScriptPath(true);
 
         return fs.existsSync(scriptPath);
     }
@@ -427,11 +427,13 @@ export class PipelineServerContext {
     public async getScriptContents(taskDefinitionId: string): Promise<string> {
         const taskDefinition = await this.getTaskDefinition(taskDefinitionId);
 
+        console.log(taskDefinition.user_arguments);
+
         if (taskDefinition) {
             const haveScript = await PipelineServerContext.getScriptStatusForTaskDefinition(taskDefinition);
 
             if (haveScript) {
-                const scriptPath = await taskDefinition.getFullScriptPath();
+                const scriptPath = await taskDefinition.getFullScriptPath(true);
 
                 return fs.readFileSync(scriptPath, "utf8");
             }
@@ -440,15 +442,18 @@ export class PipelineServerContext {
         return null;
     }
 
-    public getTaskExecution(id: string): Promise<ITaskExecution> {
-        return this._persistentStorageManager.TaskExecutions.findById(id);
+    public getTaskExecution(id: string): Promise<ITaskExecutionAttributes> {
+        // return this._persistentStorageManager.TaskExecutions.findById(id);
+        return null;
     }
 
-    public getTaskExecutions(): Promise<ITaskExecution[]> {
-        return this._persistentStorageManager.TaskExecutions.findAll({});
+    public getTaskExecutions(): Promise<ITaskExecutionAttributes[]> {
+        // return this._persistentStorageManager.TaskExecutions.findAll({});
+        return Promise.resolve([]);
     }
 
-    public async getTaskExecutionsPage(reqOffset: number, reqLimit: number, completionCode: CompletionStatusCode): Promise<ISimplePage<ITaskExecution>> {
+    public async getTaskExecutionsPage(reqOffset: number, reqLimit: number, completionCode: CompletionResult): Promise<ISimplePage<ITaskExecutionAttributes>> {
+
         let offset = 0;
         let limit = 10;
 
@@ -459,27 +464,35 @@ export class PipelineServerContext {
         if (reqLimit !== null && reqLimit !== undefined) {
             limit = reqLimit;
         }
-
+        /*
         const count = await this._persistentStorageManager.TaskExecutions.count();
 
         if (offset > count) {
             return {
-                offset: offset,
-                limit: limit,
+                offset,
+                limit,
                 totalCount: count,
                 hasNextPage: false,
                 items: []
             };
         }
 
-        const nodes: ITaskExecution[] = await this._persistentStorageManager.TaskExecutions.getPage(offset, limit, completionCode);
+        const nodes: ITaskExecutionAttributes[] = await this._persistentStorageManager.TaskExecutions.getPage(offset, limit, completionCode);
 
         return {
-            offset: offset,
-            limit: limit,
+            offset,
+            limit,
             totalCount: count,
             hasNextPage: offset + limit < count,
             items: nodes
+        };
+        */
+        return {
+            offset,
+            limit,
+            totalCount: 0,
+            hasNextPage: false,
+            items: []
         };
     }
 
@@ -522,23 +535,6 @@ export class PipelineServerContext {
         if (reqLimit !== null && reqLimit !== undefined) {
             limit = reqLimit;
         }
-
-        /*
-        const tableName = generatePipelineStageTableName(pipelineStage.id);
-        const connector = await connectorForFile(generatePipelineStateDatabaseName(pipelineStage.dst_path), tableName);
-
-        const countObj = await connector(tableName).where({
-            prev_stage_status: TilePipelineStatus.Complete,
-            this_stage_status: status,
-        }).count("relative_path");
-
-        const count = countObj[0][`count("relative_path")`];
-
-        const items = await connector(tableName).where({
-            prev_stage_status: TilePipelineStatus.Complete,
-            this_stage_status: status,
-        }).limit(limit).offset(offset).select();
-        */
 
         // TODO Use findAndCount
         const stageConnector = await connectorForStage(pipelineStage);

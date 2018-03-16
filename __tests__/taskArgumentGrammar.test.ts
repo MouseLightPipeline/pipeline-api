@@ -1,9 +1,7 @@
-// import * as nearley from "nearley";
-
-import {TaskArgumentType} from "../server/data-model/taskArgument";
-
 const nearley = require("nearley");
+
 const grammar = require("../server/argument-parser/taskArgumentGrammar.js");
+import {TaskArgumentType} from "../server/data-model/sequelize/taskDefinition";
 
 test("single argument", () => {
     const value = `Hello`;

@@ -1,12 +1,27 @@
 import * as path from "path";
+import {Instance, Model} from "sequelize";
 
-export interface ITaskDefinition {
+export enum TaskArgumentType {
+    Literal = 0,
+    Parameter = 1
+}
+
+export interface ITaskArgument {
+    value: string;
+    type: TaskArgumentType;
+}
+
+export interface ITaskArguments {
+    arguments: ITaskArgument[];
+}
+
+export interface ITaskDefinitionAttributes {
     id: string;
     name: string;
     description: string;
     script: string;
     interpreter: string;
-    script_args: string;
+    // script_args: string;
     cluster_args: string;
     expected_exit_code: number;
     work_units: number;
@@ -16,8 +31,15 @@ export interface ITaskDefinition {
     created_at: Date;
     updated_at: Date;
     deleted_at: Date;
+}
 
-    getFullScriptPath(): Promise<string>;
+export interface ITaskDefinition extends Instance<ITaskDefinitionAttributes>, ITaskDefinitionAttributes {
+    user_arguments: ITaskArgument[];
+
+    getFullScriptPath(resolveRelative: boolean): Promise<string>;
+}
+
+export interface ITaskDefinitionModel extends Model<ITaskDefinition, ITaskDefinitionAttributes> {
 }
 
 export const TableName = "TaskDefinitions";
@@ -76,7 +98,17 @@ export function sequelizeImport(sequelize, DataTypes) {
         createdAt: "created_at",
         updatedAt: "updated_at",
         deletedAt: "deleted_at",
-        paranoid: true
+        paranoid: true,
+        getterMethods: {
+            user_arguments: function() {
+                return JSON.parse(this.script_args).arguments;
+            }
+        },
+        setterMethods: {
+            user_arguments: function(value) {
+                this.setDataValue("script_args", JSON.stringify({arguments: value}));
+            }
+        }
     });
 
     TaskDefinition.associate = models => {
@@ -86,7 +118,7 @@ export function sequelizeImport(sequelize, DataTypes) {
         TaskRepositories = models.TaskRepositories;
     };
 
-    TaskDefinition.prototype.getFullScriptPath = async function(): Promise<string> {
+    TaskDefinition.prototype.getFullScriptPath = async function (resolveRelative: boolean): Promise<string> {
         let scriptPath = this.script;
 
         if (this.task_repository_id) {
@@ -94,7 +126,7 @@ export function sequelizeImport(sequelize, DataTypes) {
 
             scriptPath = path.resolve(path.join(repo.location, scriptPath));
         } else {
-            if (!path.isAbsolute(scriptPath)) {
+            if (resolveRelative && !path.isAbsolute(scriptPath)) {
                 scriptPath = path.join(process.cwd(), scriptPath);
             }
         }

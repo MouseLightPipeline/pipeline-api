@@ -25,7 +25,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
 
         const toInsert = _.differenceBy(knownInput, knownOutput, DefaultPipelineIdKey);
 
-        const toUpdate = _.intersectionBy(knownInput, DefaultPipelineIdKey);
+        const toUpdate = _.intersectionBy(knownInput, knownOutput, DefaultPipelineIdKey);
 
         sorted.toDelete = _.differenceBy(knownOutput, knownInput, DefaultPipelineIdKey).map(t => t.relative_path);
 

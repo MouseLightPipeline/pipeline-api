@@ -1,3 +1,8 @@
+export enum QueueType {
+    Local = 0,
+    Cluster = 1
+}
+
 export enum PipelineWorkerStatus {
     Unavailable = 0,
     Connected,

@@ -1,5 +1,6 @@
 import {IToProcessTile, IToProcessTileAttributes} from "../../data-access/sequelize/stageTableConnector";
-import {Instance} from "sequelize";
+import {Instance, Model} from "sequelize";
+import {ITaskDefinition, ITaskDefinitionAttributes} from "./taskDefinition";
 
 export const NO_BOUND: number = null;
 export const NO_SAMPLE: number = -1;
@@ -49,6 +50,9 @@ export interface IProjectAttributes {
 }
 
 export interface IProject extends Instance<IProjectAttributes>, IProjectAttributes {}
+
+export interface IProjectModel extends Model<IProject, IProjectAttributes> {
+}
 
 export const TableName = "Projects";
 

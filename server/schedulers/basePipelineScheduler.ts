@@ -10,12 +10,13 @@ import {ISchedulerInterface} from "./schedulerHub";
 import {PipelineWorkerClient} from "../graphql/client/pipelineWorkerClient";
 import {PipelineServerContext} from "../graphql/pipelineServerContext";
 import {IProject} from "../data-model/sequelize/project";
-import {CompletionStatusCode, ExecutionStatusCode} from "../data-model/sequelize/taskExecution";
+import {CompletionResult, ExecutionStatus, SyncStatus} from "../data-model/taskExecution";
 import {connectorForProject, ProjectDatabaseConnector} from "../data-access/sequelize/projectDatabaseConnector";
 import {
     IInProcessTileAttributes, IPipelineTile, IPipelineTileAttributes, IToProcessTileAttributes,
     StageTableConnector
 } from "../data-access/sequelize/stageTableConnector";
+import {ITaskArgument, ITaskArguments, TaskArgumentType} from "../data-model/sequelize/taskDefinition";
 
 export const DefaultPipelineIdKey = "relative_path";
 
@@ -96,6 +97,7 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
     }
 
     public set IsProcessingRequested(b: boolean) {
+        // TODO When set to true, reload the stage b/c it may have been edited.  Same for project & project scheduler.
         this._isProcessingRequested = b;
     }
 
@@ -256,23 +258,43 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
     private async updateOneExecutingTile(serverContext: PipelineServerContext, tile: IInProcessTileAttributes, updateList: InProcessModifyList): Promise<void> {
         let workerForTask = await serverContext.getPipelineWorker(tile.worker_id);
 
-        const executionStatus = await PipelineWorkerClient.Instance().queryTaskExecution(workerForTask, tile.task_execution_id);
+        const executionStatus = await PipelineWorkerClient.Instance().queryTaskExecution(workerForTask, tile.worker_task_execution_id);
 
         if (executionStatus.workerResponded) {
             const executionInfo = executionStatus.taskExecution;
 
             if (executionInfo != null) {
-                if (executionInfo.execution_status_code === ExecutionStatusCode.Completed || executionInfo.execution_status_code === ExecutionStatusCode.Zombie) {
+                const localTaskExecution = await this._outputStageConnector.loadTaskExecution(tile.task_execution_id);
+
+                const update = Object.assign({}, {
+                        job_id: executionInfo.job_id,
+                        job_name: executionInfo.job_name,
+                        execution_status_code: executionInfo.execution_status_code,
+                        completion_status_code: executionInfo.completion_status_code,
+                        last_process_status_code: executionInfo.last_process_status_code,
+                        max_memory: executionInfo.max_memory,
+                        max_cpu: executionInfo.max_cpu,
+                        exit_code: executionInfo.exit_code,
+                        submitted_at: executionInfo.submitted_at,
+                        started_at: executionInfo.started_at,
+                        completed_at: executionInfo.completed_at,
+                        sync_status: executionInfo.sync_status,
+                        synchronized_at: executionInfo.synchronized_at
+                    });
+
+                await localTaskExecution.update(update);
+
+                if (executionInfo.execution_status_code === ExecutionStatus.Completed || executionInfo.execution_status_code === ExecutionStatus.Zombie) {
                     let tileStatus = TilePipelineStatus.Queued;
 
                     switch (executionInfo.completion_status_code) {
-                        case CompletionStatusCode.Success:
+                        case CompletionResult.Success:
                             tileStatus = TilePipelineStatus.Complete;
                             break;
-                        case CompletionStatusCode.Error:
+                        case CompletionResult.Error:
                             tileStatus = TilePipelineStatus.Failed; // Do not queue again
                             break;
-                        case CompletionStatusCode.Cancel:
+                        case CompletionResult.Cancel:
                             tileStatus = TilePipelineStatus.Canceled; // Could return to incomplete to be queued again
                             break;
                     }
@@ -299,12 +321,50 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
         }
     }
 
+    /***
+     * This is the opportunity to prepare any scheduler-specific information that are mapped from parameter arguments.
+     * In particular, anything that requires an async/await call.
+     *
+     * @param {IPipelineTileAttributes} tile
+     * @returns {Promise<any>}
+     */
     protected async getTaskContext(tile: IPipelineTileAttributes): Promise<any> {
         return null;
     }
 
-    protected getTaskArguments(tile: IPipelineTileAttributes, context: any): string[] {
-        return [];
+    protected mapTaskArgumentParameter(value: string, tile: IPipelineTileAttributes, context: any): string {
+        let result = value;
+
+        switch (result) {
+            case "PROJECT_NAME":
+                return this._project.name;
+            case "PROJECT_ROOT":
+                return this._project.root_path;
+            case "X":
+                return tile.lat_x.toString();
+            case "Y":
+                return tile.lat_y.toString();
+            case "Z":
+                return tile.lat_z.toString();
+        }
+
+        return result;
+    }
+
+    protected mapTaskArguments(scriptsArgs: ITaskArgument[], tile: IPipelineTileAttributes, context: any): string[] {
+        return scriptsArgs.map(arg => {
+            if (arg.type === TaskArgumentType.Literal) {
+                return arg.value;
+            }
+
+            let value = arg.value;
+
+            if (value.length > 3) {
+                value = value.substr(2, -1);
+            }
+
+            return this.mapTaskArgumentParameter(value, tile, context);
+        });
     }
 
     protected async muxInputOutputTiles(knownInput, knownOutput: IPipelineTile[]): Promise<IMuxTileLists> {

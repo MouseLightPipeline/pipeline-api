@@ -194,7 +194,7 @@ export = {
                 updated_at: Sequelize.DATE,
                 deleted_at: Sequelize.DATE
             });
-
+/*
         await queryInterface.createTable("TaskExecutions",
             {
                 id: {
@@ -244,7 +244,7 @@ export = {
                         key: "id"
                     }
                 }
-            });
+            });*/
     },
 
     down: async (queryInterface, Sequelize) => {
@@ -255,6 +255,6 @@ export = {
         await queryInterface.dropTable("PipelineWorkers");
         await queryInterface.dropTable("TaskDefinitions");
         await queryInterface.dropTable("TaskRepositories");
-        await queryInterface.dropTable("TaskExecutions");
+        // await queryInterface.dropTable("TaskExecutions");
     }
 };
