@@ -3,7 +3,12 @@ import {FindOptions, Instance, Model, Sequelize} from "sequelize";
 import {isNullOrUndefined} from "util";
 import {IPipelineWorker, QueueType} from "./sequelize/pipelineWorker";
 import {ITaskDefinition} from "./sequelize/taskDefinition";
-import {IStartTaskInput} from "../graphql/client/pipelineWorkerClient";
+
+export interface IStartTaskInput {
+    pipelineStageId: string;
+    tileId: string;
+    logFile: string;
+}
 
 export enum ExecutionStatus {
     Undefined = 0,
@@ -68,7 +73,7 @@ export interface ITaskExecution extends Instance<ITaskExecutionAttributes>, ITas
 }
 
 export interface ITaskExecutionModel extends Model<ITaskExecution, ITaskExecutionAttributes> {
-    createTaskExecution(workerId: string, queueType: QueueType, taskDefinition: ITaskDefinition, startTaskInput: IStartTaskInput): Promise<ITaskExecution>;
+    createTaskExecution(worker: IPipelineWorker, taskDefinition: ITaskDefinition, startTaskInput: IStartTaskInput): Promise<ITaskExecution>;
     getPage(reqOffset: number, reqLimit: number, completionCode: CompletionResult): Promise<ITaskExecution[]>;
 }
 
@@ -195,24 +200,26 @@ export function augmentTaskExecutionModel(Model: ITaskExecutionModel) {
     };
 
 
-    Model.createTaskExecution = async function (workerId: string, queueType: QueueType, taskDefinition: ITaskDefinition, startTaskInput: IStartTaskInput): Promise<ITaskExecution> {
-        let taskExecution = await createTaskExecutionWithInput(workerId, queueType, taskDefinition, startTaskInput);
+    Model.createTaskExecution = async function (worker: IPipelineWorker, taskDefinition: ITaskDefinition, startTaskInput: IStartTaskInput): Promise<ITaskExecution> {
+        let taskExecution = await createTaskExecutionWithInput(worker, taskDefinition, startTaskInput);
 
         return this.create(taskExecution);
     };
 }
 
-async function createTaskExecutionWithInput(workerId: string, queueType: QueueType, taskDefinition: ITaskDefinition, startTaskInput: IStartTaskInput): Promise<ITaskExecutionAttributes> {
+async function createTaskExecutionWithInput(worker: IPipelineWorker, taskDefinition: ITaskDefinition, startTaskInput: IStartTaskInput): Promise<ITaskExecutionAttributes> {
+    const queueType: QueueType = worker.is_cluster_proxy ? QueueType.Cluster : QueueType.Local;
+
     return {
         task_definition_id: taskDefinition.id,
         pipeline_stage_id: startTaskInput.pipelineStageId,
         tile_id: startTaskInput.tileId,
-        worker_id: workerId,
+        worker_id: worker.id,
         work_units: queueType === QueueType.Local ? taskDefinition.work_units : null,
         cluster_work_units: queueType === QueueType.Cluster ? taskDefinition.cluster_work_units : null,
         resolved_script: await taskDefinition.getFullScriptPath(false),
         resolved_interpreter: taskDefinition.interpreter,
-        resolved_script_args: JSON.stringify(startTaskInput.scriptArgs),
+        resolved_script_args: null, // Will be filled later b/c may include execution id created after this is saved. JSON.stringify(startTaskInput.scriptArgs),
         resolved_cluster_args: queueType === QueueType.Cluster ? JSON.parse(taskDefinition.cluster_args).arguments[0] : null,
         resolved_log_path: startTaskInput.logFile,
         expected_exit_code: taskDefinition.expected_exit_code,

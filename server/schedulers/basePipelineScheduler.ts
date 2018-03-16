@@ -10,13 +10,14 @@ import {ISchedulerInterface} from "./schedulerHub";
 import {PipelineWorkerClient} from "../graphql/client/pipelineWorkerClient";
 import {PipelineServerContext} from "../graphql/pipelineServerContext";
 import {IProject} from "../data-model/sequelize/project";
-import {CompletionResult, ExecutionStatus, SyncStatus} from "../data-model/taskExecution";
+import {CompletionResult, ExecutionStatus, ITaskExecution, SyncStatus} from "../data-model/taskExecution";
 import {connectorForProject, ProjectDatabaseConnector} from "../data-access/sequelize/projectDatabaseConnector";
 import {
     IInProcessTileAttributes, IPipelineTile, IPipelineTileAttributes, IToProcessTileAttributes,
     StageTableConnector
 } from "../data-access/sequelize/stageTableConnector";
-import {ITaskArgument, ITaskArguments, TaskArgumentType} from "../data-model/sequelize/taskDefinition";
+import {ITaskArgument, ITaskArguments, ITaskDefinition, TaskArgumentType} from "../data-model/sequelize/taskDefinition";
+import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 
 export const DefaultPipelineIdKey = "relative_path";
 
@@ -332,26 +333,42 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
         return null;
     }
 
-    protected mapTaskArgumentParameter(value: string, tile: IPipelineTileAttributes, context: any): string {
+    protected mapTaskArgumentParameter(value: string, task: ITaskDefinition, taskExecution: ITaskExecution, worker: IPipelineWorker, tile: IPipelineTileAttributes, context: any): string {
         let result = value;
 
-        switch (result) {
+        switch (result.toUpperCase()) {
             case "PROJECT_NAME":
                 return this._project.name;
             case "PROJECT_ROOT":
                 return this._project.root_path;
+            case "LOG_FILE":
+                return taskExecution.resolved_log_path;
             case "X":
-                return tile.lat_x.toString();
+                return isNullOrUndefined(tile.lat_x) ? value : tile.lat_x.toString();
             case "Y":
-                return tile.lat_y.toString();
+                return isNullOrUndefined(tile.lat_y) ? value : tile.lat_y.toString();
             case "Z":
-                return tile.lat_z.toString();
+                return isNullOrUndefined(tile.lat_z) ? value : tile.lat_z.toString();
+            case "STEP_X":
+                return isNullOrUndefined(tile.step_x) ? value : tile.step_x.toString();
+            case "STEP_Y":
+                return isNullOrUndefined(tile.step_y) ? value : tile.step_y.toString();
+            case "STEP_Z":
+                return isNullOrUndefined(tile.step_z) ? value : tile.step_z.toString();
+            case "EXPECTED_EXIT_CODE":
+                return isNullOrUndefined(task.expected_exit_code) ? value : task.expected_exit_code.toString();
+            case "IS_CLUSTER_JOB":
+                return worker.is_cluster_proxy ? "1" : "0";
+            case "TASK_ID":
+                return taskExecution.id;
         }
 
         return result;
     }
 
-    protected mapTaskArguments(scriptsArgs: ITaskArgument[], tile: IPipelineTileAttributes, context: any): string[] {
+    protected mapTaskArguments(task: ITaskDefinition, taskExecution: ITaskExecution, worker: IPipelineWorker, tile: IPipelineTileAttributes, context: any): string[] {
+        const scriptsArgs: ITaskArgument[] = task.user_arguments;
+
         return scriptsArgs.map(arg => {
             if (arg.type === TaskArgumentType.Literal) {
                 return arg.value;
@@ -360,10 +377,12 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
             let value = arg.value;
 
             if (value.length > 3) {
-                value = value.substr(2, -1);
+                value = value.substring(2, value.length - 1);
             }
 
-            return this.mapTaskArgumentParameter(value, tile, context);
+            // Stop-gap to make sure we never return an empty return that causes arguments in the shell script to go out
+            // of order.
+            return this.mapTaskArgumentParameter(value, task, taskExecution, worker, tile, context) || value;
         });
     }
 

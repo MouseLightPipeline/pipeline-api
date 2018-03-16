@@ -8,8 +8,14 @@ import {
 import {IPipelineStage, PipelineStageMethod} from "../data-model/sequelize/pipelineStage";
 import {IPipelineTile, IPipelineTileAttributes} from "../data-access/sequelize/stageTableConnector";
 import {PipelineScheduler} from "./stagePipelineScheduler";
-import {AdjacentTileStageConnector, IAdjacentTileAttributes} from "../data-access/sequelize/adjacentTileStageConnector";
+import {
+    AdjacentTileStageConnector, IAdjacentTile,
+    IAdjacentTileAttributes
+} from "../data-access/sequelize/adjacentTileStageConnector";
 import {IProject} from "../data-model/sequelize/project";
+import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
+import {ITaskDefinition} from "../data-model/sequelize/taskDefinition";
+import {ITaskExecution} from "../data-model/taskExecution";
 
 interface IMuxUpdateLists extends IMuxTileLists {
     toInsertAdjacentMapIndex: IAdjacentTileAttributes[];
@@ -26,16 +32,21 @@ export class PipelineAdjacentScheduler extends PipelineScheduler {
         return this._outputStageConnector as AdjacentTileStageConnector;
     }
 
-    protected async getTaskContext(tile: IPipelineTileAttributes): Promise<IAdjacentTileAttributes> {
+    protected async getTaskContext(tile: IPipelineTileAttributes): Promise<IAdjacentTile> {
         return this.OutputStageConnector.loadAdjacentTile(tile.relative_path);
     }
 
-    protected getTaskArguments(tile: IPipelineTileAttributes, context: IAdjacentTileAttributes): string[] {
-        if (context === null) {
-            return [];
+    protected mapTaskArgumentParameter(value: string, task: ITaskDefinition, taskExecution: ITaskExecution, worker: IPipelineWorker, tile: IPipelineTileAttributes, context: IAdjacentTile): string {
+        if (context !== null) {
+            switch (value.toUpperCase()) {
+                case "ADJACENT_TILE_RELATIVE_PATH":
+                    return context.adjacent_relative_path;
+                case "ADJACENT_TILE_NAME":
+                    return context.adjacent_tile_name;
+            }
         }
 
-        return [context.adjacent_relative_path, context.adjacent_tile_name];
+        return super.mapTaskArgumentParameter(value, task, taskExecution, worker, tile, context);
     }
 
     private async findPreviousLayerTile(inputTile: IPipelineTileAttributes): Promise<IPipelineTile> {

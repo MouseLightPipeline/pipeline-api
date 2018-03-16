@@ -9,14 +9,6 @@ import {IPipelineWorker, PipelineWorkerStatus} from "../../data-model/sequelize/
 import {IWorkerMutationOutput, PipelineServerContext} from "../pipelineServerContext";
 import {ITaskExecutionAttributes} from "../../data-model/taskExecution";
 
-export interface IStartTaskInput {
-    taskDefinitionId: string;
-    pipelineStageId: string;
-    tileId: string;
-    logFile: string;
-    scriptArgs: string[];
-}
-
 export interface ITaskExecutionStatus {
     workerResponded: boolean;
     taskExecution: ITaskExecutionAttributes;

@@ -18,11 +18,11 @@ function generatePipelineStageAdjacentTileTableName(pipelineStageId: string) {
 export class AdjacentTileStageConnector extends StageTableConnector {
     private _adjacentTileModel: Model<IAdjacentTile, IAdjacentTileAttributes> = null;
 
-    public async loadAdjacentTile(id: string): Promise<IAdjacentTileAttributes> {
+    public async loadAdjacentTile(id: string): Promise<IAdjacentTile> {
         return this._adjacentTileModel.findOne({where: {relative_path: id}});
     }
 
-    public async loadAdjacentTiles(): Promise<IAdjacentTileAttributes[]> {
+    public async loadAdjacentTiles(): Promise<IAdjacentTile[]> {
         return this._adjacentTileModel.findAll();
     }
 

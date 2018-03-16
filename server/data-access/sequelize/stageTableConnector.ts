@@ -5,11 +5,10 @@ const debug = require("debug")("pipeline:coordinator-api:stage-database-connecto
 import {TilePipelineStatus} from "../../schedulers/basePipelineScheduler";
 import {
     augmentTaskExecutionModel,
-    createTaskExecutionTable, ITaskExecution,
+    createTaskExecutionTable, IStartTaskInput, ITaskExecution,
     ITaskExecutionModel
 } from "../../data-model/taskExecution";
-import {IStartTaskInput} from "../../graphql/client/pipelineWorkerClient";
-import {QueueType} from "../../data-model/sequelize/pipelineWorker";
+import {IPipelineWorker} from "../../data-model/sequelize/pipelineWorker";
 import {ITaskDefinition} from "../../data-model/sequelize/taskDefinition";
 
 export function generatePipelineCustomTableName(pipelineStageId: string, tableName) {
@@ -291,8 +290,8 @@ export class StageTableConnector {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    public async createTaskExecution(workerId: string, queueType: QueueType, taskDefinition: ITaskDefinition, startTaskInput: IStartTaskInput): Promise<ITaskExecution> {
-        return this._taskExecutionTable.createTaskExecution(workerId, queueType, taskDefinition, startTaskInput);
+    public async createTaskExecution(worker: IPipelineWorker, taskDefinition: ITaskDefinition, startTaskInput: IStartTaskInput): Promise<ITaskExecution> {
+        return this._taskExecutionTable.createTaskExecution(worker, taskDefinition, startTaskInput);
     };
 
     // -----------------------------------------------------------------------------------------------------------------

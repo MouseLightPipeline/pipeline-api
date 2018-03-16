@@ -190,21 +190,19 @@ export abstract class PipelineScheduler extends BasePipelineScheduler {
 
                     const logFile = path.join(log_root_path, pipelineTile.relative_path, ".log", `${task.log_prefix}-${pipelineTile.tile_name}`);
 
+                    let taskExecution = await this._outputStageConnector.createTaskExecution(worker, task, {
+                        pipelineStageId: this._pipelineStage.id,
+                        tileId: pipelineTile.relative_path,
+                        logFile
+                    });
+
                     let args = [src_path, this._pipelineStage.dst_path, pipelineTile.relative_path, pipelineTile.tile_name];
 
                     const context = await this.getTaskContext(pipelineTile);
 
-                    args = args.concat(this.mapTaskArguments(task.user_arguments, pipelineTile, context));
+                    args = args.concat(this.mapTaskArguments(task, taskExecution, worker, pipelineTile, context));
 
-                    // let taskExecution = await PipelineWorkerClient.Instance().startTaskExecution(worker, this._pipelineStage.task_id, this._pipelineStage.id, pipelineTile.relative_path, args);
-
-                    let taskExecution = await this._outputStageConnector.createTaskExecution(worker.id, worker.is_cluster_proxy ? QueueType.Cluster : QueueType.Local, task, {
-                        taskDefinitionId: task.id,
-                        pipelineStageId: this._pipelineStage.id,
-                        tileId: pipelineTile.relative_path,
-                        logFile,
-                        scriptArgs: args
-                    });
+                    await taskExecution.update({resolved_script_args: JSON.stringify(args)});
 
                     let taskResponse = await PipelineWorkerClient.Instance().startTaskExecution(worker, taskExecution.get({plain: true}));
 
