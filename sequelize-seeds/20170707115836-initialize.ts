@@ -280,7 +280,7 @@ function createProjects(when: Date) {
             id: "44e49773-1c19-494b-b283-54466b94b70f",
             name: "Sample Brain",
             description: "Sample brain pipeline project",
-            root_path: "/groups/mousebrainmicro/mousebrainmicro/from_tier2/data/2016-10-31/Tiling",
+            root_path: "/groups/mousebrainmicro/mousebrainmicro/data/2017-10-31-RECOVERED/Tiling",
             log_root_path: "",
             sample_number: 99998,
             region_x_min: 277,
