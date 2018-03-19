@@ -66,13 +66,19 @@ function createTaskDefinitions(when: Date) {
             interpreter: "none",
             script_args: JSON.stringify({
                 arguments: [{
+                    value: "${EXPECTED_EXIT_CODE}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "${IS_CLUSTER_JOB}",
+                    type: TaskArgumentType.Parameter
+                }, {
                     value: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps/axon-classifier",
                     type: TaskArgumentType.Literal
                 }]
             }),
-            cluster_args: JSON.stringify({arguments: [""]}),
+            cluster_args: JSON.stringify({arguments: ["-n 4 -R\"select[broadwell]\""]}),
             expected_exit_code: 0,
-            work_units: 4,
+            work_units: 18,
             cluster_work_units: 1,
             log_prefix: "ax",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
@@ -85,13 +91,22 @@ function createTaskDefinitions(when: Date) {
             interpreter: "none",
             script_args: JSON.stringify({
                 arguments: [{
+                    value: "${EXPECTED_EXIT_CODE}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "${TASK_ID}",
+                    type: TaskArgumentType.Parameter
+                }, {
                     value: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps",
                     type: TaskArgumentType.Literal
-                }, {value: "/groups/mousebrainmicro/mousebrainmicro/Software/mcr/v90", type: TaskArgumentType.Literal}]
+                }, {
+                    value: "/groups/mousebrainmicro/mousebrainmicro/Software/mcr/v90",
+                    type: TaskArgumentType.Literal
+                }]
             }),
-            cluster_args: JSON.stringify({arguments: [""]}),
+            cluster_args: JSON.stringify({arguments: ["-n 4 -R\"affinity[core(1)]\""]}),
             expected_exit_code: 0,
-            work_units: 2,
+            work_units: 4,
             cluster_work_units: 1,
             log_prefix: "dd",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
@@ -104,15 +119,58 @@ function createTaskDefinitions(when: Date) {
             interpreter: "none",
             script_args: JSON.stringify({
                 arguments: [{
-                    value: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps",
+                    value: "${PROJECT_ROOT}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "${ADJACENT_TILE_RELATIVE_PATH}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "${EXPECTED_EXIT_CODE}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "${TASK_ID}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps/pointmatch_test",
                     type: TaskArgumentType.Literal
-                }, {value: "/groups/mousebrainmicro/mousebrainmicro/Software/mcr/v92", type: TaskArgumentType.Literal}]
+                }, {
+                    value: "/groups/mousebrainmicro/mousebrainmicro/Software/mcr/v92",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "[0,0,0]",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "1",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "10000",
+                    type: TaskArgumentType.Literal
+                }]
             }),
-            cluster_args: JSON.stringify({arguments: [""]}),
+            cluster_args: JSON.stringify({arguments: ["-n 2 -R\"affinity[core(1)]\""]}),
             expected_exit_code: 0,
             work_units: 1,
             cluster_work_units: 1,
             log_prefix: "pm",
+            task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
+            created_at: when
+        }, {
+            id: "ae111b6e-2187-4e07-8ccf-bc7d425d95af",
+            name: "Line Fix",
+            description: "",
+            script: "lineFix.sh",
+            interpreter: "none",
+            script_args: JSON.stringify({
+                arguments: [{
+                    value: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps/lineFix",
+                    type: TaskArgumentType.Literal
+                }]
+            }),
+            cluster_args: JSON.stringify({arguments: ["-n 4 -R\"affinity[core(1)]\""]}),
+            expected_exit_code: 0,
+            work_units: 4,
+            cluster_work_units: 1,
+            log_prefix: "lf",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }];
