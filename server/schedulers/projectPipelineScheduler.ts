@@ -133,7 +133,7 @@ export class ProjectPipelineScheduler extends BasePipelineScheduler {
 
             if (!fse.existsSync(dataFile)) {
                 debug(`${dashboardJsonFile} also does not exist in the project root path ${dataFile} - skipping tile update`);
-                return;
+                return [];
             }
         }
 
