@@ -124,12 +124,6 @@ export class ProjectPipelineScheduler extends BasePipelineScheduler {
     }
 
     private async performJsonUpdate(): Promise<IPipelineTileAttributes[]> {
-        let projectUpdate: IProjectAttributes = {
-            id: this._project.id
-        };
-
-        let tiles: IProjectAttributes[] = [];
-
         let dataFile = path.join(this._project.root_path, pipelineInputJsonFile);
 
         if (!fse.existsSync(dataFile)) {
@@ -141,11 +135,15 @@ export class ProjectPipelineScheduler extends BasePipelineScheduler {
                 debug(`${dashboardJsonFile} also does not exist in the project root path ${dataFile} - skipping tile update`);
                 return;
             }
-
-            [projectUpdate, tiles] = await this.parseDashboardInput(dataFile, projectUpdate);
-        } else {
-            [projectUpdate, tiles] = await this.parsePipelineInput(dataFile, projectUpdate);
         }
+
+        let projectUpdate: IProjectAttributes = {
+            id: this._project.id
+        };
+
+        let tiles: IProjectAttributes[];
+
+        [projectUpdate, tiles] = await this.parsePipelineInput(dataFile, projectUpdate);
 
         let outputFile = path.join(this._project.root_path, tileStatusJsonFile);
 
@@ -165,11 +163,21 @@ export class ProjectPipelineScheduler extends BasePipelineScheduler {
     }
 
     private async parsePipelineInput(dataFile: string, projectUpdate: IProjectAttributes): Promise<[IProjectAttributes, IPipelineTileAttributes[]]> {
-        let tiles: IPipelineTileAttributes[] = [];
-
         let contents = fse.readFileSync(dataFile);
 
         let jsonContent = JSON.parse(contents);
+
+        if (!isNullOrUndefined(jsonContent.pipelineFormat)) {
+            // Pipeline-specific input format.
+            return this.parsePipelineDefaultInput(jsonContent, projectUpdate);
+        } else {
+            // Legacy direct dashboard input format.
+            return this.parseDashboardInput(jsonContent, projectUpdate);
+        }
+    }
+
+    private async parsePipelineDefaultInput(jsonContent: any, projectUpdate: IProjectAttributes): Promise<[IProjectAttributes, IPipelineTileAttributes[]]> {
+        let tiles: IPipelineTileAttributes[] = [];
 
         if (jsonContent.extents) {
             projectUpdate.sample_x_min = jsonContent.extents.minimumX;
@@ -209,14 +217,10 @@ export class ProjectPipelineScheduler extends BasePipelineScheduler {
         return [projectUpdate, tiles];
     }
 
-    private async parseDashboardInput(dataFile: string, projectUpdate: IProjectAttributes): Promise<[IProjectAttributes, IPipelineTileAttributes[]]> {
+    private async parseDashboardInput(jsonContent: any, projectUpdate: IProjectAttributes): Promise<[IProjectAttributes, IPipelineTileAttributes[]]> {
         let tiles: IPipelineTileAttributes[] = [];
 
-        let contents = fse.readFileSync(dataFile);
-
-        let jsonContent = JSON.parse(contents);
-
-        if (jsonContent.monitor && jsonContent.monitor.extents) {
+        if (jsonContent.monitor.extents) {
             projectUpdate.sample_x_min = jsonContent.monitor.extents.minimumX;
             projectUpdate.sample_x_max = jsonContent.monitor.extents.maximumX;
             projectUpdate.sample_y_min = jsonContent.monitor.extents.minimumY;
