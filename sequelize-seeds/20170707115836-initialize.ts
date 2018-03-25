@@ -283,12 +283,12 @@ function createProjects(when: Date) {
             root_path: "/groups/mousebrainmicro/mousebrainmicro/data/2017-10-31/Tiling",
             log_root_path: "",
             sample_number: 99998,
-            region_x_min: 277,
-            region_x_max: 281,
-            region_y_min: 35,
-            region_y_max: 39,
-            region_z_min: 388,
-            region_z_max: 392,
+            region_x_min: null,
+            region_x_max: null,
+            region_y_min: null,
+            region_y_max: null,
+            region_z_min: null,
+            region_z_max: null,
             is_processing: false,
             created_at: when
         }];
