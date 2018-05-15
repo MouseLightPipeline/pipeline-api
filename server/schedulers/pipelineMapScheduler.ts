@@ -1,4 +1,5 @@
 import * as _ from "lodash";
+const { performance } = require("perf_hooks");
 
 const debug = require("debug")("pipeline:coordinator-api:map-scheduler");
 
@@ -86,7 +87,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
             }
         }).filter(t => t !== null);
 
-        debug(`${performance.now() - t0} ms to mux ${this._pipelineStage.id}`);
+        debug(`${(performance.now() - t0).toFixed(3)} ms to mux ${this._pipelineStage.id}`);
 
         return sorted;
     }
