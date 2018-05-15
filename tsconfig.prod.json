@@ -4,6 +4,7 @@
   "compilerOptions": {
     "outDir": "dist",
     "sourceMap": false
+    "skipLibCheck": true
   },
   "exclude": [
     "sequelize-migrations",

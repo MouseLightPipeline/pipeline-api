@@ -1,5 +1,7 @@
 import * as _ from "lodash";
 
+const debug = require("debug")("pipeline:coordinator-api:adjacent-scheduler");
+
 import {
     TilePipelineStatus,
     DefaultPipelineIdKey,

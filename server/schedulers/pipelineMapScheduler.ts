@@ -1,6 +1,6 @@
 import * as _ from "lodash";
 
-const debug = require("debug")("pipeline:coordinator-api:pipeline-map-worker");
+const debug = require("debug")("pipeline:coordinator-api:map-scheduler");
 
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 
