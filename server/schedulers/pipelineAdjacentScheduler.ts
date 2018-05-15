@@ -172,16 +172,11 @@ export class PipelineAdjacentScheduler extends PipelineScheduler {
             muxUpdateLists.toInsertAdjacentMapIndex.push(adjacentMap);
         }
 
-        if (adjacentMap === null) {
-            debug(`null adjacentMap ${inputTile.relative_path}`);
-            return;
-        }
-
         // This really shouldn't fail since we should have already seen the tile at some point to have created the
         // mapping.
         // const adjacentInputTileIdx = adjacentMap ? knownInputIdLookup.indexOf(adjacentMap.adjacent_relative_path) : -1;
         // const adjacentInputTile = adjacentInputTileIdx > -1 ? knownInput[adjacentInputTileIdx] : null;
-        const adjacentInputTile = knownInputIdLookup[adjacentMap.adjacent_relative_path] || null;
+        const adjacentInputTile = adjacentMap ? knownInputIdLookup[adjacentMap.adjacent_relative_path] || null : null;
 
         let prev_status = TilePipelineStatus.DoesNotExist;
 
