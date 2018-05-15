@@ -1,4 +1,5 @@
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
+const {performance} = require("perf_hooks");
 
 const fse = require("fs-extra");
 const path = require("path");
@@ -91,7 +92,15 @@ export class ProjectPipelineScheduler extends BasePipelineScheduler {
             });
         });
 
+        let t0 = performance.now();
+
+        const existingTilePaths = knownOutput.reduce((p, t) => {
+            p[t.relative_path] = t;
+            return p;
+        }, {});
+
         sorted.toUpdate = toUpdate.map<IPipelineTile>((inputTile: IPipelineTileAttributes) => {
+            /*
             const existingTileIdx = _.findIndex(knownOutput, t => t.relative_path === inputTile.relative_path);
 
             if (existingTileIdx < 0) {
@@ -100,6 +109,14 @@ export class ProjectPipelineScheduler extends BasePipelineScheduler {
             }
 
             const existingTile = knownOutput[existingTileIdx];
+            */
+
+            const existingTile = existingTilePaths[inputTile.relative_path];
+
+            if (existingTile === null) {
+                debug(`unexpected missing tile ${inputTile.relative_path}`);
+                return null;
+            }
 
             if (existingTile.prev_stage_status !== inputTile.this_stage_status) {
                 existingTile.tile_name = inputTile.tile_name;
@@ -119,6 +136,8 @@ export class ProjectPipelineScheduler extends BasePipelineScheduler {
                 return null;
             }
         }).filter(t => t !== null);
+
+        debug(`${(performance.now() - t0).toFixed(3)} ms to map update ${this._project.id}`);
 
         return sorted;
     }

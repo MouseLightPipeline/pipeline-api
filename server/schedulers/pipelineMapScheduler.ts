@@ -1,5 +1,5 @@
 import * as _ from "lodash";
-const { performance } = require("perf_hooks");
+const {performance} = require("perf_hooks");
 
 const debug = require("debug")("pipeline:coordinator-api:map-scheduler");
 
@@ -23,8 +23,6 @@ export class PipelineMapScheduler extends PipelineScheduler {
             toReset: [],
             toDelete: []
         };
-
-        const t0 = performance.now();
 
         const toInsert = _.differenceBy(knownInput, knownOutput, DefaultPipelineIdKey);
 
@@ -55,15 +53,26 @@ export class PipelineMapScheduler extends PipelineScheduler {
             };
         });
 
+        let t0 = performance.now();
+
+        const existingTilePaths = knownOutput.reduce((p, t) => {
+            p[t.relative_path] = t;
+            return p;
+        }, {});
+
         sorted.toUpdate = toUpdate.map(inputTile => {
+            /*
             const existingTileIdx = _.findIndex(knownOutput, t => t.relative_path === inputTile.relative_path);
 
-            if (existingTileIdx < 0) {
+            const existingTile = knownOutput[existingTileIdx];
+            */
+
+            const existingTile = existingTilePaths[inputTile.relative_path];
+
+            if (existingTile === null) {
                 debug(`unexpected missing tile ${inputTile.relative_path}`);
                 return null;
             }
-
-            const existingTile = knownOutput[existingTileIdx];
 
             if (existingTile.prev_stage_status !== inputTile.this_stage_status) {
                 if (existingTile.this_stage_status === TilePipelineStatus.Queued && inputTile.this_stage_status !== TilePipelineStatus.Complete) {
@@ -87,7 +96,7 @@ export class PipelineMapScheduler extends PipelineScheduler {
             }
         }).filter(t => t !== null);
 
-        debug(`${(performance.now() - t0).toFixed(3)} ms to mux ${this._pipelineStage.id}`);
+        debug(`${(performance.now() - t0).toFixed(3)} ms to map update ${this._pipelineStage.id}`);
 
         return sorted;
     }
