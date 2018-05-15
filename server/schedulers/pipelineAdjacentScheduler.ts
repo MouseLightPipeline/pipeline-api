@@ -100,11 +100,11 @@ export class PipelineAdjacentScheduler extends PipelineScheduler {
         // const knownInputIdLookup = knownInput.map(obj => obj[DefaultPipelineIdKey]);
         const knownOutputIdLookup = knownOutput.reduce((p, t) => {
             p[t.relative_path] = t;
-            return p
+            return p;
         }, {});
         const knownInputIdLookup = knownInput.reduce((p, t) => {
             p[t.relative_path] = t;
-            return p
+            return p;
         }, {});
 
         // List of tiles where we already know the previous layer tile id.
@@ -113,7 +113,7 @@ export class PipelineAdjacentScheduler extends PipelineScheduler {
         // const adjacentMapIdLookup = adjacentMapRows.map(obj => obj[DefaultPipelineIdKey]);
         const adjacentMapIdLookup = adjacentMapRows.reduce((p, t) => {
             p[t.relative_path] = t;
-            return p
+            return p;
         }, {});
 
         muxUpdateLists.toDelete = _.differenceBy(knownOutput, knownInput, DefaultPipelineIdKey).map(t => t.relative_path);
@@ -121,7 +121,7 @@ export class PipelineAdjacentScheduler extends PipelineScheduler {
         // Force serial execution of each tile given async calls within function.
         await knownInput.reduce(async (promiseChain, inputTile) => {
             return promiseChain.then(() => {
-                return this.muxUpdateTile(inputTile, knownInput, knownOutput, adjacentMapRows, knownInputIdLookup, knownOutputIdLookup, adjacentMapIdLookup, muxUpdateLists.toDelete, muxUpdateLists);
+                return this.muxUpdateTile(inputTile, knownInputIdLookup, knownOutputIdLookup, adjacentMapIdLookup, muxUpdateLists.toDelete, muxUpdateLists);
             });
         }, Promise.resolve());
 
@@ -135,8 +135,7 @@ export class PipelineAdjacentScheduler extends PipelineScheduler {
         return muxUpdateLists;
     }
 
-    private async muxUpdateTile(inputTile: IPipelineTile, knownInput: IPipelineTile[], knownOutput: IPipelineTile[], nextLayerMapRows: IAdjacentTileAttributes[],
-                                knownInputIdLookup, knownOutputIdLookup, nextLayerMapIdLookup, toDelete: string[], muxUpdateLists: IMuxUpdateLists): Promise<void> {
+    private async muxUpdateTile(inputTile: IPipelineTile, knownInputIdLookup, knownOutputIdLookup, nextLayerMapIdLookup, toDelete: string[], muxUpdateLists: IMuxUpdateLists): Promise<void> {
         // const idx = knownOutputIdLookup.indexOf(inputTile[DefaultPipelineIdKey]);
 
         // const existingOutput: IPipelineTile = idx > -1 ? knownOutput[idx] : null;
@@ -171,6 +170,11 @@ export class PipelineAdjacentScheduler extends PipelineScheduler {
             };
 
             muxUpdateLists.toInsertAdjacentMapIndex.push(adjacentMap);
+        }
+
+        if (adjacentMap === null) {
+            debug(`null adjacentMap ${inputTile.relative_path}`);
+            return;
         }
 
         // This really shouldn't fail since we should have already seen the tile at some point to have created the
