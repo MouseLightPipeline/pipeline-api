@@ -8,10 +8,7 @@ const coreServicesOptions = {
         password: "pgsecret",
         logging: null,
         pool: {
-            max: 30,
-            min: 5,
-            acquire: 20000,
-            idle: 20000
+            acquire: 20000
         }
     },
     metricsDatabase: {
