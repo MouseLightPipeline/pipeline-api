@@ -23,6 +23,8 @@ export class PipelineMapScheduler extends PipelineScheduler {
             toDelete: []
         };
 
+        const t0 = performance.now();
+
         const toInsert = _.differenceBy(knownInput, knownOutput, DefaultPipelineIdKey);
 
         const toUpdate = _.intersectionBy(knownInput, knownOutput, DefaultPipelineIdKey);
@@ -83,6 +85,8 @@ export class PipelineMapScheduler extends PipelineScheduler {
                 return null;
             }
         }).filter(t => t !== null);
+
+        debug(`${performance.now() - t0} ms to mux ${this._pipelineStage.id}`);
 
         return sorted;
     }

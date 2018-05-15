@@ -89,6 +89,8 @@ export class PipelineAdjacentScheduler extends PipelineScheduler {
             toDeleteAdjacentMapIndex: []
         };
 
+        const t0 = performance.now();
+
         // Flatten input and and output for faster searching.
         const knownOutputIdLookup = knownOutput.map(obj => obj[DefaultPipelineIdKey]);
         const knownInputIdLookup = knownInput.map(obj => obj[DefaultPipelineIdKey]);
@@ -110,6 +112,8 @@ export class PipelineAdjacentScheduler extends PipelineScheduler {
         await this.OutputStageConnector.insertAdjacent(muxUpdateLists.toInsertAdjacentMapIndex);
 
         await this.OutputStageConnector.deleteAdjacent(muxUpdateLists.toDeleteAdjacentMapIndex);
+
+        debug(`${performance.now() - t0} ms to mux ${this._pipelineStage.id}`);
 
         // Insert, update, delete handled by base.
         return muxUpdateLists;

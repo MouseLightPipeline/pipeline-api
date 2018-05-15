@@ -401,30 +401,31 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
 
             let knownOutput = await this._outputStageConnector.loadTiles({attributes: [DefaultPipelineIdKey, "prev_stage_status", "this_stage_status"]});
 
+            debug(`muxing tiles`);
             let sorted = await this.muxInputOutputTiles(knownInput, knownOutput);
 
-            debug(`${sorted.toInsert} to insert`);
+            debug(`${sorted.toInsert.length} to insert`);
             await this._outputStageConnector.insertTiles(sorted.toInsert);
 
-            debug(`${sorted.toUpdate} to update`);
+            debug(`${sorted.toUpdate.length} to update`);
             await this._outputStageConnector.updateTiles(sorted.toUpdate);
 
-            debug(`${sorted.toDelete} to delete`);
+            debug(`${sorted.toDelete.length} to delete`);
             await this._outputStageConnector.deleteTiles(sorted.toDelete);
 
-            debug(`${sorted.toDelete} to delete in to process`);
+            debug(`${sorted.toDelete.length} to delete in to process`);
             // Also remove any queued to process.
             await this._outputStageConnector.deleteToProcess(sorted.toDelete);
 
             // Remove any queued whose previous stage have been reverted.
 
-            debug(`${sorted.toReset} to reset`);
+            debug(`${sorted.toReset.length} to reset`);
             if (sorted.toReset.length > 0) {
                 debug(`${sorted.toReset.length} tiles have reverted their status and should be removed from to-process`);
                 await this._outputStageConnector.deleteToProcess(sorted.toReset.map(t => t.relative_path));
             }
 
-            debug(`update compete`);
+            debug(`update complete`);
             /*
              const previousStageRegression = sorted.toUpdate.filter(t => t.prev_stage_status !== TilePipelineStatus.Complete && t.this_stage_status === TilePipelineStatus.Queued).map(t => t[DefaultPipelineIdKey]);
 
