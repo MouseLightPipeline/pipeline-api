@@ -1,5 +1,6 @@
 import * as _ from "lodash";
-const { performance } = require("perf_hooks");
+
+const {performance} = require("perf_hooks");
 
 const debug = require("debug")("pipeline:coordinator-api:adjacent-scheduler");
 
@@ -95,13 +96,25 @@ export class PipelineAdjacentScheduler extends PipelineScheduler {
         const t0 = performance.now();
 
         // Flatten input and and output for faster searching.
-        const knownOutputIdLookup = knownOutput.map(obj => obj[DefaultPipelineIdKey]);
-        const knownInputIdLookup = knownInput.map(obj => obj[DefaultPipelineIdKey]);
+        // const knownOutputIdLookup = knownOutput.map(obj => obj[DefaultPipelineIdKey]);
+        // const knownInputIdLookup = knownInput.map(obj => obj[DefaultPipelineIdKey]);
+        const knownOutputIdLookup = knownOutput.reduce((p, t) => {
+            p[t.relative_path] = t;
+            return p
+        }, {});
+        const knownInputIdLookup = knownInput.reduce((p, t) => {
+            p[t.relative_path] = t;
+            return p
+        }, {});
 
         // List of tiles where we already know the previous layer tile id.
         // const adjacentMapRows = await this.zIndexMapTable.select();
         const adjacentMapRows = await this.OutputStageConnector.loadAdjacentTiles();
-        const adjacentMapIdLookup = adjacentMapRows.map(obj => obj[DefaultPipelineIdKey]);
+        // const adjacentMapIdLookup = adjacentMapRows.map(obj => obj[DefaultPipelineIdKey]);
+        const adjacentMapIdLookup = adjacentMapRows.reduce((p, t) => {
+            p[t.relative_path] = t;
+            return p
+        }, {});
 
         muxUpdateLists.toDelete = _.differenceBy(knownOutput, knownInput, DefaultPipelineIdKey).map(t => t.relative_path);
 
@@ -123,15 +136,18 @@ export class PipelineAdjacentScheduler extends PipelineScheduler {
     }
 
     private async muxUpdateTile(inputTile: IPipelineTile, knownInput: IPipelineTile[], knownOutput: IPipelineTile[], nextLayerMapRows: IAdjacentTileAttributes[],
-                                knownInputIdLookup: string[], knownOutputIdLookup: string[], nextLayerMapIdLookup: string[], toDelete: string[],
-                                muxUpdateLists: IMuxUpdateLists): Promise<void> {
-        const idx = knownOutputIdLookup.indexOf(inputTile[DefaultPipelineIdKey]);
+                                knownInputIdLookup, knownOutputIdLookup, nextLayerMapIdLookup, toDelete: string[], muxUpdateLists: IMuxUpdateLists): Promise<void> {
+        // const idx = knownOutputIdLookup.indexOf(inputTile[DefaultPipelineIdKey]);
 
-        const existingOutput: IPipelineTile = idx > -1 ? knownOutput[idx] : null;
+        // const existingOutput: IPipelineTile = idx > -1 ? knownOutput[idx] : null;
 
-        const adjacentLookupIndex = nextLayerMapIdLookup.indexOf(inputTile[DefaultPipelineIdKey]);
+        const existingOutput = knownOutputIdLookup[inputTile.relative_path] || null;
 
-        let adjacentMap: IAdjacentTileAttributes = adjacentLookupIndex > -1 ? nextLayerMapRows[adjacentLookupIndex] : null;
+        // const adjacentLookupIndex = nextLayerMapIdLookup.indexOf(inputTile[DefaultPipelineIdKey]);
+
+        // let adjacentMap: IAdjacentTileAttributes = adjacentLookupIndex > -1 ? nextLayerMapRows[adjacentLookupIndex] : null;
+
+        let adjacentMap: IAdjacentTileAttributes = nextLayerMapIdLookup[inputTile.relative_path] || null;
 
         let tile = null;
 
@@ -159,8 +175,9 @@ export class PipelineAdjacentScheduler extends PipelineScheduler {
 
         // This really shouldn't fail since we should have already seen the tile at some point to have created the
         // mapping.
-        const adjacentInputTileIdx = adjacentMap ? knownInputIdLookup.indexOf(adjacentMap.adjacent_relative_path) : -1;
-        const adjacentInputTile = adjacentInputTileIdx > -1 ? knownInput[adjacentInputTileIdx] : null;
+        // const adjacentInputTileIdx = adjacentMap ? knownInputIdLookup.indexOf(adjacentMap.adjacent_relative_path) : -1;
+        // const adjacentInputTile = adjacentInputTileIdx > -1 ? knownInput[adjacentInputTileIdx] : null;
+        const adjacentInputTile = knownInputIdLookup[adjacentMap.adjacent_relative_path] || null;
 
         let prev_status = TilePipelineStatus.DoesNotExist;
 
