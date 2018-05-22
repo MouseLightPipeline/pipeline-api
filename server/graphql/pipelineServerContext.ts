@@ -99,7 +99,12 @@ export class PipelineServerContext {
                 return output;
             }
 
-            row = await this._persistentStorageManager.PipelineWorkers.findById(workerInput.id);
+            row = await row.update({
+                work_unit_capacity: output.worker.work_capacity,
+                is_cluster_proxy: output.worker.is_cluster_proxy
+            });
+
+            console.log(row.dataValues);
 
             return {worker: row, error: ""};
         } catch (err) {

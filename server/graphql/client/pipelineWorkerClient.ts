@@ -14,6 +14,17 @@ export interface ITaskExecutionStatus {
     taskExecution: ITaskExecutionAttributes;
 }
 
+export interface IClientWorker {
+    id: string;
+    work_capacity: number;
+    is_cluster_proxy: boolean;
+}
+
+export interface IClientUpdateWorkerOutput {
+    worker: IClientWorker;
+    error: string;
+}
+
 export class PipelineWorkerClient {
     private static _instance: PipelineWorkerClient = null;
 
@@ -184,7 +195,7 @@ export class PipelineWorkerClient {
         return null;
     }
 
-    public async updateWorker(worker: IPipelineWorker): Promise<IWorkerMutationOutput> {
+    public async updateWorker(worker: IPipelineWorker): Promise<IClientUpdateWorkerOutput> {
         const client = this.getClient(worker);
 
         if (client === null) {
@@ -197,6 +208,8 @@ export class PipelineWorkerClient {
                 mutation UpdateWorkerMutation($worker: WorkerInput) {
                     updateWorker(worker: $worker) {
                         id
+                        work_capacity
+                        is_cluster_proxy
                     }
                 }`,
                 variables: {
