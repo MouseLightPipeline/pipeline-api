@@ -159,8 +159,12 @@ export class StageTableConnector {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    public async countTiles(): Promise<number> {
-        return this._tileTable.count();
+    public async countTiles(where: any): Promise<number> {
+        if (where) {
+            return this._tileTable.count(where);
+        } else {
+            return this._tileTable.count();
+        }
     }
 
     public async countInProcess(): Promise<number> {

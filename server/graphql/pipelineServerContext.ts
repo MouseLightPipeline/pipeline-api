@@ -541,7 +541,12 @@ export class PipelineServerContext {
         // TODO Use findAndCount
         const stageConnector = await connectorForStage(pipelineStage);
 
-        const totalCount = await stageConnector.countTiles();
+        const totalCount = await stageConnector.countTiles({
+            where: {
+                prev_stage_status: TilePipelineStatus.Complete,
+                this_stage_status: status
+            }
+        });
 
         const items = await stageConnector.loadTiles({
             where: {
