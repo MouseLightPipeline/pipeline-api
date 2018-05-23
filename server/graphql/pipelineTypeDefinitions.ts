@@ -379,11 +379,11 @@ type Mutation {
   
   createTaskRepository(taskRepository: TaskRepositoryInput): MutateTaskRepositoryOutput
   updateTaskRepository(taskRepository: TaskRepositoryInput): MutateTaskRepositoryOutput
-  deleteTaskRepository(taskRepository: TaskRepositoryInput): DeleteTaskRepositoryOutput
+  deleteTaskRepository(id: String!): DeleteTaskRepositoryOutput
   
   createTaskDefinition(taskDefinition: TaskDefinitionInput): MutateTaskDefinitionOutput
   updateTaskDefinition(taskDefinition: TaskDefinitionInput): MutateTaskDefinitionOutput
-  deleteTaskDefinition(taskDefinition: TaskDefinitionInput): DeleteTaskDefinitionOutput
+  deleteTaskDefinition(id: String!): DeleteTaskDefinitionOutput
 
   setWorkerAvailability(id: String!, shouldBeInSchedulerPool: Boolean!): PipelineWorker
   updateWorker(worker: PipelineWorkerInput): MutatePipelineWorkerOutput

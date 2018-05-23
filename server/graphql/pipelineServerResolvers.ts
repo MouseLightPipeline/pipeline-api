@@ -180,8 +180,8 @@ let resolvers = {
         updateTaskRepository(_, args: IMutateRepositoryArguments, context: PipelineServerContext): Promise<ITaskRepositoryMutationOutput> {
             return context.updateTaskRepository(args.taskRepository);
         },
-        deleteTaskRepository(_, args: IMutateRepositoryArguments, context: PipelineServerContext): Promise<ITaskRepositoryDeleteOutput> {
-            return context.deleteTaskRepository(args.taskRepository);
+        deleteTaskRepository(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskRepositoryDeleteOutput> {
+            return context.deleteTaskRepository(args.id);
         },
         createTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: PipelineServerContext): Promise<ITaskDefinitionMutationOutput> {
             return context.createTaskDefinition(args.taskDefinition);
@@ -189,8 +189,8 @@ let resolvers = {
         updateTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: PipelineServerContext): Promise<ITaskDefinitionMutationOutput> {
             return context.updateTaskDefinition(args.taskDefinition);
         },
-        deleteTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: PipelineServerContext): Promise<ITaskDefinitionDeleteOutput> {
-            return context.deleteTaskDefinition(args.taskDefinition);
+        deleteTaskDefinition(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskDefinitionDeleteOutput> {
+            return context.deleteTaskDefinition(args.id);
         },
         updateWorker(_, args: IUpdateWorkerArguments, context: PipelineServerContext): Promise<IWorkerMutationOutput> {
             return context.updateWorker(args.worker);

@@ -339,9 +339,8 @@ export class PipelineServerContext {
         try {
             const result = await this._persistentStorageManager.TaskRepositories.create(taskRepository);
 
-            return {taskRepository: result, error: ""};
+            return {taskRepository: result, error: null};
 
-            // return {taskRepository: await this._taskRepositories.create(taskRepository), error: ""};
         } catch (err) {
             return {taskRepository: null, error: err.message}
         }
@@ -349,25 +348,24 @@ export class PipelineServerContext {
 
     public async updateTaskRepository(taskRepository: ITaskRepository): Promise<ITaskRepositoryMutationOutput> {
         try {
-            // return {taskRepository: await this._taskRepositories.updateRepository(taskRepository), error: ""};
             let row = await this._persistentStorageManager.TaskRepositories.findById(taskRepository.id);
 
             await row.update(taskRepository);
 
             row = await this._persistentStorageManager.TaskRepositories.findById(taskRepository.id);
 
-            return {taskRepository: row, error: ""};
+            return {taskRepository: row, error: null};
         } catch (err) {
             return {taskRepository: null, error: err.message}
         }
     }
 
-    public async deleteTaskRepository(taskRepository: ITaskRepository): Promise<ITaskRepositoryDeleteOutput> {
+    public async deleteTaskRepository(id: string): Promise<ITaskRepositoryDeleteOutput> {
         try {
-            const affectedRowCount = await this._persistentStorageManager.TaskRepositories.destroy({where: {id: taskRepository.id}});
+            const affectedRowCount = await this._persistentStorageManager.TaskRepositories.destroy({where: {id}});
 
             if (affectedRowCount > 0) {
-                return {id: taskRepository.id, error: ""};
+                return {id, error: null};
             } else {
                 return {id: null, error: "Could not delete repository (no error message)"};
             }
@@ -388,7 +386,7 @@ export class PipelineServerContext {
         try {
             const result = await this._persistentStorageManager.TaskDefinitions.create(taskDefinition);
 
-            return {taskDefinition: result, error: ""};
+            return {taskDefinition: result, error: null};
         } catch (err) {
             return {taskDefinition: null, error: err.message}
         }
@@ -396,25 +394,24 @@ export class PipelineServerContext {
 
     public async updateTaskDefinition(taskDefinition: ITaskDefinitionAttributes): Promise<ITaskDefinitionMutationOutput> {
         try {
-            // return {taskDefinition: await this._taskDefinitions.updateTaskDefinition(taskDefinition), error: ""};
             let row = await this._persistentStorageManager.TaskDefinitions.findById(taskDefinition.id);
 
             await row.update(taskDefinition);
 
             row = await this._persistentStorageManager.TaskDefinitions.findById(taskDefinition.id);
 
-            return {taskDefinition: row, error: ""};
+            return {taskDefinition: row, error: null};
         } catch (err) {
             return {taskDefinition: null, error: err.message}
         }
     }
 
-    public async deleteTaskDefinition(taskDefinition: ITaskDefinitionAttributes): Promise<ITaskDefinitionDeleteOutput> {
+    public async deleteTaskDefinition(id: string): Promise<ITaskDefinitionDeleteOutput> {
         try {
-            const affectedRowCount = await this._persistentStorageManager.TaskDefinitions.destroy({where: {id: taskDefinition.id}});
+            const affectedRowCount = await this._persistentStorageManager.TaskDefinitions.destroy({where: {id}});
 
             if (affectedRowCount > 0) {
-                return {id: taskDefinition.id, error: ""};
+                return {id, error: null};
             } else {
                 return {id: null, error: "Could not delete task definition (no error message)"};
             }
