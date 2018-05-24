@@ -156,6 +156,12 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
     }
 
     protected async updateToProcessQueue(): Promise<boolean> {
+        //
+        // TODO There is an infrequent bug where a tile stays as 2, but not in To_Process table.
+        // Pending finding the bug, should do a sweep of tiles that are marked queued (2), but that are not in the
+        // table and remark them incomplete (1) and reprocess them just to be safe
+        //
+
         debug("looking for new to-process");
 
         let toProcessInsert: IToProcessTileAttributes[] = [];
@@ -268,20 +274,20 @@ export abstract class BasePipelineScheduler implements ISchedulerInterface {
                 const localTaskExecution = await this._outputStageConnector.loadTaskExecution(tile.task_execution_id);
 
                 const update = Object.assign({}, {
-                        job_id: executionInfo.job_id,
-                        job_name: executionInfo.job_name,
-                        execution_status_code: executionInfo.execution_status_code,
-                        completion_status_code: executionInfo.completion_status_code,
-                        last_process_status_code: executionInfo.last_process_status_code,
-                        max_memory: executionInfo.max_memory,
-                        max_cpu: executionInfo.max_cpu,
-                        exit_code: executionInfo.exit_code,
-                        submitted_at: executionInfo.submitted_at,
-                        started_at: executionInfo.started_at,
-                        completed_at: executionInfo.completed_at,
-                        sync_status: executionInfo.sync_status,
-                        synchronized_at: executionInfo.synchronized_at
-                    });
+                    job_id: executionInfo.job_id,
+                    job_name: executionInfo.job_name,
+                    execution_status_code: executionInfo.execution_status_code,
+                    completion_status_code: executionInfo.completion_status_code,
+                    last_process_status_code: executionInfo.last_process_status_code,
+                    max_memory: executionInfo.max_memory,
+                    max_cpu: executionInfo.max_cpu,
+                    exit_code: executionInfo.exit_code,
+                    submitted_at: executionInfo.submitted_at,
+                    started_at: executionInfo.started_at,
+                    completed_at: executionInfo.completed_at,
+                    sync_status: executionInfo.sync_status,
+                    synchronized_at: executionInfo.synchronized_at
+                });
 
                 await localTaskExecution.update(update);
 
