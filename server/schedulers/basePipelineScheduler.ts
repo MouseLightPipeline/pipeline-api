@@ -10,13 +10,13 @@ import {ISchedulerInterface} from "./schedulerHub";
 import {PipelineWorkerClient} from "../graphql/client/pipelineWorkerClient";
 import {PipelineServerContext} from "../graphql/pipelineServerContext";
 import {IProject} from "../data-model/sequelize/project";
-import {CompletionResult, ExecutionStatus, ITaskExecution, SyncStatus} from "../data-model/taskExecution";
+import {CompletionResult, ExecutionStatus, ITaskExecution} from "../data-model/taskExecution";
 import {connectorForProject, ProjectDatabaseConnector} from "../data-access/sequelize/projectDatabaseConnector";
 import {
     IInProcessTileAttributes, IPipelineTile, IPipelineTileAttributes, IToProcessTileAttributes,
     StageTableConnector
 } from "../data-access/sequelize/stageTableConnector";
-import {ITaskArgument, ITaskArguments, ITaskDefinition, TaskArgumentType} from "../data-model/sequelize/taskDefinition";
+import {ITaskArgument, ITaskDefinition, TaskArgumentType} from "../data-model/sequelize/taskDefinition";
 import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 
 export const DefaultPipelineIdKey = "relative_path";

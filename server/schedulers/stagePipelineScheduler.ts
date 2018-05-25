@@ -5,7 +5,7 @@ const debug = require("debug")("pipeline:coordinator-api:stage-pipeline-schedule
 
 import {PipelineWorkerClient} from "../graphql/client/pipelineWorkerClient";
 import {PipelineServerContext} from "../graphql/pipelineServerContext";
-import {IPipelineWorker, QueueType} from "../data-model/sequelize/pipelineWorker";
+import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {IProject} from "../data-model/sequelize/project";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
