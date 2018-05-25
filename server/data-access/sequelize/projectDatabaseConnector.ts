@@ -27,7 +27,6 @@ interface IStageQueueToken {
 
 interface IProjectQueueToken {
     projectConnector: ProjectDatabaseConnector;
-    project: IProjectAttributes;
     resolve: any;
     reject: any;
 }
@@ -63,6 +62,10 @@ export class ProjectDatabaseConnector {
         return this._isConnected;
     }
 
+    public get Project(): IProjectAttributes {
+        return this._project;
+    }
+
     public async connectorForStage(stage: IPipelineStage): Promise<StageTableConnector> {
         if (this._stageConnectors.has(stage.id)) {
             return this._stageConnectors.get(stage.id);
@@ -94,32 +97,31 @@ export class ProjectDatabaseConnector {
         return this._stageConnectors.get(stage.id);
     }
 
-    public async connectorForProject(project: IProjectAttributes): Promise<StageTableConnector> {
-        if (this._stageConnectors.has(project.id)) {
-            return this._stageConnectors.get(project.id);
+    public async connectorForProject(): Promise<StageTableConnector> {
+        if (this._stageConnectors.has(this._project.id)) {
+            return this._stageConnectors.get(this._project.id);
         }
 
         // Serialize access to queue for a non-existent connector so only one is created.
         return new Promise<StageTableConnector>((resolve, reject) => {
             this._projectConnectorQueueAccess.push({
                 projectConnector: this,
-                project,
                 resolve,
                 reject
             });
         });
     }
 
-    public async internalConnectorForProject(project: IProjectAttributes): Promise<StageTableConnector> {
-        if (!this._stageConnectors.has(project.id)) {
-            const connector = new StageTableConnector(this._connection, project.id);
+    public async internalConnectorForProject(): Promise<StageTableConnector> {
+        if (!this._stageConnectors.has(this._project.id)) {
+            const connector = new StageTableConnector(this._connection, this._project.id);
 
             await connector.initialize();
 
-            this._stageConnectors.set(project.id, connector);
+            this._stageConnectors.set(this._project.id, connector);
         }
 
-        return this._stageConnectors.get(project.id);
+        return this._stageConnectors.get(this._project.id);
     }
 
     private async ensureDatabase() {
@@ -207,11 +209,11 @@ async function accessStageQueue(token: IStageQueueToken, completeCallback) {
 
 async function accessProjectQueue(token: IProjectQueueToken, completeCallback) {
     try {
-        const connector = await token.projectConnector.internalConnectorForProject(token.project);
+        const connector = await token.projectConnector.internalConnectorForProject();
 
         token.resolve(connector);
     } catch (err) {
-        debug(`failed database connection: ${token.project.id}`);
+        debug(`failed database connection: ${token.projectConnector.Project.id}`);
         debug(err);
         token.reject(err);
     }

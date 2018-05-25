@@ -350,10 +350,6 @@ type Query {
   
   taskRepository(id: String!): TaskRepository
   taskRepositories: [TaskRepository!]!
-  
-  taskExecution(id: String!): TaskExecution
-  taskExecutions: [TaskExecution!]!
-  taskExecutionsPage(offset: Int, limit: Int, status: Int): ExecutionPage
 
   pipelineStagePerformance(id: String!): PipelineStagePerformance
   pipelineStagePerformances: [PipelineStagePerformance!]!

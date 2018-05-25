@@ -2,14 +2,12 @@ import {Instance, Model, Sequelize} from "sequelize";
 
 const debug = require("debug")("pipeline:coordinator-api:stage-database-connector");
 
-import {TilePipelineStatus} from "../../schedulers/basePipelineScheduler";
 import {
     augmentTaskExecutionModel,
-    createTaskExecutionTable, IStartTaskInput, ITaskExecution,
+    createTaskExecutionTable, ITaskExecution,
     ITaskExecutionModel
 } from "../../data-model/taskExecution";
-import {IPipelineWorker} from "../../data-model/sequelize/pipelineWorker";
-import {ITaskDefinition} from "../../data-model/sequelize/taskDefinition";
+import {TilePipelineStatus} from "../../data-model/TilePipelineStatus";
 
 export function generatePipelineCustomTableName(pipelineStageId: string, tableName) {
     return pipelineStageId + "_" + tableName;
@@ -177,10 +175,6 @@ export class StageTableConnector {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    public async insertTiles(tiles: IPipelineTileAttributes[]) {
-        return StageTableConnector.bulkCreate(this._tileTable, tiles);
-    }
-
     public async updateTiles(objArray: IPipelineTile[]) {
         if (!objArray || objArray.length === 0) {
             return;
@@ -210,14 +204,6 @@ export class StageTableConnector {
             await this._tileTable.update({this_stage_status: status},
                 {where: {relative_path: {$in: toUpdate.get(status)}}});
         }));
-    }
-
-    public async deleteTiles(toDelete: string[]) {
-        if (!toDelete || toDelete.length === 0) {
-            return;
-        }
-
-        return this._tileTable.destroy({where: {relative_path: {$in: toDelete}}});
     }
 
     public async getTileCounts(): Promise<IPipelineStageTileCounts> {
@@ -255,48 +241,6 @@ export class StageTableConnector {
 
         return affectedRows;
     }
-
-    // -----------------------------------------------------------------------------------------------------------------
-
-    public async insertToProcess(toProcess: IToProcessTileAttributes[]) {
-        return StageTableConnector.bulkCreate(this._toProcessTable, toProcess);
-    }
-
-    public async deleteToProcess(toDelete: string[]) {
-        if (!toDelete || toDelete.length === 0) {
-            return;
-        }
-
-        return this._toProcessTable.destroy({where: {relative_path: {$in: toDelete}}});
-    }
-
-    public async deleteToProcessTile(toProcess: IToProcessTileAttributes) {
-        if (!toProcess) {
-            return;
-        }
-
-        return this._toProcessTable.destroy({where: {relative_path: toProcess.relative_path}});
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------
-
-    public async insertInProcessTile(inProcess: IInProcessTileAttributes) {
-        return this._inProcessTable.create(inProcess);
-    }
-
-    public async deleteInProcess(toDelete: string[]) {
-        if (!toDelete || toDelete.length === 0) {
-            return;
-        }
-
-        return this._inProcessTable.destroy({where: {relative_path: {$in: toDelete}}});
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------
-
-    public async createTaskExecution(worker: IPipelineWorker, taskDefinition: ITaskDefinition, startTaskInput: IStartTaskInput): Promise<ITaskExecution> {
-        return this._taskExecutionTable.createTaskExecution(worker, taskDefinition, startTaskInput);
-    };
 
     // -----------------------------------------------------------------------------------------------------------------
 

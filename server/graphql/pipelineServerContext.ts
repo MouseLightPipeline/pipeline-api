@@ -1,8 +1,9 @@
 import * as path from "path";
 import * as fs from "fs";
 
+const debug = require("debug")("pipeline:coordinator-api:server-context");
+
 import {IPipelineStagePerformance} from "../data-model/sequelize/pipelineStagePerformance";
-import {SchedulerHub} from "../schedulers/schedulerHub";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {ITaskDefinition, ITaskDefinitionAttributes} from "../data-model/sequelize/taskDefinition";
 import {ITaskRepository} from "../data-model/sequelize/taskRepository";
@@ -10,10 +11,39 @@ import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {IProject, IProjectAttributes, IProjectInput, NO_BOUND, NO_SAMPLE} from "../data-model/sequelize/project";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 import {PipelineWorkerClient} from "./client/pipelineWorkerClient";
-import {CompletionResult, ITaskExecutionAttributes} from "../data-model/taskExecution";
-import {IPipelineStageTileCounts, IPipelineTileAttributes} from "../data-access/sequelize/stageTableConnector";
-import {TilePipelineStatus} from "../schedulers/basePipelineScheduler";
-import {connectorForStage} from "../data-access/sequelize/projectDatabaseConnector";
+import {
+    IPipelineStageTileCounts,
+    IPipelineTile,
+    IPipelineTileAttributes
+} from "../data-access/sequelize/stageTableConnector";
+import {
+    connectorForProject,
+    connectorForStage,
+} from "../data-access/sequelize/projectDatabaseConnector";
+import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
+
+interface IPipelineTileExt extends IPipelineTile {
+    stage_id: string;
+    depth: number;
+}
+
+interface ITileMap {
+    max_depth: number,
+    x_min: number,
+    x_max: number,
+    y_min: number,
+    y_max: number,
+    tiles: any[]
+}
+
+const kEmptyTileMap: ITileMap = {
+    max_depth: 0,
+    x_min: 0,
+    x_max: 0,
+    y_min: 0,
+    y_max: 0,
+    tiles: []
+};
 
 export interface IWorkerMutationOutput {
     worker: IPipelineWorker;
@@ -103,8 +133,6 @@ export class PipelineServerContext {
                 work_unit_capacity: output.worker.work_capacity,
                 is_cluster_proxy: output.worker.is_cluster_proxy
             });
-
-            console.log(row.dataValues);
 
             return {worker: row, error: ""};
         } catch (err) {
@@ -444,60 +472,6 @@ export class PipelineServerContext {
         return null;
     }
 
-    public getTaskExecution(id: string): Promise<ITaskExecutionAttributes> {
-        // return this._persistentStorageManager.TaskExecutions.findById(id);
-        return null;
-    }
-
-    public getTaskExecutions(): Promise<ITaskExecutionAttributes[]> {
-        // return this._persistentStorageManager.TaskExecutions.findAll({});
-        return Promise.resolve([]);
-    }
-
-    public async getTaskExecutionsPage(reqOffset: number, reqLimit: number, completionCode: CompletionResult): Promise<ISimplePage<ITaskExecutionAttributes>> {
-
-        let offset = 0;
-        let limit = 10;
-
-        if (reqOffset !== null && reqOffset !== undefined) {
-            offset = reqOffset;
-        }
-
-        if (reqLimit !== null && reqLimit !== undefined) {
-            limit = reqLimit;
-        }
-        /*
-        const count = await this._persistentStorageManager.TaskExecutions.count();
-
-        if (offset > count) {
-            return {
-                offset,
-                limit,
-                totalCount: count,
-                hasNextPage: false,
-                items: []
-            };
-        }
-
-        const nodes: ITaskExecutionAttributes[] = await this._persistentStorageManager.TaskExecutions.getPage(offset, limit, completionCode);
-
-        return {
-            offset,
-            limit,
-            totalCount: count,
-            hasNextPage: offset + limit < count,
-            items: nodes
-        };
-        */
-        return {
-            offset,
-            limit,
-            totalCount: 0,
-            hasNextPage: false,
-            items: []
-        };
-    }
-
     public getPipelineStagePerformance(id: string): Promise<IPipelineStagePerformance> {
         return this._persistentStorageManager.PipelineStagePerformances.findById(id);
     }
@@ -510,8 +484,171 @@ export class PipelineServerContext {
         return this._persistentStorageManager.PipelineStagePerformances.findOne({where: {pipeline_stage_id}});
     }
 
-    public static getProjectPlaneTileStatus(project_id: string, plane: number): Promise<any> {
-        return SchedulerHub.Instance.loadTileStatusForPlane(project_id, plane);
+    public static async getProjectPlaneTileStatus(project_id: string, plane: number): Promise<ITileMap> {
+        try {
+            if (plane == null) {
+                debug("plane not defined");
+                return kEmptyTileMap;
+            }
+
+            const projectsManager = PersistentStorageManager.Instance().Projects;
+
+            const project = await projectsManager.findById(project_id);
+
+            if (!project) {
+                debug("project not defined");
+                return kEmptyTileMap;
+            }
+
+            const pipelineStagesManager = PersistentStorageManager.Instance().PipelineStages;
+
+            const stages: IPipelineStage[] = await pipelineStagesManager.getForProject(project_id);
+
+            if (stages.length === 0) {
+                debug("no stages for project");
+                return kEmptyTileMap;
+            }
+
+            const maxDepth = stages.reduce((current, stage) => Math.max(current, stage.depth), 0);
+
+            const connector = await connectorForProject(project);
+
+            const stageConnectorPromises: Promise<IPipelineTileExt[]>[] = stages.map(async (stage) => {
+                const stageConnector = await connector.connectorForStage(stage);
+
+                const tiles = await stageConnector.loadTileStatusForPlane(plane);
+
+                return tiles.map(tile => {
+                    return Object.assign(tile.toJSON(), {stage_id: stage.id, depth: stage.depth}) as IPipelineTileExt;
+                });
+            });
+
+            stageConnectorPromises.unshift(new Promise(async (resolve) => {
+                const stageConnector = await connector.connectorForProject();
+
+                const tiles = await stageConnector.loadTileStatusForPlane(plane);
+
+                const tilesExt = tiles.map(tile => {
+                    return Object.assign(tile.toJSON(), {stage_id: project.id, depth: 0}) as IPipelineTileExt;
+                });
+
+                resolve(tilesExt);
+            }));
+
+            const tilesAllStages = await Promise.all(stageConnectorPromises);
+
+            const tileArray = tilesAllStages.reduce((source, next) => source.concat(next), []);
+
+            console.log(tileArray);
+
+            if (tileArray.length === 0) {
+                debug("no tiles across all stages");
+                return kEmptyTileMap;
+            }
+
+            let tiles = {};
+
+            let x_min = 1e7, x_max = 0, y_min = 1e7, y_max = 0;
+
+            tileArray.map(tile => {
+                x_min = Math.min(x_min, tile.lat_x);
+                x_max = Math.max(x_max, tile.lat_x);
+                y_min = Math.min(y_min, tile.lat_y);
+                y_max = Math.max(y_max, tile.lat_y);
+
+                let t = tiles[`${tile.lat_x}_${tile.lat_y}`];
+
+                if (!t) {
+                    t = {
+                        x_index: tile.lat_x,
+                        y_index: tile.lat_y,
+                        stages: []
+                    };
+
+                    tiles[`${tile.lat_x}_${tile.lat_y}`] = t;
+                }
+
+                // Duplicate tiles exist.  Use whatever is further along (i.e., a repeat of an incomplete that is complete
+                // and processing supersedes.
+
+                const existing = t.stages.filter(s => s.depth === tile.depth);
+
+                if (existing.length === 0) {
+                    t.stages.push({
+                        relative_path: tile.relative_path,
+                        stage_id: tile.stage_id,
+                        depth: tile.depth,
+                        status: tile.this_stage_status
+                    });
+                } else if (tile.this_stage_status > existing.status) {
+                    existing.relative_path = tile.relative_path;
+                    existing.stage_id = tile.stage_id;
+                    existing.depth = tile.depth;
+                    // This is not strictly correct as failed enum > complete and complete is probably what you want
+                    // to know.
+                    existing.status = tile.this_stage_status;
+                }
+            });
+
+            let output = [];
+
+            // I forget what I am trying to drop here?
+            for (let prop in tiles) {
+                if (tiles.hasOwnProperty(prop)) {
+                    output.push(tiles[prop]);
+                }
+            }
+
+            return {
+                max_depth: maxDepth,
+                x_min: project.sample_x_min >= 0 ? project.sample_x_min : x_min,
+                x_max: project.sample_x_max >= 0 ? project.sample_x_min : x_max,
+                y_min: project.sample_y_min >= 0 ? project.sample_y_min : x_min,
+                y_max: project.sample_y_max >= 0 ? project.sample_y_min : x_max,
+                tiles: output
+            };
+        } catch (err) {
+            console.log(err);
+            return kEmptyTileMap;
+        }
+    }
+
+    public static async thumbnailPath(id: string, x, y, z): Promise<string> {
+        try {
+            let isProject = false;
+            let project: IProject = null;
+
+            const stage: IPipelineStage = PersistentStorageManager.Instance().PipelineStages.findById(id);
+
+            if (!stage) {
+                project = await PersistentStorageManager.Instance().Projects.findById(id);
+                isProject = true;
+            } else {
+                project = await PersistentStorageManager.Instance().Projects.findById(stage.project_id);
+            }
+
+            if (!project) {
+                return null;
+            }
+
+            const connector = await connectorForProject(project);
+
+            const stageConnector = isProject ? await connector.connectorForProject() : await connector.connectorForStage({id});
+
+            if (!stageConnector) {
+                return null;
+            }
+
+            const tile = await stageConnector.loadTileThumbnailPath(x, y, z);
+
+            if (tile) {
+                return path.join(isProject ? project.root_path : stage.dst_path, tile.relative_path);
+            }
+        } catch (err) {
+            debug(err);
+        }
+
+        return null;
     }
 
     public async tilesForStage(pipelineStageId: string, status: TilePipelineStatus, reqOffset: number, reqLimit: number): Promise<ITilePage> {

@@ -1,8 +1,7 @@
 import * as path from "path";
 import * as fs from "fs";
 import {isNullOrUndefined} from "util";
-
-import {SchedulerHub} from "../schedulers/schedulerHub";
+import {PipelineServerContext} from "../graphql/pipelineServerContext";
 
 export async function thumbnailQueryMiddleware(req, res) {
     const pipelineStageId = req.body.pipelineStageId;
@@ -21,7 +20,7 @@ export async function thumbnailQueryMiddleware(req, res) {
 
         let enc = null;
 
-        let thumbnailPath = await SchedulerHub.Instance.thumbnailPath(pipelineStageId, x, y, z);
+        let thumbnailPath = await PipelineServerContext.thumbnailPath(pipelineStageId, x, y, z);
 
         thumbnailPath = path.join(thumbnailPath, thumbName);
 
@@ -60,7 +59,7 @@ export async function thumbnailParamQueryMiddleware(req, res) {
             return;
         }
 
-        let thumbnailPath = await SchedulerHub.Instance.thumbnailPath(pipelineStageId, x, y, z);
+        let thumbnailPath = await PipelineServerContext.thumbnailPath(pipelineStageId, x, y, z);
 
         thumbnailPath = path.join(thumbnailPath, thumbName);
 

@@ -15,7 +15,7 @@ import {IProjectAttributes, IProjectInput} from "../data-model/sequelize/project
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 import {CompletionResult, ITaskExecutionAttributes} from "../data-model/taskExecution";
 import {IPipelineStageTileCounts, IPipelineTileAttributes} from "../data-access/sequelize/stageTableConnector";
-import {TilePipelineStatus} from "../schedulers/basePipelineScheduler";
+import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
 
 interface IIdOnlyArgument {
     id: string;
@@ -123,15 +123,6 @@ let resolvers = {
         },
         taskRepositories(_, __, context: PipelineServerContext): Promise<ITaskRepository[]> {
             return context.getTaskRepositories();
-        },
-        taskExecution(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskExecutionAttributes> {
-            return context.getTaskExecution(args.id);
-        },
-        taskExecutions(_, __, context: PipelineServerContext): Promise<ITaskExecutionAttributes[]> {
-            return context.getTaskExecutions();
-        },
-        taskExecutionsPage(_, args: ITaskExecutionPageArguments, context: PipelineServerContext): Promise<ISimplePage<ITaskExecutionAttributes>> {
-            return context.getTaskExecutionsPage(args.offset, args.limit, args.status);
         },
         pipelineStagePerformance(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IPipelineStagePerformance> {
             return context.getPipelineStagePerformance(args.id);
