@@ -457,8 +457,6 @@ export class PipelineServerContext {
     public async getScriptContents(taskDefinitionId: string): Promise<string> {
         const taskDefinition = await this.getTaskDefinition(taskDefinitionId);
 
-        console.log(taskDefinition.user_arguments);
-
         if (taskDefinition) {
             const haveScript = await PipelineServerContext.getScriptStatusForTaskDefinition(taskDefinition);
 
@@ -538,8 +536,6 @@ export class PipelineServerContext {
             const tilesAllStages = await Promise.all(stageConnectorPromises);
 
             const tileArray = tilesAllStages.reduce((source, next) => source.concat(next), []);
-
-            console.log(tileArray);
 
             if (tileArray.length === 0) {
                 debug("no tiles across all stages");

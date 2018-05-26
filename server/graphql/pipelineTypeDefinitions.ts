@@ -1,4 +1,4 @@
-let typeDefinitions = `
+export const typeDefinitions = `
 type PageInfo {
     endCursor: String
     hasNextPage: Boolean
@@ -393,5 +393,3 @@ schema {
   mutation: Mutation
 }
 `;
-
-export default typeDefinitions;
