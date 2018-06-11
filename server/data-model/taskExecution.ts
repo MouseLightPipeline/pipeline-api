@@ -176,13 +176,6 @@ export function createTaskExecutionTable(sequelize: Sequelize, tableName: string
             fields: ["worker_id"]
         }]
     });
-
-    /*
-    TaskExecutionModel.associate = models => {
-        TaskExecutionModel.belongsTo(models.TaskDefinitions, {foreignKey: "task_definition_id"});
-        TaskExecutionModel.belongsTo(models.PipelineStages, {foreignKey: "pipeline_stage_id"});
-    };
-    */
 }
 
 export function augmentTaskExecutionModel(Model: ITaskExecutionModel) {

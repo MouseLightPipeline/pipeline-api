@@ -1,6 +1,4 @@
-import {IToProcessTile, IToProcessTileAttributes} from "../../data-access/sequelize/stageTableConnector";
 import {Instance, Model} from "sequelize";
-import {ITaskDefinition, ITaskDefinitionAttributes} from "./taskDefinition";
 
 export const NO_BOUND: number = null;
 export const NO_SAMPLE: number = -1;

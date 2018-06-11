@@ -47,11 +47,7 @@ export class PersistentStorageManager {
     public get TaskDefinitions() {
         return this.pipelineDatabase.models.TaskDefinitions;
     }
-    /*
-    public get TaskExecutions() {
-        return this.pipelineDatabase.models.TaskExecutions;
-    }
-    */
+
     public get PipelineWorkers() {
         return this.pipelineDatabase.models.PipelineWorkers;
     }

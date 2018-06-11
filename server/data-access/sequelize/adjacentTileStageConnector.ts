@@ -18,26 +18,6 @@ function generatePipelineStageAdjacentTileTableName(pipelineStageId: string) {
 export class AdjacentTileStageConnector extends StageTableConnector {
     private _adjacentTileModel: Model<IAdjacentTile, IAdjacentTileAttributes> = null;
 
-    public async loadAdjacentTile(id: string): Promise<IAdjacentTile> {
-        return this._adjacentTileModel.findOne({where: {relative_path: id}});
-    }
-
-    public async loadAdjacentTiles(): Promise<IAdjacentTile[]> {
-        return this._adjacentTileModel.findAll();
-    }
-
-    public async insertAdjacent(toProcess: IToProcessTileAttributes[]) {
-        return StageTableConnector.bulkCreate(this._adjacentTileModel, toProcess);
-    }
-
-    public async deleteAdjacent(toDelete: string[]) {
-        if (!toDelete || toDelete.length === 0) {
-            return;
-        }
-
-        return this._adjacentTileModel.destroy({where: {relative_path: {$in: toDelete}}});
-    }
-
     protected defineTables() {
         super.defineTables();
 

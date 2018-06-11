@@ -337,29 +337,29 @@ input PipelineWorkerInput {
 type Query {
   pipelineWorker(id: String!): PipelineWorker
   pipelineWorkers: [PipelineWorker!]!
-  
+
   project(id: String!): Project
   projects: [Project!]!
-  
+
   pipelineStage(id: String!): PipelineStage
   pipelineStages: [PipelineStage!]!
   pipelineStagesForProject(id: String!): [PipelineStage!]!
-  
+
   taskDefinition(id: String!): TaskDefinition
   taskDefinitions: [TaskDefinition!]!
-  
+
   taskRepository(id: String!): TaskRepository
   taskRepositories: [TaskRepository!]!
 
   pipelineStagePerformance(id: String!): PipelineStagePerformance
   pipelineStagePerformances: [PipelineStagePerformance!]!
-  
+
   projectPlaneTileStatus(project_id: String, plane: Int): TilePlane
-  
+
   tilesForStage(pipelineStageId: String, status: Int, offset: Int, limit: Int): TilePage
-  
+
   scriptContents(task_definition_id: String): String
-  
+
   pipelineVolume: String
 }
 
@@ -368,22 +368,22 @@ type Mutation {
   updateProject(project: ProjectInput): MutateProjectOutput
   duplicateProject(id: String): MutateProjectOutput
   deleteProject(id: String!): DeleteProjectOutput
-  
+
   createPipelineStage(pipelineStage: PipelineStageInput): MutatePipelineStageOutput
   updatePipelineStage(pipelineStage: PipelineStageInput): MutatePipelineStageOutput
   deletePipelineStage(id: String!): DeletePipelineStageOutput
-  
+
   createTaskRepository(taskRepository: TaskRepositoryInput): MutateTaskRepositoryOutput
   updateTaskRepository(taskRepository: TaskRepositoryInput): MutateTaskRepositoryOutput
   deleteTaskRepository(id: String!): DeleteTaskRepositoryOutput
-  
+
   createTaskDefinition(taskDefinition: TaskDefinitionInput): MutateTaskDefinitionOutput
   updateTaskDefinition(taskDefinition: TaskDefinitionInput): MutateTaskDefinitionOutput
   deleteTaskDefinition(id: String!): DeleteTaskDefinitionOutput
 
   setWorkerAvailability(id: String!, shouldBeInSchedulerPool: Boolean!): PipelineWorker
   updateWorker(worker: PipelineWorkerInput): MutatePipelineWorkerOutput
-  
+
   setTileStatus(pipelineStageId: String, tileIds: [String], status: Int): [Tile]
   convertTileStatus(pipelineStageId: String, currentStatus: Int, desiredStatus: Int): [Tile]
 }

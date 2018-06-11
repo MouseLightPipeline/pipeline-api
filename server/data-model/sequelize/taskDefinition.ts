@@ -11,17 +11,13 @@ export interface ITaskArgument {
     type: TaskArgumentType;
 }
 
-export interface ITaskArguments {
-    arguments: ITaskArgument[];
-}
-
 export interface ITaskDefinitionAttributes {
     id: string;
     name: string;
     description: string;
     script: string;
     interpreter: string;
-    // script_args: string;
+    script_args: string;
     cluster_args: string;
     expected_exit_code: number;
     work_units: number;

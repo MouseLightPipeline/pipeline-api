@@ -1,10 +1,8 @@
 import {Instance, Model, Sequelize} from "sequelize";
 
-const debug = require("debug")("pipeline:coordinator-api:stage-database-connector");
-
 import {
     augmentTaskExecutionModel,
-    createTaskExecutionTable, ITaskExecution,
+    createTaskExecutionTable,
     ITaskExecutionModel
 } from "../../data-model/taskExecution";
 import {TilePipelineStatus} from "../../data-model/TilePipelineStatus";
@@ -87,9 +85,6 @@ export interface IToProcessTile extends Instance<IToProcessTileAttributes>, IToP
 export interface IToProcessTileModel extends Model<IToProcessTile, IToProcessTileAttributes> {
 }
 
-const CreateChunkSize = 100;
-const UpdateChunkSize = 100;
-
 export class StageTableConnector {
 
     protected _connection: Sequelize;
@@ -122,19 +117,6 @@ export class StageTableConnector {
         }
     }
 
-    public async loadTile(where: any): Promise<IPipelineTile> {
-        return this._tileTable.findOne({where});
-    }
-
-    public async loadUnscheduled(): Promise<IPipelineTile[]> {
-        return this._tileTable.findAll({
-            where: {
-                prev_stage_status: TilePipelineStatus.Complete,
-                this_stage_status: TilePipelineStatus.Incomplete
-            }
-        });
-    }
-
     public async loadTileThumbnailPath(x: number, y: number, z: number): Promise<IPipelineTile> {
         return this._tileTable.findOne({where: {lat_x: x, lat_y: y, lat_z: z}});
     }
@@ -143,17 +125,6 @@ export class StageTableConnector {
         return this._tileTable.findAll({where: {lat_z: zIndex}});
     }
 
-    public async loadInProcess(): Promise<IInProcessTile[]> {
-        return this._inProcessTable.findAll();
-    }
-
-    public async loadToProcess(limit: number = null): Promise<IToProcessTile[]> {
-        return this._toProcessTable.findAll({order: [["relative_path", "ASC"]], limit: limit});
-    }
-
-    public async loadTaskExecution(id: string): Promise<ITaskExecution> {
-        return this._taskExecutionTable.findById(id);
-    }
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -165,46 +136,7 @@ export class StageTableConnector {
         }
     }
 
-    public async countInProcess(): Promise<number> {
-        return this._inProcessTable.count();
-    }
-
-    public async countToProcess(): Promise<number> {
-        return this._toProcessTable.count();
-    }
-
     // -----------------------------------------------------------------------------------------------------------------
-
-    public async updateTiles(objArray: IPipelineTile[]) {
-        if (!objArray || objArray.length === 0) {
-            return;
-        }
-
-        debug(`bulk update ${objArray.length} items`);
-
-        // Operate on a shallow copy since splice is going to be destructive.
-        const toUpdate = objArray.slice();
-
-        while (toUpdate.length > 0) {
-            try {
-                const next = toUpdate.splice(0, UpdateChunkSize);
-                await this.bulkUpdate(next);
-            } catch (err) {
-                debug(err);
-            }
-        }
-    }
-
-    public async updateTileStatus(toUpdate: Map<TilePipelineStatus, string[]>) {
-        if (!toUpdate) {
-            return;
-        }
-
-        return Promise.all(Array.from(toUpdate.keys()).map(async (status) => {
-            await this._tileTable.update({this_stage_status: status},
-                {where: {relative_path: {$in: toUpdate.get(status)}}});
-        }));
-    }
 
     public async getTileCounts(): Promise<IPipelineStageTileCounts> {
         const incomplete = await this._tileTable.count({where: {this_stage_status: TilePipelineStatus.Incomplete}});
@@ -240,35 +172,6 @@ export class StageTableConnector {
         });
 
         return affectedRows;
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------
-
-    protected static async bulkCreate(table: any, objArray: any[]) {
-        if (!objArray || objArray.length === 0) {
-            return;
-        }
-
-        debug(`bulk create ${objArray.length} items`);
-
-        // Operate on a shallow copy since splice is going to be destructive.
-        const toInsert = objArray.slice();
-
-        while (toInsert.length > 0) {
-            try {
-                await table.bulkCreate(toInsert.splice(0, CreateChunkSize));
-            } catch (err) {
-                debug(err);
-            }
-        }
-    }
-
-    protected async bulkUpdate(objArray: any[]) {
-        return this._connection.transaction(t => {
-            return Promise.all(objArray.map(obj => {
-                obj.save({transaction: t});
-            }));
-        });
     }
 
     // -----------------------------------------------------------------------------------------------------------------
