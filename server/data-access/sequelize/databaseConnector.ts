@@ -1,4 +1,5 @@
 import * as path from "path";
+
 const Sequelize = require("sequelize");
 
 const debug = require("debug")("pipeline:coordinator-api:database-connector");
@@ -84,8 +85,12 @@ async function authenticate(database, name) {
             }
         });
     } catch (err) {
-        debug(`failed database connection: ${name}`);
-        debug(err);
+        if (err.name === "SequelizeConnectionRefusedError") {
+            debug(`failed database connection: ${name} (connection refused - is it running?) - delaying 5 seconds`);
+        } else {
+            debug(`failed database connection: ${name} - delaying 5 seconds`);
+            debug(err);
+        }
 
         setTimeout(() => authenticate(database, name), 5000);
     }
