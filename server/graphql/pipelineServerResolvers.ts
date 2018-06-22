@@ -180,6 +180,9 @@ let resolvers = {
         updateTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: PipelineServerContext): Promise<ITaskDefinitionMutationOutput> {
             return context.updateTaskDefinition(args.taskDefinition);
         },
+        duplicateTaskDefinition(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskDefinitionMutationOutput> {
+            return context.duplicateTask(args.id);
+        },
         deleteTaskDefinition(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskDefinitionDeleteOutput> {
             return context.deleteTaskDefinition(args.id);
         },

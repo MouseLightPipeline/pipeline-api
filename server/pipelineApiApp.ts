@@ -11,7 +11,6 @@ import {typeDefinitions} from "./graphql/pipelineTypeDefinitions";
 import {SocketIoServer} from "./io/ioServer";
 import {ServiceOptions} from "./options/serverOptions";
 import {thumbnailParamQueryMiddleware, thumbnailQueryMiddleware} from "./middleware/thumbnailQueryMiddleware";
-import {MetricsConnector} from "./data-access/metrics/metricsConnector";
 import resolvers from "./graphql/pipelineServerResolvers";
 import {PipelineServerContext} from "./graphql/pipelineServerContext";
 
@@ -22,8 +21,6 @@ let executableSchema = makeExecutableSchema({
         requireResolversForNonScalar: false
     }
 });
-
-MetricsConnector.Instance().initialize().then();
 
 const app = express();
 

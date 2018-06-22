@@ -8,29 +8,13 @@ const coreServicesOptions = {
         password: "pgsecret",
         logging: null,
         pool: {
-            max: 30,
-            min: 5,
+            max: 5,
+            min: 0,
             acquire: 20000,
-            idle: 20000
+            idle: 10000
         }
-    },
-    metricsDatabase: {
-            host: "pipeline-metrics",
-            port: 8086,
-            taskDatabase: "task_metrics_db"
-    },
-    messageQueue: {
-
     }
 };
-
-function loadMetricsDatabaseOptions(options: any): any {
-    // When outside a pure container environment.
-    options.host = process.env.PIPELINE_CORE_SERVICES_HOST || options.host;
-    options.port = parseInt(process.env.PIPELINE_INFLUX_PORT) || options.port;
-
-    return options;
-}
 
 function loadDatabaseOptions(options: any): any {
     // When outside a pure container environment.
@@ -47,7 +31,6 @@ function loadOptions() {
 
     // When outside a pure container environment.
     options.database = loadDatabaseOptions(options.database);
-    options.metricsDatabase = loadMetricsDatabaseOptions(options.metricsDatabase);
 
     return options;
 }
@@ -55,5 +38,3 @@ function loadOptions() {
 export const CoreServicesOptions = loadOptions();
 
 export const SequelizeOptions = CoreServicesOptions.database;
-
-export const MetricsOptions = CoreServicesOptions.metricsDatabase;

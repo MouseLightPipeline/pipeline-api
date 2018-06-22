@@ -1,7 +1,6 @@
-import {FindOptions, Instance, Model, Sequelize} from "sequelize";
+import {Instance, Model, Sequelize} from "sequelize";
 
-import {isNullOrUndefined} from "util";
-import {IPipelineWorker, QueueType} from "./sequelize/pipelineWorker";
+import {IPipelineWorker} from "./sequelize/pipelineWorker";
 import {ITaskDefinition} from "./sequelize/taskDefinition";
 
 export interface IStartTaskInput {
@@ -48,7 +47,7 @@ export interface ITaskExecutionAttributes {
     resolved_log_path?: string;
     expected_exit_code?: number;
     worker_id?: string;
-    work_units?: number;
+    local_work_units?: number;
     cluster_work_units?: number;
     queue_type?: number;
     job_id?: number;
@@ -118,7 +117,7 @@ export function createTaskExecutionTable(sequelize: Sequelize, tableName: string
         worker_id: {
             type: DataTypes.UUID
         },
-        work_units: {
+        local_work_units: {
             type: DataTypes.INTEGER
         },
         cluster_work_units: {
@@ -176,62 +175,4 @@ export function createTaskExecutionTable(sequelize: Sequelize, tableName: string
             fields: ["worker_id"]
         }]
     });
-}
-
-export function augmentTaskExecutionModel(Model: ITaskExecutionModel) {
-    Model.getPage = async (reqOffset: number, reqLimit: number, completionCode: CompletionResult): Promise<ITaskExecution[]> => {
-        const options: FindOptions<ITaskExecutionAttributes> = {
-            offset: reqOffset,
-            limit: reqLimit
-        };
-
-        if (!isNullOrUndefined(completionCode)) {
-            options.where = {completion_status_code: completionCode};
-        }
-
-        return Model.findAll(options);
-    };
-
-
-    Model.createTaskExecution = async function (worker: IPipelineWorker, taskDefinition: ITaskDefinition, startTaskInput: IStartTaskInput): Promise<ITaskExecution> {
-        let taskExecution = await createTaskExecutionWithInput(worker, taskDefinition, startTaskInput);
-
-        return this.create(taskExecution);
-    };
-}
-
-async function createTaskExecutionWithInput(worker: IPipelineWorker, taskDefinition: ITaskDefinition, startTaskInput: IStartTaskInput): Promise<ITaskExecutionAttributes> {
-    const queueType: QueueType = worker.is_cluster_proxy ? QueueType.Cluster : QueueType.Local;
-
-    return {
-        task_definition_id: taskDefinition.id,
-        pipeline_stage_id: startTaskInput.pipelineStageId,
-        tile_id: startTaskInput.tileId,
-        worker_id: worker.id,
-        work_units: queueType === QueueType.Local ? taskDefinition.work_units : null,
-        cluster_work_units: queueType === QueueType.Cluster ? taskDefinition.cluster_work_units : null,
-        resolved_script: await taskDefinition.getFullScriptPath(false),
-        resolved_interpreter: taskDefinition.interpreter,
-        resolved_script_args: null, // Will be filled later b/c may include execution id created after this is saved. JSON.stringify(startTaskInput.scriptArgs),
-        resolved_cluster_args: queueType === QueueType.Cluster ? JSON.parse(taskDefinition.cluster_args).arguments[0] : null,
-        resolved_log_path: startTaskInput.logFile,
-        expected_exit_code: taskDefinition.expected_exit_code,
-        queue_type: queueType,
-        job_id: null,
-        job_name: null,
-        execution_status_code: ExecutionStatus.Initializing,
-        completion_status_code: CompletionResult.Incomplete,
-        last_process_status_code: null,
-        max_memory: NaN,
-        max_cpu: NaN,
-        exit_code: null,
-        submitted_at: null,
-        started_at: null,
-        completed_at: null,
-        sync_status: SyncStatus.Never,
-        synchronized_at: null,
-        created_at: null,
-        updated_at: null,
-        deleted_at: null
-    };
 }

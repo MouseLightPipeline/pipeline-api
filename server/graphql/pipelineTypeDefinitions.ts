@@ -35,12 +35,13 @@ type PipelineWorker {
   total_memory: Float
   free_memory: Float
   load_average: Float
-  work_unit_capacity: Float
+  local_work_capacity: Float
+  cluster_work_capacity: Float
   last_seen: Float
-  task_load: Float
+  local_task_load: Float
+  cluster_task_load: Float
   status: Int
   is_in_scheduler_pool: Boolean
-  is_cluster_proxy: Boolean
   created_at: Float
   updated_at: Float
   deleted_at: Float
@@ -66,7 +67,7 @@ type TaskDefinition {
   script_args: String!
   cluster_args: String
   expected_exit_code: Int
-  work_units: Float
+  local_work_units: Float
   cluster_work_units: Float
   log_prefix: String
   task_repository_id: String
@@ -323,15 +324,15 @@ input TaskDefinitionInput {
   script_args: String
   cluster_args: String
   expected_exit_code: Int
-  work_units: Float
+  local_work_units: Float
   cluster_work_units: Float
   log_prefix: String
 }
 
 input PipelineWorkerInput {
   id: String
-  work_unit_capacity: Float
-  is_cluster_proxy: Boolean
+  local_work_capacity: Float
+  cluster_work_capacity: Float
 }
 
 type Query {
@@ -379,6 +380,7 @@ type Mutation {
 
   createTaskDefinition(taskDefinition: TaskDefinitionInput): MutateTaskDefinitionOutput
   updateTaskDefinition(taskDefinition: TaskDefinitionInput): MutateTaskDefinitionOutput
+  duplicateTaskDefinition(id: String): MutateTaskDefinitionOutput
   deleteTaskDefinition(id: String!): DeleteTaskDefinitionOutput
 
   setWorkerAvailability(id: String!, shouldBeInSchedulerPool: Boolean!): PipelineWorker

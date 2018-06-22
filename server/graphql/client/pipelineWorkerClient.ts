@@ -10,8 +10,8 @@ import {PipelineServerContext} from "../pipelineServerContext";
 
 export interface IClientWorker {
     id: string;
-    work_capacity: number;
-    is_cluster_proxy: boolean;
+    local_work_capacity: number;
+    cluster_work_capacity: number;
 }
 
 export interface IClientUpdateWorkerOutput {
@@ -84,12 +84,12 @@ export class PipelineWorkerClient {
                 mutation UpdateWorkerMutation($worker: WorkerInput) {
                     updateWorker(worker: $worker) {
                         id
-                        work_capacity
-                        is_cluster_proxy
+                        local_work_capacity
+                        cluster_work_capacity
                     }
                 }`,
                 variables: {
-                    worker: Object.assign({}, {id: worker.id, work_capacity: worker.work_unit_capacity})
+                    worker: Object.assign({}, {id: worker.id, local_work_capacity: worker.local_work_capacity, cluster_work_capacity: worker.cluster_work_capacity})
                 }
             });
 

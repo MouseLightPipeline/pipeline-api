@@ -10,6 +10,6 @@ export DEBUG=pipeline*
 
 nohup node server/pipelineApiApp.js &
 
-sleep 3
+sleep 5
 
 chmod 775 nohup.out

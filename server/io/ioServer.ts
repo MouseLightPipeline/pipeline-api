@@ -5,16 +5,34 @@ import {IPipelineWorker, PipelineWorkerStatus} from "../data-model/sequelize/pip
 
 const debug = require("debug")("pipeline:coordinator-api:socket.io");
 
+interface IHeartbeatWorker {
+    id: string;
+    local_work_capacity: number;
+    cluster_work_capacity: number;
+}
+
+interface IHeartbeatData {
+    worker: IHeartbeatWorker;
+    localTaskLoad: number;
+    clusterTaskLoad: number;
+}
+
+
 export class SocketIoServer {
     private static _ioServer = null;
-
-    private _httpServer;
 
     public static use(app) {
         this._ioServer = new SocketIoServer(app);
 
         return this._ioServer._httpServer;
     }
+
+    public static get Instance() {
+        return this._ioServer;
+    }
+
+    private readonly _httpServer;
+    private readonly _connectionMap = new Map<string, string>();
 
     private constructor(app) {
         this._httpServer = http.createServer(app);
@@ -23,7 +41,7 @@ export class SocketIoServer {
 
         io.on("connection", client => this.onConnect(client));
 
-        debug("interface listening for workers");
+        debug("socket.io worker connection open");
     }
 
     private onConnect(client) {
@@ -31,17 +49,17 @@ export class SocketIoServer {
 
         client.on("workerApiService", workerInformation => this.onWorkerApiService(client, workerInformation));
 
-        client.on("heartBeat", heartbeatData => this.onHeartbeat(client, heartbeatData));
+        client.on("heartBeat", (heartbeatData: IHeartbeatData) => this.onHeartbeat(client, heartbeatData));
 
         client.on("disconnect", () => this.onDisconnect(client));
     }
 
     private onDisconnect(client) {
-        debug("worker disconnected");
+        debug(`worker ${this._connectionMap.get(client.id)} disconnected`);
     }
 
     private async onWorkerApiService(client, workerInformation) {
-        // Update worker for last seen.
+        this._connectionMap.set(client.id, workerInformation.worker.id);
 
         try {
             let row = await PersistentStorageManager.Instance().PipelineWorkers.getForWorkerId(workerInformation.worker.id);
@@ -49,9 +67,8 @@ export class SocketIoServer {
             const worker: IPipelineWorker = {};
 
             worker.worker_id = workerInformation.worker.id;
-            worker.work_unit_capacity = workerInformation.worker.work_capacity;
-            worker.is_cluster_proxy = workerInformation.worker.is_cluster_proxy;
-            // worker.is_accepting_jobs = workerInformation.worker.is_accepting_jobs;
+            worker.local_work_capacity = workerInformation.worker.local_work_capacity;
+            worker.cluster_work_capacity = workerInformation.worker.cluster_work_capacity;
             worker.name = workerInformation.service.name;
             worker.address = workerInformation.service.networkAddress;
             worker.port = parseInt(workerInformation.service.networkPort);
@@ -69,9 +86,7 @@ export class SocketIoServer {
         }
     }
 
-    private async onHeartbeat(client, heartbeatData) {
-        // Update worker for last seen.
-
+    private async onHeartbeat(client, heartbeatData: IHeartbeatData) {
         try {
             let row = await PersistentStorageManager.Instance().PipelineWorkers.getForWorkerId(heartbeatData.worker.id);
 
@@ -81,16 +96,17 @@ export class SocketIoServer {
 
             const worker: IPipelineWorker = {};
 
-            worker.is_cluster_proxy = heartbeatData.worker.is_cluster_proxy;
-            worker.work_unit_capacity = heartbeatData.worker.work_capacity;
+            worker.local_work_capacity = heartbeatData.worker.local_work_capacity;
+            worker.cluster_work_capacity = heartbeatData.worker.cluster_work_capacity;
+            worker.local_task_load = heartbeatData.localTaskLoad;
+            worker.cluster_task_load = heartbeatData.clusterTaskLoad;
             worker.last_seen = new Date();
-            worker.task_load = heartbeatData.taskLoad;
 
             await row.update(worker);
 
             let status = PipelineWorkerStatus.Unavailable;
 
-            switch (heartbeatData.taskLoad) {
+            switch (Math.max(heartbeatData.localTaskLoad, heartbeatData.clusterTaskLoad)) {
                 case -1:
                     status = PipelineWorkerStatus.Connected;
                     break;

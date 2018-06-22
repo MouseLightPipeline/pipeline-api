@@ -117,8 +117,8 @@ export class PipelineServerContext {
 
             let output = await PipelineWorkerClient.Instance().updateWorker(Object.assign({}, {
                 id: workerInput.id,
-                work_unit_capacity: workerInput.work_unit_capacity,
-                is_cluster_proxy: workerInput.is_cluster_proxy
+                local_work_capacity: workerInput.local_work_capacity,
+                cluster_work_capacity: workerInput.cluster_work_capacity
             }, {
                 name: row.name,
                 address: row.address,
@@ -130,8 +130,8 @@ export class PipelineServerContext {
             }
 
             row = await row.update({
-                work_unit_capacity: output.worker.work_capacity,
-                is_cluster_proxy: output.worker.is_cluster_proxy
+                local_work_capacity: output.worker.local_work_capacity,
+                cluster_work_capacity: output.worker.cluster_work_capacity
             });
 
             return {worker: row, error: ""};
@@ -434,6 +434,24 @@ export class PipelineServerContext {
         }
     }
 
+    public async duplicateTask(id: string): Promise<ITaskDefinitionMutationOutput> {
+        try {
+            const input = (await this._persistentStorageManager.TaskDefinitions.findById(id)).toJSON();
+
+            input.id = undefined;
+            input.name += " copy";
+            input.created_at = new Date();
+            input.updated_at = input.created_at;
+
+            const taskDefinition = await this._persistentStorageManager.TaskDefinitions.create(input);
+
+            return {taskDefinition, error: ""};
+        } catch (err) {
+            console.log(err);
+            return {taskDefinition: null, error: err.message}
+        }
+    }
+
     public async deleteTaskDefinition(id: string): Promise<ITaskDefinitionDeleteOutput> {
         try {
             const affectedRowCount = await this._persistentStorageManager.TaskDefinitions.destroy({where: {id}});
@@ -514,7 +532,11 @@ export class PipelineServerContext {
             const stageConnectorPromises: Promise<IPipelineTileExt[]>[] = stages.map(async (stage) => {
                 const stageConnector = await connector.connectorForStage(stage);
 
-                const tiles = await stageConnector.loadTileStatusForPlane(plane);
+                let tiles = [];
+
+                if (stageConnector) {
+                    tiles = await stageConnector.loadTileStatusForPlane(plane);
+                }
 
                 return tiles.map(tile => {
                     return Object.assign(tile.toJSON(), {stage_id: stage.id, depth: stage.depth}) as IPipelineTileExt;
@@ -524,7 +546,11 @@ export class PipelineServerContext {
             stageConnectorPromises.unshift(new Promise(async (resolve) => {
                 const stageConnector = await connector.connectorForProject();
 
-                const tiles = await stageConnector.loadTileStatusForPlane(plane);
+                let tiles = [];
+
+                if (stageConnector) {
+                    tiles = await stageConnector.loadTileStatusForPlane(plane);
+                }
 
                 const tilesExt = tiles.map(tile => {
                     return Object.assign(tile.toJSON(), {stage_id: project.id, depth: 0}) as IPipelineTileExt;
@@ -674,6 +700,16 @@ export class PipelineServerContext {
         // TODO Use findAndCount
         const stageConnector = await connectorForStage(pipelineStage);
 
+        if (!stageConnector) {
+            return {
+                offset: reqOffset,
+                limit: reqLimit,
+                totalCount: 0,
+                hasNextPage: false,
+                items: []
+            };
+        }
+
         const totalCount = await stageConnector.countTiles({
             where: {
                 prev_stage_status: TilePipelineStatus.Complete,
@@ -709,7 +745,7 @@ export class PipelineServerContext {
 
             const stageConnector = await connectorForStage(pipelineStage);
 
-            return stageConnector.getTileCounts();
+            return stageConnector ? stageConnector.getTileCounts() : PipelineStageStatusUnavailable;
         } catch (err) {
             return PipelineStageStatusUnavailable;
         }
@@ -732,7 +768,7 @@ export class PipelineServerContext {
 
         const stageConnector = await connectorForStage(pipelineStage);
 
-        return stageConnector.setTileStatus(tileIds, status);
+        return stageConnector ? stageConnector.setTileStatus(tileIds, status) : null;
     }
 
     /***

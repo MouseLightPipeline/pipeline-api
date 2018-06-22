@@ -9,5 +9,3 @@ fi
 export DEBUG=pipeline*
 
 node server/pipelineApiApp.js &> /var/log/pipeline/coordinator-${logName}.log
-
-# sleep infinity

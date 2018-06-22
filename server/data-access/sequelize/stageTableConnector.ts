@@ -1,10 +1,6 @@
 import {Instance, Model, Sequelize} from "sequelize";
 
-import {
-    augmentTaskExecutionModel,
-    createTaskExecutionTable,
-    ITaskExecutionModel
-} from "../../data-model/taskExecution";
+import {createTaskExecutionTable, ITaskExecutionModel} from "../../data-model/taskExecution";
 import {TilePipelineStatus} from "../../data-model/TilePipelineStatus";
 
 export function generatePipelineCustomTableName(pipelineStageId: string, tableName) {
@@ -100,10 +96,11 @@ export class StageTableConnector {
         this._tableBaseName = id;
     }
 
-    public async initialize() {
+    public async initialize(): Promise<void> {
         this.defineTables();
 
-        return this._connection.sync();
+        // Do not perform mode/table updates from the API server, only the scheduler.
+        // this._connection.sync();
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -184,7 +181,6 @@ export class StageTableConnector {
         this._inProcessTable = this.defineInProcessTable(this._connection.Sequelize);
 
         this._taskExecutionTable = createTaskExecutionTable(this._connection, generatePipelineStageTaskExecutionTableName(this._tableBaseName));
-        augmentTaskExecutionModel(this._taskExecutionTable);
     }
 
     private defineTileTable(DataTypes): any {
@@ -249,6 +245,7 @@ export class StageTableConnector {
                 defaultValue: null
             }
         }, {
+            tableName: this._tableBaseName,
             timestamps: true,
             createdAt: "created_at",
             updatedAt: "updated_at",
