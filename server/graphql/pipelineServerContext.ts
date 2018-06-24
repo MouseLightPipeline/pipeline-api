@@ -21,6 +21,7 @@ import {
     connectorForStage,
 } from "../data-access/sequelize/projectDatabaseConnector";
 import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
+import {ServiceOptions} from "../options/serverOptions";
 
 interface IPipelineTileExt extends IPipelineTile {
     stage_id: string;
@@ -640,7 +641,7 @@ export class PipelineServerContext {
             let isProject = false;
             let project: IProject = null;
 
-            const stage: IPipelineStage = PersistentStorageManager.Instance().PipelineStages.findById(id);
+            const stage: IPipelineStage = await PersistentStorageManager.Instance().PipelineStages.findById(id);
 
             if (!stage) {
                 project = await PersistentStorageManager.Instance().Projects.findById(id);
@@ -664,7 +665,15 @@ export class PipelineServerContext {
             const tile = await stageConnector.loadTileThumbnailPath(x, y, z);
 
             if (tile) {
-                return path.join(isProject ? project.root_path : stage.dst_path, tile.relative_path);
+                let fullPath = path.join(isProject ? project.root_path : stage.dst_path, tile.relative_path);
+
+                ServiceOptions.driveMapping.map(d => {
+                    if (fullPath.startsWith(d.remote)) {
+                        fullPath = d.local + fullPath.slice(d.remote.length);
+                    }
+                });
+
+                return fullPath
             }
         } catch (err) {
             debug(err);

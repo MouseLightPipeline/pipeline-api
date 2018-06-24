@@ -61,6 +61,11 @@ export async function thumbnailParamQueryMiddleware(req, res) {
 
         let thumbnailPath = await PipelineServerContext.thumbnailPath(pipelineStageId, x, y, z);
 
+        if (!thumbnailPath) {
+            res.status(404).send("Not found");
+            return;
+        }
+
         thumbnailPath = path.join(thumbnailPath, thumbName);
 
         if (fs.existsSync(thumbnailPath)) {

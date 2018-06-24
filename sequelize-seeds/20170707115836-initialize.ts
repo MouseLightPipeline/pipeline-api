@@ -190,7 +190,7 @@ function createTaskDefinitions(when: Date) {
             }),
             cluster_args: JSON.stringify({arguments: [""]}),
             expected_exit_code: 0,
-            local_work_units: 0,
+            local_work_units: 1,
             cluster_work_units: 1,
             log_prefix: "ec",
             task_repository_id: "f22c6e43-782c-4e0e-b0ca-b34fcec3340a",
