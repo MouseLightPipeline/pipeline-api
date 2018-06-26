@@ -67,7 +67,7 @@ function createTaskDefinitions(when: Date) {
             interpreter: "none",
             script_args: JSON.stringify({
                 arguments: [{
-                    value: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps/lineFix",
+                    value: path.join(taskLocationPrefix, "/apps/lineFix"),
                     type: TaskArgumentType.Literal
                 }]
             }),
@@ -92,7 +92,7 @@ function createTaskDefinitions(when: Date) {
                     value: "${IS_CLUSTER_JOB}",
                     type: TaskArgumentType.Parameter
                 }, {
-                    value: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps/axon-classifier/axon_uint16.ilp",
+                    value: path.join(taskLocationPrefix, "/apps/axon-classifier/axon_uint16.ilp"),
                     type: TaskArgumentType.Literal
                 }]
             }),
@@ -117,7 +117,7 @@ function createTaskDefinitions(when: Date) {
                     value: "${TASK_ID}",
                     type: TaskArgumentType.Parameter
                 }, {
-                    value: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps/dogDescriptor",
+                    value: path.join(taskLocationPrefix, "apps/dogDescriptor"),
                     type: TaskArgumentType.Literal
                 }, {
                     value: "/groups/mousebrainmicro/mousebrainmicro/Software/mcr/v92",
@@ -151,7 +151,7 @@ function createTaskDefinitions(when: Date) {
                     value: "${TASK_ID}",
                     type: TaskArgumentType.Parameter
                 }, {
-                    value: "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline/apps/pointmatch_test",
+                    value: path.join(taskLocationPrefix, "apps/pointmatch_test"),
                     type: TaskArgumentType.Literal
                 }, {
                     value: "/groups/mousebrainmicro/mousebrainmicro/Software/mcr/v92",

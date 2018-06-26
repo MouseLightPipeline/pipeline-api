@@ -2,10 +2,12 @@
 
 logName=$(date '+%Y-%m-%d%H-%M-%S');
 
-if [ ! -z "${PIPELINE_PERFORM_MIGRATION}" ]; then
-    ./migrate.sh &> /var/log/pipeline/coordinator-${logName}.log
-fi
+mkdir -p ~/var/log/pipeline
+
+./migrate.sh &> /var/log/pipeline/coordinator-${logName}.log
+
+wait
 
 export DEBUG=pipeline*
 
-node server/pipelineApiApp.js &> /var/log/pipeline/coordinator-${logName}.log
+node server/pipelineApiApp.js >> /var/log/pipeline/coordinator-${logName}.log 2>&1
