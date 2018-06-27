@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-logName=$(date '+%Y-%m-%d%H-%M-%S');
+logName=$(date '+%Y-%m-%d_%H-%M-%S');
 
 mkdir -p ~/var/log/pipeline
 

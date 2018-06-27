@@ -71,7 +71,7 @@ function createTaskDefinitions(when: Date) {
                     type: TaskArgumentType.Literal
                 }]
             }),
-            cluster_args: JSON.stringify({arguments: ["-n 4 -R\"affinity[core(1)]\""]}),
+            cluster_args: JSON.stringify({arguments: ["-n 4 -R\"affinity[core(1)]\" -P mouselight"]}),
             expected_exit_code: 0,
             local_work_units: 4,
             cluster_work_units: 1,
@@ -96,7 +96,7 @@ function createTaskDefinitions(when: Date) {
                     type: TaskArgumentType.Literal
                 }]
             }),
-            cluster_args: JSON.stringify({arguments: ["-n 4 -R\"select[broadwell]\""]}),
+            cluster_args: JSON.stringify({arguments: ["-n 4 -R\"select[broadwell]\" -P mouselight"]}),
             expected_exit_code: 0,
             local_work_units: 18,
             cluster_work_units: 1,
@@ -124,7 +124,7 @@ function createTaskDefinitions(when: Date) {
                     type: TaskArgumentType.Literal
                 }]
             }),
-            cluster_args: JSON.stringify({arguments: ["-n 4 -R\"affinity[core(1)]\""]}),
+            cluster_args: JSON.stringify({arguments: ["-n 4 -R\"affinity[core(1)]\" -P mouselight"]}),
             expected_exit_code: 0,
             local_work_units: 4,
             cluster_work_units: 1,
@@ -167,7 +167,7 @@ function createTaskDefinitions(when: Date) {
                     type: TaskArgumentType.Literal
                 }]
             }),
-            cluster_args: JSON.stringify({arguments: ["-n 2 -R\"affinity[core(1)]\""]}),
+            cluster_args: JSON.stringify({arguments: ["-n 2 -R\"affinity[core(1)]\" -P mouselight"]}),
             expected_exit_code: 0,
             local_work_units: 1,
             cluster_work_units: 1,
@@ -284,7 +284,7 @@ function createProjects(when: Date) {
             id: "44e49773-1c19-494b-b283-54466b94b70f",
             name: "Sample Brain",
             description: "Sample brain pipeline project",
-            root_path: "/groups/mousebrainmicro/mousebrainmicro/data/2017-10-31/Tiling",
+            root_path: "/groups/mousebrainmicro/mousebrainmicro/data/2018-03-26/Tiling",
             log_root_path: "",
             sample_number: 99998,
             region_x_min: null,
