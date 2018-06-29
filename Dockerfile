@@ -10,4 +10,4 @@ RUN yarn install
 
 CMD ["./docker-entry.sh"]
 
-EXPOSE  3000
+EXPOSE  6001
