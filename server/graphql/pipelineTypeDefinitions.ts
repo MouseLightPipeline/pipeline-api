@@ -143,29 +143,6 @@ type PipelineTileStatus {
   canceled: Int
 }
 
-type PipelineStagePerformance {
-  id: String!
-  pipeline_stage_id: String
-  num_in_process: Int
-  num_ready_to_process: Int
-  num_execute: Int
-  num_complete: Int
-  num_error: Int
-  num_cancel: Int
-  cpu_average: Float
-  cpu_high: Float
-  cpu_low: Float
-  memory_average: Float
-  memory_high: Float
-  memory_low: Float
-  duration_average: Float
-  duration_high: Float
-  duration_low: Float
-  created_at: String
-  updated_at: String
-  deleted_at: String
-}
-
 type PipelineStage {
   id: String!
   name: String
@@ -181,7 +158,6 @@ type PipelineStage {
   project: Project
   task: TaskDefinition
   tile_status: PipelineTileStatus
-  performance: PipelineStagePerformance
   previous_stage: PipelineStage
   child_stages: [PipelineStage]
   created_at: Float
@@ -351,9 +327,6 @@ type Query {
 
   taskRepository(id: String!): TaskRepository
   taskRepositories: [TaskRepository!]!
-
-  pipelineStagePerformance(id: String!): PipelineStagePerformance
-  pipelineStagePerformances: [PipelineStagePerformance!]!
 
   projectPlaneTileStatus(project_id: String, plane: Int): TilePlane
 

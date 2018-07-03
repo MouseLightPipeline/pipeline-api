@@ -147,41 +147,6 @@ export = {
             });
 
         await queryInterface.createTable(
-            "PipelineStagePerformances",
-            {
-                id: {
-                    primaryKey: true,
-                    type: Sequelize.UUID,
-                    defaultValue: Sequelize.UUIDV4
-                },
-                num_in_process: Sequelize.INTEGER,
-                num_ready_to_process: Sequelize.INTEGER,
-                num_execute: Sequelize.INTEGER,
-                num_complete: Sequelize.INTEGER,
-                num_error: Sequelize.INTEGER,
-                num_cancel: Sequelize.INTEGER,
-                duration_average: Sequelize.DOUBLE,
-                duration_high: Sequelize.DOUBLE,
-                duration_low: Sequelize.DOUBLE,
-                cpu_average: Sequelize.DOUBLE,
-                cpu_high: Sequelize.DOUBLE,
-                cpu_low: Sequelize.DOUBLE,
-                memory_average: Sequelize.DOUBLE,
-                memory_high: Sequelize.DOUBLE,
-                memory_low: Sequelize.DOUBLE,
-                pipeline_stage_id: {
-                    type: Sequelize.UUID,
-                    references: {
-                        model: "PipelineStages",
-                        key: "id"
-                    }
-                },
-                created_at: Sequelize.DATE,
-                updated_at: Sequelize.DATE,
-                deleted_at: Sequelize.DATE
-            });
-
-        await queryInterface.createTable(
             "PipelineStageFunctions",
             {
                 id: {

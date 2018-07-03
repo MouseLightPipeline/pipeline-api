@@ -73,7 +73,7 @@ function createTaskDefinitions(when: Date) {
             }),
             cluster_args: JSON.stringify({arguments: ["-n 4 -R\"affinity[core(1)]\" -P mouselight"]}),
             expected_exit_code: 0,
-            local_work_units: 4,
+            local_work_units: 2,
             cluster_work_units: 1,
             log_prefix: "lf",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",

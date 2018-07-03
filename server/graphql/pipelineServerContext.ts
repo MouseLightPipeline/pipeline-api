@@ -3,7 +3,6 @@ import * as fs from "fs";
 
 const debug = require("debug")("pipeline:coordinator-api:server-context");
 
-import {IPipelineStagePerformance} from "../data-model/sequelize/pipelineStagePerformance";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {ITaskDefinition, ITaskDefinitionAttributes} from "../data-model/sequelize/taskDefinition";
 import {ITaskRepository} from "../data-model/sequelize/taskRepository";
@@ -487,18 +486,6 @@ export class PipelineServerContext {
         }
 
         return null;
-    }
-
-    public getPipelineStagePerformance(id: string): Promise<IPipelineStagePerformance> {
-        return this._persistentStorageManager.PipelineStagePerformances.findById(id);
-    }
-
-    public getPipelineStagePerformances(): Promise<IPipelineStagePerformance[]> {
-        return this._persistentStorageManager.PipelineStagePerformances.findAll({});
-    }
-
-    public async getForStage(pipeline_stage_id: string): Promise<IPipelineStagePerformance> {
-        return this._persistentStorageManager.PipelineStagePerformances.findOne({where: {pipeline_stage_id}});
     }
 
     public static async getProjectPlaneTileStatus(project_id: string, plane: number): Promise<ITileMap> {

@@ -1,19 +1,22 @@
 import {ITaskRepository} from "../data-model/sequelize/taskRepository";
 
-import {IPipelineStagePerformance} from "../data-model/sequelize/pipelineStagePerformance";
 import {
-    IPipelineStageDeleteOutput, IPipelineStageMutationOutput,
+    IPipelineStageDeleteOutput,
+    IPipelineStageMutationOutput,
     IProjectDeleteOutput,
-    IProjectMutationOutput, ISimplePage, ITaskDefinitionDeleteOutput,
+    IProjectMutationOutput,
+    ITaskDefinitionDeleteOutput,
     ITaskDefinitionMutationOutput,
     ITaskRepositoryDeleteOutput,
-    ITaskRepositoryMutationOutput, ITilePage, IWorkerMutationOutput, PipelineServerContext
+    ITaskRepositoryMutationOutput,
+    ITilePage,
+    IWorkerMutationOutput,
+    PipelineServerContext
 } from "./pipelineServerContext";
 import {ITaskDefinition, ITaskDefinitionAttributes} from "../data-model/sequelize/taskDefinition";
 import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {IProjectAttributes, IProjectInput} from "../data-model/sequelize/project";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
-import {CompletionResult, ITaskExecutionAttributes} from "../data-model/taskExecution";
 import {IPipelineStageTileCounts, IPipelineTileAttributes} from "../data-access/sequelize/stageTableConnector";
 import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
 
@@ -62,12 +65,6 @@ interface IPipelinePlaneStatusArguments {
 interface IActiveWorkerArguments {
     id: string;
     shouldBeInSchedulerPool: boolean;
-}
-
-interface ITaskExecutionPageArguments {
-    offset: number;
-    limit: number;
-    status: CompletionResult;
 }
 
 interface ITileStatusArguments {
@@ -123,12 +120,6 @@ let resolvers = {
         },
         taskRepositories(_, __, context: PipelineServerContext): Promise<ITaskRepository[]> {
             return context.getTaskRepositories();
-        },
-        pipelineStagePerformance(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IPipelineStagePerformance> {
-            return context.getPipelineStagePerformance(args.id);
-        },
-        pipelineStagePerformances(_, __, context: PipelineServerContext): Promise<IPipelineStagePerformance[]> {
-            return context.getPipelineStagePerformances();
         },
         projectPlaneTileStatus(_, args: IPipelinePlaneStatusArguments, context: PipelineServerContext): Promise<any> {
             return PipelineServerContext.getProjectPlaneTileStatus(args.project_id, args.plane);
@@ -208,9 +199,6 @@ let resolvers = {
         }
     },
     PipelineStage: {
-        performance(stage, _, context: PipelineServerContext): any {
-            return context.getForStage(stage.id);
-        },
         task(stage, _, context: PipelineServerContext): any {
             return context.getTaskDefinition(stage.task_id);
         },
