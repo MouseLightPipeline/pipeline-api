@@ -3,6 +3,15 @@ import {Instance, Model} from "sequelize";
 export const NO_BOUND: number = null;
 export const NO_SAMPLE: number = -1;
 
+export enum ProjectInputSourceState {
+    Unknown = 0,
+    BadLocation = 1,
+    Missing = 2,
+    Dashboard = 3,
+    Pipeline = 4,
+    Disappeared = 5
+}
+
 export interface IProjectGridRegion {
     x_min: number;
     x_max: number;
@@ -20,6 +29,10 @@ export interface IProjectInput {
     is_processing?: boolean;
     sample_number?: number;
     region_bounds?: IProjectGridRegion;
+    region_z_max?: number;
+    input_source_state?: ProjectInputSourceState;
+    last_seen_input_source?: Date;
+    last_checked_input_source?: Date;
 }
 
 export interface IProjectAttributes {
@@ -42,12 +55,16 @@ export interface IProjectAttributes {
     region_z_min?: number;
     region_z_max?: number;
     is_processing?: boolean;
+    input_source_state?: ProjectInputSourceState;
+    last_seen_input_source?: Date;
+    last_checked_input_source?: Date;
     created_at?: Date;
     updated_at?: Date;
     deleted_at?: Date;
 }
 
-export interface IProject extends Instance<IProjectAttributes>, IProjectAttributes {}
+export interface IProject extends Instance<IProjectAttributes>, IProjectAttributes {
+}
 
 export interface IProjectModel extends Model<IProject, IProjectAttributes> {
 }
@@ -62,77 +79,68 @@ export function sequelizeImport(sequelize, DataTypes) {
             defaultValue: DataTypes.UUIDV4
         },
         name: {
-            type: DataTypes.TEXT,
-            defaultValue: ""
+            type: DataTypes.TEXT
         },
         description: {
-            type: DataTypes.TEXT,
-            defaultValue: ""
+            type: DataTypes.TEXT
         },
         root_path: {
-            type: DataTypes.TEXT,
-            defaultValue: ""
+            type: DataTypes.TEXT
         },
         log_root_path: {
-            type: DataTypes.TEXT,
-            defaultValue: ""
+            type: DataTypes.TEXT
         },
         sample_number: {
-            type: DataTypes.INTEGER,
-            defaultValue: 0
+            type: DataTypes.INTEGER
         },
         sample_x_min: {
-            type: DataTypes.DOUBLE,
-            defaultValue: 0
+            type: DataTypes.DOUBLE
         },
         sample_x_max: {
-            type: DataTypes.DOUBLE,
-            defaultValue: 0
+            type: DataTypes.DOUBLE
         },
         sample_y_min: {
-            type: DataTypes.DOUBLE,
-            defaultValue: 0
+            type: DataTypes.DOUBLE
         },
         sample_y_max: {
-            type: DataTypes.DOUBLE,
-            defaultValue: 0
+            type: DataTypes.DOUBLE
         },
         sample_z_min: {
-            type: DataTypes.DOUBLE,
-            defaultValue: 0
+            type: DataTypes.DOUBLE
         },
         sample_z_max: {
-            type: DataTypes.DOUBLE,
-            defaultValue: 0
+            type: DataTypes.DOUBLE
         },
         region_x_min: {
-            type: DataTypes.DOUBLE,
-            defaultValue: 0
+            type: DataTypes.DOUBLE
         },
         region_x_max: {
-            type: DataTypes.DOUBLE,
-            defaultValue: 0
+            type: DataTypes.DOUBLE
         },
         region_y_min: {
-            type: DataTypes.DOUBLE,
-            defaultValue: 0
+            type: DataTypes.DOUBLE
         },
         region_y_max: {
-            type: DataTypes.DOUBLE,
-            defaultValue: 0
+            type: DataTypes.DOUBLE
         },
         region_z_min: {
-            type: DataTypes.DOUBLE,
-            defaultValue: 0
+            type: DataTypes.DOUBLE
         },
         region_z_max: {
-            type: DataTypes.DOUBLE,
-            defaultValue: 0
+            type: DataTypes.DOUBLE
         },
         is_processing: {
-            type: DataTypes.BOOLEAN,
-            defaultValue: false
-        }
+            type: DataTypes.BOOLEAN
+        },
+        input_source_state: {
+            type: DataTypes.INTEGER
+        },
+        last_seen_input_source: {
+            type: DataTypes.DATE
+        },
+        last_checked_input_source: {
+            type: DataTypes.DATE
+        },
     }, {
         timestamps: true,
         createdAt: "created_at",

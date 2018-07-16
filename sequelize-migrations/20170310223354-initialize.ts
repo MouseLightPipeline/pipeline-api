@@ -84,10 +84,22 @@ export = {
                     defaultValue: Sequelize.UUIDV4
                 },
                 name: Sequelize.TEXT,
-                description: Sequelize.TEXT,
-                root_path: Sequelize.TEXT,
-                log_root_path: Sequelize.TEXT,
-                sample_number: Sequelize.INTEGER,
+                description: {
+                    type: Sequelize.TEXT,
+                    defaultValue: ""
+                },
+                root_path: {
+                    type: Sequelize.TEXT,
+                    defaultValue: ""
+                },
+                log_root_path: {
+                    type: Sequelize.TEXT,
+                    defaultValue: ""
+                },
+                sample_number: {
+                    type: Sequelize.INTEGER,
+                    defaultValue: -1
+                },
                 sample_x_min: Sequelize.INTEGER,
                 sample_x_max: Sequelize.INTEGER,
                 sample_y_min: Sequelize.INTEGER,
@@ -100,7 +112,16 @@ export = {
                 region_y_max: Sequelize.INTEGER,
                 region_z_min: Sequelize.INTEGER,
                 region_z_max: Sequelize.INTEGER,
-                is_processing: Sequelize.BOOLEAN,
+                is_processing: {
+                    type: Sequelize.BOOLEAN,
+                    defaultValue: false
+                },
+                input_source_state: {
+                    type: Sequelize.INTEGER,
+                    defaultValue: 0
+                },
+                last_seen_input_source: Sequelize.DATE,
+                last_checked_input_source: Sequelize.DATE,
                 created_at: Sequelize.DATE,
                 updated_at: Sequelize.DATE,
                 deleted_at: Sequelize.DATE

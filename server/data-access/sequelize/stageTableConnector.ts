@@ -40,9 +40,6 @@ export interface IPipelineTileAttributes {
     step_x?: number;
     step_y?: number;
     step_z?: number;
-    duration?: number;
-    cpu_high?: number;
-    memory_high?: number;
     created_at?: Date;
     updated_at?: Date;
 }
@@ -227,18 +224,6 @@ export class StageTableConnector {
             step_z: {
                 type: DataTypes.INTEGER,
                 defaultValue: null
-            },
-            duration: {
-                type: DataTypes.DOUBLE,
-                defaultValue: 0
-            },
-            cpu_high: {
-                type: DataTypes.DOUBLE,
-                defaultValue: 0
-            },
-            memory_high: {
-                type: DataTypes.DOUBLE,
-                defaultValue: 0
             },
             user_data: {
                 type: DataTypes.TEXT,

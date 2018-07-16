@@ -2,6 +2,7 @@ import * as socket_io from "socket.io";
 import * as http from "http";
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {IPipelineWorker, PipelineWorkerStatus} from "../data-model/sequelize/pipelineWorker";
+import {isNullOrUndefined} from "util";
 
 const debug = require("debug")("pipeline:coordinator-api:socket.io");
 
@@ -59,6 +60,10 @@ export class SocketIoServer {
     }
 
     private async onWorkerApiService(client, workerInformation) {
+        if (isNullOrUndefined(workerInformation.worker)) {
+            return;
+        }
+
         this._connectionMap.set(client.id, workerInformation.worker.id);
 
         try {

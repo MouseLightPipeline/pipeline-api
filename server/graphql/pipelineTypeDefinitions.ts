@@ -97,8 +97,9 @@ type TaskExecution {
   execution_status_code: Int
   completion_status_code: Int
   last_process_status_code: Float
-  max_memory: Float
-  max_cpu: Float
+  cpu_time_seconds: Float
+  max_memory_mb: Float
+  max_cpu_percent: Float
   exit_code: Int
   started_at: String
   completed_at: String
@@ -128,6 +129,9 @@ type Project {
   region_z_min: Int
   region_z_max: Int
   is_processing: Boolean
+  input_source_state: Int
+  last_seen_input_source: Float
+  last_checked_input_source: Float
   created_at: Float
   updated_at: Float
   deleted_at: Float
@@ -265,6 +269,9 @@ input ProjectInput {
   root_path: String
   log_root_path: String
   sample_number: Int
+  input_source_state: Int
+  last_seen_input_source: Float
+  last_checked_input_source: Float
   is_processing: Boolean
   region_bounds: RegionInput
 }
