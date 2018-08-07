@@ -7,7 +7,14 @@ import {PersistentStorageManager} from "../data-access/sequelize/databaseConnect
 import {ITaskDefinition, ITaskDefinitionAttributes} from "../data-model/sequelize/taskDefinition";
 import {ITaskRepository} from "../data-model/sequelize/taskRepository";
 import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
-import {IProject, IProjectAttributes, IProjectInput, NO_BOUND, NO_SAMPLE} from "../data-model/sequelize/project";
+import {
+    IProject,
+    IProjectAttributes,
+    IProjectInput,
+    NO_BOUND,
+    NO_SAMPLE,
+    ProjectInputSourceState
+} from "../data-model/sequelize/project";
 import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
 import {PipelineWorkerClient} from "./client/pipelineWorkerClient";
 import {
@@ -243,6 +250,9 @@ export class PipelineServerContext {
             input.region_y_max = NO_BOUND;
             input.region_z_min = NO_BOUND;
             input.region_z_max = NO_BOUND;
+            input.input_source_state = ProjectInputSourceState.Unknown;
+            input.last_checked_input_source = null;
+            input.last_seen_input_source = null;
             input.is_processing = false;
             input.created_at = new Date();
             input.updated_at = input.created_at;
