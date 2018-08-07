@@ -230,6 +230,20 @@ export class PipelineServerContext {
             input.id = undefined;
             input.name += " copy";
             input.root_path += "copy";
+            input.sample_number = NO_SAMPLE;
+            input.sample_x_min = NO_BOUND;
+            input.sample_x_max = NO_BOUND;
+            input.sample_y_min = NO_BOUND;
+            input.sample_y_max = NO_BOUND;
+            input.sample_z_min = NO_BOUND;
+            input.sample_z_max = NO_BOUND;
+            input.region_x_min = NO_BOUND;
+            input.region_x_max = NO_BOUND;
+            input.region_y_min = NO_BOUND;
+            input.region_y_max = NO_BOUND;
+            input.region_z_min = NO_BOUND;
+            input.region_z_max = NO_BOUND;
+            input.is_processing = false;
             input.created_at = new Date();
             input.updated_at = input.created_at;
 
