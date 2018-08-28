@@ -6,6 +6,9 @@ const isProduction = seedEnv === "production";
 const taskLocationPrefix = process.env.PIPELINE_TASK_ROOT || "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline";
 const devProjectLocationPrefix = process.env.PIPELINE_DEV_ROOT || "/groups/mousebrainmicro/mousebrainmicro/";
 
+// Samples are archived periodically.  The data used for testing/configuration needs to be changed periodically.
+const sampleBrainProject = "2018-03-26";
+
 enum TaskArgumentType {
     Literal = 0,
     Parameter = 1
@@ -284,7 +287,7 @@ function createProjects(when: Date) {
             id: "44e49773-1c19-494b-b283-54466b94b70f",
             name: "Sample Brain",
             description: "Sample brain pipeline project",
-            root_path: "/groups/mousebrainmicro/mousebrainmicro/data/2018-03-26/Tiling",
+            root_path: `/groups/mousebrainmicro/mousebrainmicro/data/${sampleBrainProject}/Tiling`,
             log_root_path: "",
             sample_number: 99998,
             region_x_min: null,
@@ -352,7 +355,7 @@ function createPipelineStages(when: Date) {
             id: "90e86015-65c9-44b9-926d-deaced40ddaa",
             name: "Line Fix",
             description: "Line Fix",
-            dst_path: "/nrs/mouselight/pipeline_output/2017-10-31/stage_1_line_fix_output",
+            dst_path: `/nrs/mouselight/pipeline_testing/${sampleBrainProject}/stage_1_line_fix_output`,
             function_type: 2,
             is_processing: false,
             depth: 1,
@@ -364,7 +367,7 @@ function createPipelineStages(when: Date) {
             id: "828276a5-44c0-4bd1-87f7-9495bc3e9f6c",
             name: "Classifier",
             description: "Classifier",
-            dst_path: "/nrs/mouselight/pipeline_output/2017-10-31/stage_2_classifier_output",
+            dst_path: `/nrs/mouselight/pipeline_testing/${sampleBrainProject}/stage_2_classifier_output`,
             function_type: 2,
             is_processing: false,
             depth: 2,
@@ -376,7 +379,7 @@ function createPipelineStages(when: Date) {
             id: "5188b927-4c50-4f97-b22b-b123da78dad6",
             name: "Descriptors",
             description: "Descriptors",
-            dst_path: "/nrs/mouselight/pipeline_output/2017-10-31/stage_3_descriptor_output",
+            dst_path: `/nrs/mouselight/pipeline_testing/${sampleBrainProject}/stage_3_descriptor_output`,
             function_type: 2,
             is_processing: false,
             depth: 3,
@@ -388,7 +391,7 @@ function createPipelineStages(when: Date) {
             id: "2683ad99-e389-41fd-a54c-38834ccc7ae9",
             name: "Point Match",
             description: "Point Match",
-            dst_path: "/nrs/mouselight/pipeline_output/2017-10-31/stage_4_point_match_output",
+            dst_path: `/nrs/mouselight/pipeline_testing/${sampleBrainProject}/stage_4_point_match_output`,
             function_type: 5,
             is_processing: false,
             depth: 4,
