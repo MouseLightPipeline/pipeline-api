@@ -276,6 +276,7 @@ export class PipelineServerContext {
                     stageData.previous_stage_id = null;
                 }
                 stageData.dst_path += "copy";
+                stageData.is_processing = false;
 
                 const stage = await this._persistentStorageManager.PipelineStages.createFromInput(stageData);
 

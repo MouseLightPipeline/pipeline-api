@@ -17,7 +17,11 @@ import {ITaskDefinition, ITaskDefinitionAttributes} from "../data-model/sequeliz
 import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {IProjectAttributes, IProjectInput} from "../data-model/sequelize/project";
 import {IPipelineStage, IPipelineStageAttributes} from "../data-model/sequelize/pipelineStage";
-import {IPipelineStageTileCounts, IPipelineTileAttributes} from "../data-access/sequelize/stageTableConnector";
+import {
+    IPipelineStageTileCounts,
+    IPipelineTile,
+    IPipelineTileAttributes
+} from "../data-access/sequelize/stageTableConnector";
 import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
 
 interface IIdOnlyArgument {
@@ -238,6 +242,12 @@ let resolvers = {
     TaskExecution: {
         task_definition(taskExecution, _, context: PipelineServerContext) {
             return context.getTaskDefinition(taskExecution.task_definition_id);
+        }
+    },
+    Tile: {
+        task_executions(tile: IPipelineTile, _, context: PipelineServerContext): any {
+            console.log(tile);
+            return [];
         }
     }
 };
