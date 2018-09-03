@@ -176,6 +176,8 @@ type Tile {
   lat_z: Int
   prev_stage_status: Int
   this_stage_status: Int
+  created_at: Float
+  updated_at: Float
 }
 
 type TilePage {
