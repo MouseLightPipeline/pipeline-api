@@ -318,12 +318,16 @@ export class PipelineServerContext {
         return this._persistentStorageManager.PipelineStages.findAll({});
     }
 
-    public getPipelineStagesForProject(id: string): Promise<IPipelineStage[]> {
-        return this._persistentStorageManager.PipelineStages.getForProject(id);
+    public async getPipelineStagesForProject(id: string): Promise<IPipelineStage[]> {
+        const project = await this._persistentStorageManager.Projects.findById(id);
+
+        return project.getStages();
     }
 
-    public getPipelineStagesForTaskDefinition(id: string): Promise<IPipelineStageAttributes[]> {
-        return this._persistentStorageManager.PipelineStages.getForTask(id);
+    public async getPipelineStagesForTaskDefinition(id: string): Promise<IPipelineStageAttributes[]> {
+        const task = await this._persistentStorageManager.TaskDefinitions.findById(id);
+
+        return task.getStages();
     }
 
     public async getPipelineStageChildren(id: string): Promise<IPipelineStage[]> {
@@ -522,9 +526,7 @@ export class PipelineServerContext {
                 return kEmptyTileMap;
             }
 
-            const pipelineStagesManager = PersistentStorageManager.Instance().PipelineStages;
-
-            const stages: IPipelineStageAttributes[] = await pipelineStagesManager.getForProject(project_id);
+            const stages: IPipelineStage[] = await project.getStages();
 
             if (stages.length === 0) {
                 debug("no stages for project");

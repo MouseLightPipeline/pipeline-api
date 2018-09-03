@@ -1,4 +1,5 @@
 import {Instance, Model} from "sequelize";
+import {IPipelineStage} from "./pipelineStage";
 
 export const NO_BOUND: number = null;
 export const NO_SAMPLE: number = -1;
@@ -64,9 +65,10 @@ export interface IProjectAttributes {
 }
 
 export interface IProject extends Instance<IProjectAttributes>, IProjectAttributes {
+    getStages(): Promise<IPipelineStage[]>
 }
 
-export interface IProjectModel extends Model<IProject, IProjectAttributes> {
+export interface IProjectTable extends Model<IProject, IProjectAttributes> {
 }
 
 export const TableName = "Projects";
@@ -150,7 +152,7 @@ export function sequelizeImport(sequelize, DataTypes) {
     });
 
     Project.associate = models => {
-        Project.hasMany(models.PipelineStages, {foreignKey: "project_id"});
+        Project.hasMany(models.PipelineStages, {foreignKey: "project_id", as: {singular: "stage", plural: "stages"}});
     };
 
     return Project;

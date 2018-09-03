@@ -7,16 +7,16 @@ const debug = require("debug")("pipeline:coordinator-api:database-connector");
 
 import {loadModels} from "./modelLoader";
 import {SequelizeOptions} from "../../options/coreServicesOptions";
-import {IProjectModel} from "../../data-model/sequelize/project";
-import {ITaskDefinitionModel} from "../../data-model/sequelize/taskDefinition";
+import {IProjectTable} from "../../data-model/sequelize/project";
+import {ITaskDefinitionTable} from "../../data-model/sequelize/taskDefinition";
 import {IPipelineStageTable} from "../../data-model/sequelize/pipelineStage";
 
 export interface IPipelineModels {
-    TaskDefinitions?: ITaskDefinitionModel;
+    TaskDefinitions?: ITaskDefinitionTable;
     TaskRepositories?: any;
     // TaskExecutions?: any;
     PipelineWorkers?: any;
-    Projects?: IProjectModel;
+    Projects?: IProjectTable;
     PipelineStages?: IPipelineStageTable;
     PipelineStagePerformances?: any;
 }

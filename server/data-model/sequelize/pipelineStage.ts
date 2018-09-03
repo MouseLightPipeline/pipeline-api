@@ -32,8 +32,6 @@ export interface IPipelineStage extends Instance<IPipelineStageAttributes>, IPip
 export interface IPipelineStageTable extends Model<IPipelineStage, IPipelineStageAttributes> {
     createFromInput(stageInput: IPipelineStageAttributes): Promise<IPipelineStage>;
     remove(transaction: Transaction, id: string): Promise<IPipelineStage>;
-    getForProject(project_id: string): Promise<IPipelineStage[]>;
-    getForTask(task_id: string): Promise<IPipelineStage[]>;
 }
 
 export const TableName = "PipelineStages";
@@ -124,10 +122,6 @@ export function sequelizeImport(sequelize, DataTypes) {
 
         return id;
     };
-
-    PipelineStage.getForProject = async (project_id: string): Promise<IPipelineStage[]> => project_id ? await PipelineStage.findAll({where: {project_id}}) : [];
-
-    PipelineStage.getForTask = async (task_id: string): Promise<IPipelineStage[]> => task_id ? await PipelineStage.findAll({where: {task_id}}) : [];
 
     return PipelineStage;
 }

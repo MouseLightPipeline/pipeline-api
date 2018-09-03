@@ -1,5 +1,6 @@
 import * as path from "path";
 import {Instance, Model} from "sequelize";
+import {IPipelineStage} from "./pipelineStage";
 
 export enum TaskArgumentType {
     Literal = 0,
@@ -32,10 +33,12 @@ export interface ITaskDefinitionAttributes {
 export interface ITaskDefinition extends Instance<ITaskDefinitionAttributes>, ITaskDefinitionAttributes {
     user_arguments: ITaskArgument[];
 
+    getStages(): Promise<IPipelineStage[]>
+
     getFullScriptPath(resolveRelative: boolean): Promise<string>;
 }
 
-export interface ITaskDefinitionModel extends Model<ITaskDefinition, ITaskDefinitionAttributes> {
+export interface ITaskDefinitionTable extends Model<ITaskDefinition, ITaskDefinitionAttributes> {
 }
 
 export const TableName = "TaskDefinitions";
@@ -109,7 +112,7 @@ export function sequelizeImport(sequelize, DataTypes) {
 
     TaskDefinition.associate = models => {
         TaskDefinition.belongsTo(models.TaskRepositories, {foreignKey: "task_repository_id"});
-        TaskDefinition.hasMany(models.PipelineStages, {foreignKey: "task_id"});
+        TaskDefinition.hasMany(models.PipelineStages, {foreignKey: "task_id", as: {singular: "stage", plural: "stages"}});
 
         TaskRepositories = models.TaskRepositories;
     };
