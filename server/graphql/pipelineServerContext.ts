@@ -743,6 +743,10 @@ export class PipelineServerContext {
             limit
         });
 
+        await Promise.all(items.map(async (item) => {
+            item.task_executions = await stageConnector.taskExecutionsForTile(item.relative_path);
+        }));
+
         return {
             offset: offset,
             limit: limit,

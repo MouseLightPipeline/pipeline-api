@@ -1,6 +1,6 @@
 import {Instance, Model, Sequelize} from "sequelize";
 
-import {createTaskExecutionTable, ITaskExecutionModel} from "../../data-model/taskExecution";
+import {createTaskExecutionTable, ITaskExecutionAttributes, ITaskExecutionModel} from "../../data-model/taskExecution";
 import {TilePipelineStatus} from "../../data-model/TilePipelineStatus";
 
 export function generatePipelineCustomTableName(pipelineStageId: string, tableName) {
@@ -40,6 +40,7 @@ export interface IPipelineTileAttributes {
     step_x?: number;
     step_y?: number;
     step_z?: number;
+    task_executions?: ITaskExecutionAttributes[];
     created_at?: Date;
     updated_at?: Date;
 }
@@ -166,6 +167,10 @@ export class StageTableConnector {
         });
 
         return affectedRows;
+    }
+
+    public async taskExecutionsForTile(id: string) {
+        return await this._taskExecutionTable.findAll({where: {tile_id: id}});
     }
 
     // -----------------------------------------------------------------------------------------------------------------

@@ -243,12 +243,6 @@ let resolvers = {
         task_definition(taskExecution, _, context: PipelineServerContext) {
             return context.getTaskDefinition(taskExecution.task_definition_id);
         }
-    },
-    Tile: {
-        task_executions(tile: IPipelineTile, _, context: PipelineServerContext): any {
-            console.log(tile);
-            return [];
-        }
     }
 };
 

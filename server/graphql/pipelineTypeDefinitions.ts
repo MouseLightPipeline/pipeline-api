@@ -82,7 +82,6 @@ type TaskDefinition {
 type TaskExecution {
   id: String
   worker_id: String
-  task_id: String
   task_definition_id: String
   task_definition: TaskDefinition
   pipeline_stage_id: String
