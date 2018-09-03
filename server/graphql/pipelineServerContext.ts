@@ -15,7 +15,7 @@ import {
     NO_SAMPLE,
     ProjectInputSourceState
 } from "../data-model/sequelize/project";
-import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
+import {IPipelineStage, IPipelineStageAttributes} from "../data-model/sequelize/pipelineStage";
 import {PipelineWorkerClient} from "./client/pipelineWorkerClient";
 import {
     IPipelineStageTileCounts,
@@ -68,7 +68,7 @@ export interface IProjectDeleteOutput {
 }
 
 export interface IPipelineStageMutationOutput {
-    pipelineStage: IPipelineStage;
+    pipelineStage: IPipelineStageAttributes;
     error: string;
 }
 
@@ -267,7 +267,7 @@ export class PipelineServerContext {
             const duplicateMap = new Map<string, IPipelineStage>();
 
             const dupeStage = async (inputStage): Promise<IPipelineStage> => {
-                const stageData: IPipelineStage = inputStage.toJSON();
+                const stageData: IPipelineStageAttributes = inputStage.toJSON();
 
                 stageData.project_id = project.id;
                 if (inputStage.previous_stage_id !== null) {
@@ -287,7 +287,7 @@ export class PipelineServerContext {
             await inputStages.reduce(async (promise, stage) => {
                 await promise;
                 return dupeStage(stage);
-            }, Promise.resolve());
+            }, Promise.resolve(null));
 
             return {project, error: ""};
         } catch (err) {
@@ -310,11 +310,11 @@ export class PipelineServerContext {
         }
     }
 
-    public getPipelineStage(id: string): Promise<IPipelineStage> {
+    public async getPipelineStage(id: string): Promise<IPipelineStage> {
         return this._persistentStorageManager.PipelineStages.findById(id);
     }
 
-    public getPipelineStages(): Promise<IPipelineStage[]> {
+    public async getPipelineStages(): Promise<IPipelineStage[]> {
         return this._persistentStorageManager.PipelineStages.findAll({});
     }
 
@@ -322,17 +322,17 @@ export class PipelineServerContext {
         return this._persistentStorageManager.PipelineStages.getForProject(id);
     }
 
-    public getPipelineStagesForTaskDefinition(id: string): Promise<IPipelineStage[]> {
+    public getPipelineStagesForTaskDefinition(id: string): Promise<IPipelineStageAttributes[]> {
         return this._persistentStorageManager.PipelineStages.getForTask(id);
     }
 
-    public getPipelineStageChildren(id: string): Promise<IPipelineStage[]> {
+    public async getPipelineStageChildren(id: string): Promise<IPipelineStage[]> {
         return this._persistentStorageManager.PipelineStages.findAll({where: {previous_stage_id: id}});
     }
 
-    public async createPipelineStage(pipelineStage: IPipelineStage): Promise<IPipelineStageMutationOutput> {
+    public async createPipelineStage(pipelineStage: IPipelineStageAttributes): Promise<IPipelineStageMutationOutput> {
         try {
-            const result: IPipelineStage = await this._persistentStorageManager.PipelineStages.createFromInput(pipelineStage);
+            const result: IPipelineStageAttributes = await this._persistentStorageManager.PipelineStages.createFromInput(pipelineStage);
 
             return {pipelineStage: result, error: ""};
         } catch (err) {
@@ -340,7 +340,7 @@ export class PipelineServerContext {
         }
     }
 
-    public async updatePipelineStage(pipelineStage: IPipelineStage): Promise<IPipelineStageMutationOutput> {
+    public async updatePipelineStage(pipelineStage: IPipelineStageAttributes): Promise<IPipelineStageMutationOutput> {
         try {
             let row = await this._persistentStorageManager.PipelineStages.findById(pipelineStage.id);
 
@@ -363,13 +363,7 @@ export class PipelineServerContext {
 
     public async deletePipelineStage(id: string): Promise<IPipelineStageDeleteOutput> {
         try {
-            const affectedRowCount = await this._persistentStorageManager.PipelineStages.destroy({where: {id}});
-
-            if (affectedRowCount > 0) {
-                return {id, error: ""};
-            } else {
-                return {id: null, error: "Could not delete repository (no error message)"};
-            }
+            return this._persistentStorageManager.removeStage(id);
         } catch (err) {
             return {id: null, error: err.message}
         }
@@ -530,7 +524,7 @@ export class PipelineServerContext {
 
             const pipelineStagesManager = PersistentStorageManager.Instance().PipelineStages;
 
-            const stages: IPipelineStage[] = await pipelineStagesManager.getForProject(project_id);
+            const stages: IPipelineStageAttributes[] = await pipelineStagesManager.getForProject(project_id);
 
             if (stages.length === 0) {
                 debug("no stages for project");
@@ -652,7 +646,7 @@ export class PipelineServerContext {
             let isProject = false;
             let project: IProject = null;
 
-            const stage: IPipelineStage = await PersistentStorageManager.Instance().PipelineStages.findById(id);
+            const stage: IPipelineStageAttributes = await PersistentStorageManager.Instance().PipelineStages.findById(id);
 
             if (!stage) {
                 project = await PersistentStorageManager.Instance().Projects.findById(id);

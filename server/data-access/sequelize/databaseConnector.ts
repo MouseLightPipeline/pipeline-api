@@ -1,6 +1,7 @@
 import * as path from "path";
 
 const Sequelize = require("sequelize");
+import {Transaction} from "sequelize";
 
 const debug = require("debug")("pipeline:coordinator-api:database-connector");
 
@@ -8,6 +9,7 @@ import {loadModels} from "./modelLoader";
 import {SequelizeOptions} from "../../options/coreServicesOptions";
 import {IProjectModel} from "../../data-model/sequelize/project";
 import {ITaskDefinitionModel} from "../../data-model/sequelize/taskDefinition";
+import {IPipelineStageTable} from "../../data-model/sequelize/pipelineStage";
 
 export interface IPipelineModels {
     TaskDefinitions?: ITaskDefinitionModel;
@@ -15,7 +17,7 @@ export interface IPipelineModels {
     // TaskExecutions?: any;
     PipelineWorkers?: any;
     Projects?: IProjectModel;
-    PipelineStages?: any;
+    PipelineStages?: IPipelineStageTable;
     PipelineStagePerformances?: any;
 }
 
@@ -26,7 +28,6 @@ export interface ISequelizeDatabase<T> {
 }
 
 export class PersistentStorageManager {
-
     private pipelineDatabase: ISequelizeDatabase<IPipelineModels>;
 
     public static Instance(): PersistentStorageManager {
@@ -37,7 +38,7 @@ export class PersistentStorageManager {
         return this.pipelineDatabase && this.pipelineDatabase.isConnected;
     }
 
-    public get PipelineConnection() {
+    public get Connection() {
         return this.pipelineDatabase.connection;
     }
 
@@ -68,6 +69,12 @@ export class PersistentStorageManager {
     public async initialize() {
         this.pipelineDatabase = await createConnection({});
         await authenticate(this.pipelineDatabase, "pipeline");
+    }
+
+    public async removeStage(id: string) {
+        return await this.Connection.transaction(async (t: Transaction) => {
+            return await this.PipelineStages.remove(t, id)
+        });
     }
 }
 

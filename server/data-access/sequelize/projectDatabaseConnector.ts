@@ -7,7 +7,7 @@ import {Sequelize} from "sequelize";
 const debug = require("debug")("pipeline:coordinator-api:project-database-connector");
 
 import {IProjectAttributes} from "../../data-model/sequelize/project";
-import {IPipelineStage, PipelineStageMethod} from "../../data-model/sequelize/pipelineStage";
+import {IPipelineStageAttributes, PipelineStageMethod} from "../../data-model/sequelize/pipelineStage";
 import {StageTableConnector} from "./stageTableConnector";
 import {SequelizeOptions} from "../../options/coreServicesOptions";
 import {AdjacentTileStageConnector} from "./adjacentTileStageConnector";
@@ -20,7 +20,7 @@ interface IAccessQueueToken {
 
 interface IStageQueueToken {
     projectConnector: ProjectDatabaseConnector;
-    stage: IPipelineStage;
+    stage: IPipelineStageAttributes;
     resolve: any;
     reject: any;
 }
@@ -62,7 +62,7 @@ export class ProjectDatabaseConnector {
         return this._project;
     }
 
-    public async connectorForStage(stage: IPipelineStage): Promise<StageTableConnector> {
+    public async connectorForStage(stage: IPipelineStageAttributes): Promise<StageTableConnector> {
         if (this._stageConnectors.has(stage.id)) {
             return this._stageConnectors.get(stage.id);
         }
@@ -78,7 +78,7 @@ export class ProjectDatabaseConnector {
         });
     }
 
-    public async internalConnectorForStage(stage: IPipelineStage) {
+    public async internalConnectorForStage(stage: IPipelineStageAttributes) {
         // This method can only be called serially despite async due to async queue.  Could arrive to find
         if (!this._stageConnectors.has(stage.id)) {
 
@@ -152,7 +152,7 @@ const connectionMap = new Map<string, ProjectDatabaseConnector>();
 
 const connectorQueueAccess = asyncUtils.queue(accessQueueWorker, 1);
 
-export async function connectorForStage(pipelineStage: IPipelineStage): Promise<StageTableConnector> {
+export async function connectorForStage(pipelineStage: IPipelineStageAttributes): Promise<StageTableConnector> {
     const project = await PersistentStorageManager.Instance().Projects.findById(pipelineStage.project_id);
 
     const connector = await connectorForProject(project);

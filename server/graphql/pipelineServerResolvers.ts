@@ -16,7 +16,7 @@ import {
 import {ITaskDefinition, ITaskDefinitionAttributes} from "../data-model/sequelize/taskDefinition";
 import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {IProjectAttributes, IProjectInput} from "../data-model/sequelize/project";
-import {IPipelineStage} from "../data-model/sequelize/pipelineStage";
+import {IPipelineStage, IPipelineStageAttributes} from "../data-model/sequelize/pipelineStage";
 import {IPipelineStageTileCounts, IPipelineTileAttributes} from "../data-access/sequelize/stageTableConnector";
 import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
 
@@ -42,11 +42,11 @@ interface IUpdateProjectArguments {
 }
 
 interface ICreatePipelineStageArguments {
-    pipelineStage: IPipelineStage;
+    pipelineStage: IPipelineStageAttributes;
 }
 
 interface IUpdatePipelineStageArguments {
-    pipelineStage: IPipelineStage;
+    pipelineStage: IPipelineStageAttributes;
 }
 
 interface IMutateRepositoryArguments {
@@ -205,7 +205,7 @@ let resolvers = {
         project(stage, _, context: PipelineServerContext): any {
             return context.getProject(stage.project_id);
         },
-        previous_stage(stage, _, context: PipelineServerContext): Promise<IPipelineStage> {
+        previous_stage(stage, _, context: PipelineServerContext): Promise<IPipelineStageAttributes> {
             return context.getPipelineStage(stage.previous_stage_id);
         },
         child_stages(stage, _, context: PipelineServerContext): Promise<IPipelineStage[]> {

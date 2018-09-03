@@ -1,3 +1,6 @@
+import {Instance, Model, Transaction} from "sequelize";
+import {IProject} from "./project";
+
 export enum PipelineStageMethod {
     DashboardProjectRefresh = 1,
     MapTile = 2,
@@ -6,7 +9,7 @@ export enum PipelineStageMethod {
     ZAdjacentTileComparison = 5
 }
 
-export interface IPipelineStage {
+export interface IPipelineStageAttributes {
     id?: string;
     name?: string;
     description?: string;
@@ -20,6 +23,17 @@ export interface IPipelineStage {
     created_at?: Date;
     updated_at?: Date;
     deleted_at?: Date;
+}
+
+export interface IPipelineStage extends Instance<IPipelineStageAttributes>, IPipelineStageAttributes {
+    getProject(): Promise<IProject[]>;
+}
+
+export interface IPipelineStageTable extends Model<IPipelineStage, IPipelineStageAttributes> {
+    createFromInput(stageInput: IPipelineStageAttributes): Promise<IPipelineStage>;
+    remove(transaction: Transaction, id: string): Promise<IPipelineStage>;
+    getForProject(project_id: string): Promise<IPipelineStage[]>;
+    getForTask(task_id: string): Promise<IPipelineStage[]>;
 }
 
 export const TableName = "PipelineStages";
@@ -69,7 +83,7 @@ export function sequelizeImport(sequelize, DataTypes) {
         PipelineStage.belongsTo(models.TaskDefinitions, {foreignKey: "task_id"});
     };
 
-    PipelineStage.createFromInput = async (stageInput: IPipelineStage): Promise<IPipelineStage> => {
+    PipelineStage.createFromInput = async (stageInput: IPipelineStageAttributes): Promise<IPipelineStageAttributes> => {
         let previousDepth = 0;
 
         if (stageInput.previous_stage_id) {
@@ -95,9 +109,25 @@ export function sequelizeImport(sequelize, DataTypes) {
         return PipelineStage.create(pipelineStage);
     };
 
-    PipelineStage.getForProject = (project_id: string): IPipelineStage[] => project_id ? PipelineStage.findAll({where: {project_id}}) : [];
+    PipelineStage.remove = async (t: Transaction, id: string): Promise<string> => {
+        const stage: IPipelineStage = await PipelineStage.findById(id);
 
-    PipelineStage.getForTask = (task_id: string): IPipelineStage[] => task_id ? PipelineStage.findAll({where: {task_id}}) : [];
+        if (stage) {
+            const children: IPipelineStage[] = await PipelineStage.findAll({where: {previous_stage_id: id}});
+
+            await Promise.all(children.map(async (c) => {
+                return c.update({previous_stage_id: stage.previous_stage_id});
+            }));
+
+            await PipelineStage.destroy({where: {id}});
+        }
+
+        return id;
+    };
+
+    PipelineStage.getForProject = async (project_id: string): Promise<IPipelineStage[]> => project_id ? await PipelineStage.findAll({where: {project_id}}) : [];
+
+    PipelineStage.getForTask = async (task_id: string): Promise<IPipelineStage[]> => task_id ? await PipelineStage.findAll({where: {task_id}}) : [];
 
     return PipelineStage;
 }
