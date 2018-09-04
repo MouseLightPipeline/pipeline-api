@@ -739,6 +739,7 @@ export class PipelineServerContext {
                 prev_stage_status: TilePipelineStatus.Complete,
                 this_stage_status: status
             },
+            order: ["relative_path"],
             offset,
             limit
         });
