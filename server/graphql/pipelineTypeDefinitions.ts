@@ -93,6 +93,9 @@ type TaskExecution {
   resolved_script_args: String
   resolved_cluster_args: String
   resolved_log_path: String
+  queue_type: Int
+  job_id: Int
+  job_name: String
   execution_status_code: Int
   completion_status_code: Int
   last_process_status_code: Float
@@ -100,11 +103,12 @@ type TaskExecution {
   max_memory_mb: Float
   max_cpu_percent: Float
   exit_code: Int
-  started_at: String
-  completed_at: String
-  created_at: String
-  updated_at: String
-  deleted_at: String
+  submitted_at: Float
+  started_at: Float
+  completed_at: Float
+  created_at: Float
+  updated_at: Float
+  deleted_at: Float
 }
 
 type Project {
