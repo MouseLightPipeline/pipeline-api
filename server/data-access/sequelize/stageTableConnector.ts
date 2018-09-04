@@ -170,7 +170,7 @@ export class StageTableConnector {
     }
 
     public async taskExecutionsForTile(id: string) {
-        return await this._taskExecutionTable.findAll({where: {tile_id: id}});
+        return await this._taskExecutionTable.findAll({where: {tile_id: id}, order: ["created_at"]});
     }
 
     // -----------------------------------------------------------------------------------------------------------------
