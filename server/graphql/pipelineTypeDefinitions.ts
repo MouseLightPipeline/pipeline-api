@@ -88,6 +88,7 @@ type TaskExecution {
   pipeline_stage: PipelineStage
   work_units: Float
   cluster_work_units: Float
+  resolved_output_path: String
   resolved_script: String
   resolved_interpreter: String
   resolved_script_args: String

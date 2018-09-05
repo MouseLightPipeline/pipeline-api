@@ -40,6 +40,7 @@ export interface ITaskExecutionAttributes {
     task_definition_id?: string;
     pipeline_stage_id?: string;
     tile_id?: string;
+    resolved_output_path?: string;
     resolved_script?: string;
     resolved_interpreter?: string;
     resolved_script_args?: string;
@@ -94,6 +95,10 @@ export function createTaskExecutionTable(sequelize: Sequelize, tableName: string
         },
         tile_id: {
             type: DataTypes.TEXT
+        },
+        resolved_output_path: {
+            type: DataTypes.TEXT,
+            defaultValue: ""
         },
         resolved_script: {
             type: DataTypes.TEXT,
