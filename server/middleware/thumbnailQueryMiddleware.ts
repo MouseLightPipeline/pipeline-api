@@ -55,14 +55,14 @@ export async function thumbnailParamQueryMiddleware(req, res) {
 
 
         if ([pipelineStageId, x, y, z].some(o => isNullOrUndefined(o))) {
-            res.status(404).send("Not found");
+            res.sendStatus(404);
             return;
         }
 
         let thumbnailPath = await PipelineServerContext.thumbnailPath(pipelineStageId, x, y, z);
 
         if (!thumbnailPath) {
-            res.status(404).send("Not found");
+            res.sendStatus(404);
             return;
         }
 
@@ -73,8 +73,8 @@ export async function thumbnailParamQueryMiddleware(req, res) {
             return;
         }
 
-        res.status(404).send("Not found");
+        res.sendStatus(404);
     } catch (err) {
-        res.status(404).send("Not found");
+        res.sendStatus(404);
     }
 }

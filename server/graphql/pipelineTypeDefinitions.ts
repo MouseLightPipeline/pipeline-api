@@ -1,4 +1,9 @@
 export const typeDefinitions = `
+type SchedulerHealth {
+    lastResponse: Int
+    lastSeen: Float
+}
+
 type PageInfo {
     endCursor: String
     hasNextPage: Boolean
@@ -326,6 +331,8 @@ input PipelineWorkerInput {
 }
 
 type Query {
+  schedulerHealth: SchedulerHealth
+
   pipelineWorker(id: String!): PipelineWorker
   pipelineWorkers: [PipelineWorker!]!
 

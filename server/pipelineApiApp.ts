@@ -24,7 +24,10 @@ let executableSchema = makeExecutableSchema({
 
 const app = express();
 
-app.use(ServiceOptions.graphQlEndpoint, bodyParser.json(), graphqlExpress(req => {
+app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.json());
+
+app.use(ServiceOptions.graphQlEndpoint, graphqlExpress(req => {
     return {
         schema: executableSchema,
         context: new PipelineServerContext()

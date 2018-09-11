@@ -13,7 +13,11 @@ const coreServicesOptions = {
             acquire: 20000,
             idle: 10000
         }
-    }
+    },
+    schedulerServer: {
+        host: "pipeline-scheduler",
+        port: 6002,
+    },
 };
 
 function loadDatabaseOptions(options: any): any {
@@ -26,11 +30,20 @@ function loadDatabaseOptions(options: any): any {
     return options;
 }
 
+
+function loadSchedulerServerOptions(options: any) {
+    options.host = process.env.PIPELINE_SCHEDULER_HOST || options.host;
+    options.port = parseInt(process.env.PIPELINE_SCHEDULER_PORT) || options.port;
+
+    return options;
+}
+
 function loadOptions() {
     const options = Object.assign({}, coreServicesOptions);
 
     // When outside a pure container environment.
     options.database = loadDatabaseOptions(options.database);
+    options.schedulerServer = loadSchedulerServerOptions(options.schedulerServer);
 
     return options;
 }
@@ -38,3 +51,5 @@ function loadOptions() {
 export const CoreServicesOptions = loadOptions();
 
 export const SequelizeOptions = CoreServicesOptions.database;
+
+export const SchedulerServiceOptions = CoreServicesOptions.schedulerServer;

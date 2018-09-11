@@ -28,6 +28,7 @@ import {
 } from "../data-access/sequelize/projectDatabaseConnector";
 import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
 import {ServiceOptions} from "../options/serverOptions";
+import {SchedulerServiceOptions} from "../options/coreServicesOptions";
 
 interface IPipelineTileExt extends IPipelineTile {
     stage_id: string;
@@ -51,6 +52,11 @@ const kEmptyTileMap: ITileMap = {
     y_max: 0,
     tiles: []
 };
+
+export class SchedulerHealth {
+    lastResponse: number;
+    lastSeen: Date;
+}
 
 export interface IWorkerMutationOutput {
     worker: IPipelineWorker;
@@ -109,6 +115,10 @@ export type ITilePage = ISimplePage<IPipelineTileAttributes>;
 
 export class PipelineServerContext {
     private _persistentStorageManager: PersistentStorageManager = PersistentStorageManager.Instance();
+
+    public getSchedulerHealth(): SchedulerHealth {
+        return schedulerHealth;
+    }
 
     public getPipelineWorker(id: string): Promise<IPipelineWorker> {
         return this._persistentStorageManager.PipelineWorkers.findById(id);
@@ -822,3 +832,27 @@ const PipelineStageStatusUnavailable: IPipelineStageTileCounts = {
     failed: 0,
     canceled: 0
 };
+
+const schedulerHealth = {
+  lastResponse: 404,
+  lastSeen: null
+};
+
+setInterval(async () => {
+    try {
+        const response = await fetch(`http://${SchedulerServiceOptions.host}:${SchedulerServiceOptions.port}/healthcheck`, {
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+            },
+            method: "GET"
+        });
+
+        schedulerHealth.lastResponse = response.status;
+
+        if (schedulerHealth.lastResponse == 200) {
+            schedulerHealth.lastSeen = Date.now();
+        }
+    } catch {
+        schedulerHealth.lastResponse = 404;
+    }
+}, 10000);

@@ -11,7 +11,7 @@ import {
     ITaskRepositoryMutationOutput,
     ITilePage,
     IWorkerMutationOutput,
-    PipelineServerContext
+    PipelineServerContext, SchedulerHealth
 } from "./pipelineServerContext";
 import {ITaskDefinition, ITaskDefinitionAttributes} from "../data-model/sequelize/taskDefinition";
 import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
@@ -92,6 +92,9 @@ interface IConvertTileStatusArgs {
 
 let resolvers = {
     Query: {
+        schedulerHealth(_, __, context: PipelineServerContext): SchedulerHealth {
+            return context.getSchedulerHealth();
+        },
         pipelineWorker(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IPipelineWorker> {
             return context.getPipelineWorker(args.id);
         },
