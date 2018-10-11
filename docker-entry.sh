@@ -2,7 +2,7 @@
 
 logName=$(date '+%Y-%m-%d_%H-%M-%S');
 
-mkdir -p ~/var/log/pipeline
+mkdir -p /var/log/pipeline
 
 ./migrate.sh &> /var/log/pipeline/coordinator-${logName}.log
 
