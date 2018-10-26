@@ -86,36 +86,41 @@ data volumes via Docker Compose.
 5. Launch using `npm run devel` 
 
 ### Expected Input
-#### Tile Information
-The pipeline first attempts to read from a file named `pipeline-input.json` in the project root directory.  This file is
-a streamlined version of the dashboard.json data file from the Acquisition Dashboard that can also be created for data
-sets generated outside of the Mouse Light acquisition process.
+#### Input Source
+The pipeline first attempts to read from a file named `pipeline-input.json` in the project root directory. If `pipeline-input.json`
+does not exist, the system will look for `dashboard.json`.  These files can be in either of the following formats.
 
-If `pipeline-input.json` does not exist, the system will look for `dashboard.json`.  If neither are found the system will
-not update the expected tiles for the project.  If `pipeline-input.json` appears after `dashboard.json` it will be used
-during the first update after it exists.
+#### Dashboard Input Format
+The pipeline can read the standard MouseLight Acquisition Dashboard output file - dashboard.json.  This format is 
+documented elsewhere.
 
-Any input file has the following required structure:
+#### Pipeline Input Format
+This pipeline also supports a streamlined version of the dashboard.json data with only the elements required for pipeline
+processing.  This file can be generated outside of the MouseLight acquisition process and for data other than 
+MouseLight acquisitions.
+
+The format the following required structure:
 ```json
- {
-   "tilemap":
-   {
-     "0":
+{
+  "tiles":
      [
        {
          "id": 1,
          "relative_path": "2017-12-20\\00\\00001",
          "isComplete": true,
-         "contents": {
-           "latticePosition": {
-             "x": 197,
-             "y": 119,
-             "z": 1867
-           }
-         }       
+         "position": {
+           "x": 197,
+           "y": 119,
+           "z": 1867
+         },      
+         "step": {
+           "x": 197,
+           "y": 119,
+           "z": 1867
+         },
        },
        {
-         "id": 2
+         "id": 2,
          ...
        }
      ],
@@ -123,32 +128,25 @@ Any input file has the following required structure:
      [
       ...
      ]
-   }
- }
+}
 ```
 
-The `tilemap` property is a dictionary of one or more sets of tile data.  The dashboard uses the dictionary to break up
-the tiles by day of acquisition (mirroring the folder structure) and uses the index of the day within all the days
-as the keys (0, 1 above), however the tiles can be grouped in any manner (or just be one group) and the key(s) can be anything.
-
-Each entry in the tilemap dictionary is an array of tile information.  The required components, structure, and data
-types are shown above. `relativePath` can be Windows or Unix format and will be normalized to Unix for internal use.  In
+The `tiles` property is an array of tile information.  The required components, structure, and data
+types are shown above. `id` is an optional numeric value.  `relativePath` can be Windows or Unix format and will be normalized to Unix for internal use.  In
 either case it must be escaped properly, as shown above, to be interpreted correctly.  The value is a relative path from
 the project root directory.
 
 The `isComplete` property is used to determine whether to pass the tile to any stage 1.  If false, it will appear as a
 known tile in the Tile Heat Map display page, known tile counts for the project, etc..., but will not be processed.
 
-#### Project Information
+##### Project Information
 There is an optional top-level section of the file that can be used to provide information about the project itself.
 Currently this is just the known extents of the sample.  This improves/simplifies some of the information displayed about the 
 project, but is not required.
 
-The section is at the same level as the `tilemap` property and is as follows:
+The section is at the same level as the `tiles` property and is as follows:
 ```json
 {
-  "monitor":
-  {
     "extents":
     {
       "minimumX": 184,
@@ -157,10 +155,9 @@ The section is at the same level as the `tilemap` property and is as follows:
       "maximumY": 130,
       "minimumZ": 1867,
       "maximumZ": 1941
-    }
-  },
-  "tilemap":{
+    },
+    "tiles":{
     ...
-  }
+    }
 }
 ```
