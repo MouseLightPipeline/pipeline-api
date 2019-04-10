@@ -147,6 +147,7 @@ project, but is not required.
 The section is at the same level as the `tiles` property and is as follows:
 ```json
 {
+    "pipelineFormat": "default",
     "extents":
     {
       "minimumX": 184,
@@ -161,3 +162,5 @@ The section is at the same level as the `tiles` property and is as follows:
     }
 }
 ```
+
+Note that the `pipelineFormat` field is required to indicate it is not a dashboard input file.
