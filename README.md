@@ -140,9 +140,12 @@ The `isComplete` property is used to determine whether to pass the tile to any s
 known tile in the Tile Heat Map display page, known tile counts for the project, etc..., but will not be processed.
 
 ##### Project Information
-There is an optional top-level section of the file that can be used to provide information about the project itself.
-Currently this is just the known extents of the sample.  This improves/simplifies some of the information displayed about the 
-project, but is not required.
+There is a top-level section of the file that can be used to provide information about the project itself.
+
+The `pipelineFormat` field is required to indicate it is not a dashboard input file.
+
+The `extents` field defines the extents of the sample and is optional, but if present should be a valid range for the sample.
+This improves/simplifies some of the information displayed about the project, but is not required.
 
 The section is at the same level as the `tiles` property and is as follows:
 ```json
@@ -162,5 +165,3 @@ The section is at the same level as the `tiles` property and is as follows:
     }
 }
 ```
-
-Note that the `pipelineFormat` field is required to indicate it is not a dashboard input file.
