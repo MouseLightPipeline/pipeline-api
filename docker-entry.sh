@@ -1,13 +1,25 @@
 #!/usr/bin/env bash
 
-logName=$(date '+%Y-%m-%d_%H-%M-%S');
+logName=$(date '+%Y-%m-%d_%H-%M-%S')
 
-mkdir -p /var/log/pipeline
+logPrefix="api"
 
-./migrate.sh &> /var/log/pipeline/coordinator-${logName}.log
+logBase=/var/log/pipeline
+
+logFile=${logPrefix}-${logName}.log
+
+logPath=${logBase}/${logFile}
+
+mkdir -p ${logBase}
+
+touch ${logPath}
+
+chown mluser:mousebrainmicro ${logPath}
+
+./migrate.sh >> ${logPath} 2>&1
 
 wait
 
 export DEBUG=pipeline*
 
-node server/pipelineApiApp.js >> /var/log/pipeline/coordinator-${logName}.log 2>&1
+node server/pipelineApiApp.js >> ${logPath} 2>&1

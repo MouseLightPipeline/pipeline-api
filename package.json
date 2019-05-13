@@ -11,7 +11,7 @@
     "devel": "npm run grammar && DEBUG=pipeline* node $NODE_DEBUG_OPTION --trace-warnings server/pipelineApiApp.js",
     "start": "node server/pipelineApiApp.js",
     "docker-build": "gulp docker-build",
-    "release": "gulp release",
+    "docker-release": "gulp release",
     "test": "npm run grammar && node $NODE_DEBUG_OPTION --trace-warnings __tests__/taskArgumentGrammar.test.js",
     "test2": "npm run grammar && jest"
   },
