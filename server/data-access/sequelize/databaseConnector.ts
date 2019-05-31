@@ -71,9 +71,9 @@ export class PersistentStorageManager {
         await authenticate(this.pipelineDatabase, "pipeline");
     }
 
-    public async removeStage(id: string) {
+    public async removeStage(id: string): Promise<string> {
         return await this.Connection.transaction(async (t: Transaction) => {
-            return await this.PipelineStages.remove(t, id)
+            return await this.PipelineStages.remove(t, id);
         });
     }
 }

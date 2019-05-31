@@ -307,7 +307,7 @@ export class PipelineServerContext {
         }
     }
 
-    public async deleteProject(id: string): Promise<IProjectDeleteOutput> {
+    public async archiveProject(id: string): Promise<IProjectDeleteOutput> {
         try {
             const affectedRowCount = await this._persistentStorageManager.Projects.destroy({where: {id}});
 
@@ -326,7 +326,9 @@ export class PipelineServerContext {
     }
 
     public async getPipelineStages(): Promise<IPipelineStage[]> {
-        return this._persistentStorageManager.PipelineStages.findAll({});
+        const projects = await this.getProjects();
+
+        return this._persistentStorageManager.PipelineStages.findAll({where: {project_id: {$in: projects.map(p => p.id)}}});
     }
 
     public async getPipelineStagesForProject(id: string): Promise<IPipelineStage[]> {
@@ -376,9 +378,11 @@ export class PipelineServerContext {
         }
     }
 
-    public async deletePipelineStage(id: string): Promise<IPipelineStageDeleteOutput> {
+    public async archivePipelineStage(id: string): Promise<IPipelineStageDeleteOutput> {
         try {
-            return this._persistentStorageManager.removeStage(id);
+            await this._persistentStorageManager.removeStage(id);
+
+            return {id, error: null};
         } catch (err) {
             return {id: null, error: err.message}
         }
@@ -421,7 +425,7 @@ export class PipelineServerContext {
         }
     }
 
-    public async deleteTaskRepository(id: string): Promise<ITaskRepositoryDeleteOutput> {
+    public async archiveTaskRepository(id: string): Promise<ITaskRepositoryDeleteOutput> {
         try {
             const affectedRowCount = await this._persistentStorageManager.TaskRepositories.destroy({where: {id}});
 
@@ -485,7 +489,7 @@ export class PipelineServerContext {
         }
     }
 
-    public async deleteTaskDefinition(id: string): Promise<ITaskDefinitionDeleteOutput> {
+    public async archiveTaskDefinition(id: string): Promise<ITaskDefinitionDeleteOutput> {
         try {
             const affectedRowCount = await this._persistentStorageManager.TaskDefinitions.destroy({where: {id}});
 
@@ -834,8 +838,8 @@ const PipelineStageStatusUnavailable: IPipelineStageTileCounts = {
 };
 
 const schedulerHealth = {
-  lastResponse: 404,
-  lastSeen: null
+    lastResponse: 404,
+    lastSeen: null
 };
 
 setInterval(async () => {

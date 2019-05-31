@@ -362,20 +362,20 @@ type Mutation {
   createProject(project: ProjectInput): MutateProjectOutput
   updateProject(project: ProjectInput): MutateProjectOutput
   duplicateProject(id: String): MutateProjectOutput
-  deleteProject(id: String!): DeleteProjectOutput
+  archiveProject(id: String!): DeleteProjectOutput
 
   createPipelineStage(pipelineStage: PipelineStageInput): MutatePipelineStageOutput
   updatePipelineStage(pipelineStage: PipelineStageInput): MutatePipelineStageOutput
-  deletePipelineStage(id: String!): DeletePipelineStageOutput
+  archivePipelineStage(id: String!): DeletePipelineStageOutput
 
   createTaskRepository(taskRepository: TaskRepositoryInput): MutateTaskRepositoryOutput
   updateTaskRepository(taskRepository: TaskRepositoryInput): MutateTaskRepositoryOutput
-  deleteTaskRepository(id: String!): DeleteTaskRepositoryOutput
+  archiveTaskRepository(id: String!): DeleteTaskRepositoryOutput
 
   createTaskDefinition(taskDefinition: TaskDefinitionInput): MutateTaskDefinitionOutput
   updateTaskDefinition(taskDefinition: TaskDefinitionInput): MutateTaskDefinitionOutput
   duplicateTaskDefinition(id: String): MutateTaskDefinitionOutput
-  deleteTaskDefinition(id: String!): DeleteTaskDefinitionOutput
+  archiveTaskDefinition(id: String!): DeleteTaskDefinitionOutput
 
   setWorkerAvailability(id: String!, shouldBeInSchedulerPool: Boolean!): PipelineWorker
   updateWorker(worker: PipelineWorkerInput): MutatePipelineWorkerOutput
