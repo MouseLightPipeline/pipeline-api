@@ -1,3 +1,7 @@
+import {Instance, Model} from "sequelize";
+
+import {IWorkerHeartbeatData, IWorkerUpdateData} from "../../message-queue/messageQueue";
+
 export enum QueueType {
     Local = 0,
     Cluster = 1
@@ -10,7 +14,7 @@ export enum PipelineWorkerStatus {
     Processing
 }
 
-export interface IPipelineWorker {
+export interface IPipelineWorkerAttributes {
     id?: string;
     worker_id?: string;
     name?: string;
@@ -34,6 +38,15 @@ export interface IPipelineWorker {
     created_at?: Date;
     updated_at?: Date;
     deleted_at?: Date;
+}
+
+export interface IPipelineWorker extends Instance<IPipelineWorkerAttributes>, IPipelineWorkerAttributes {
+}
+
+export interface IPipelineWorkerTable extends Model<IPipelineWorker, IPipelineWorkerAttributes> {
+    getForWorkerId(workerIc: string): Promise<IPipelineWorker>;
+    updateStatus(workerInformation: IWorkerUpdateData): Promise<void>;
+    updateHeartbeat(heartbeatData: IWorkerHeartbeatData): Promise<void>;
 }
 
 export const TableName = "PipelineWorkers";
@@ -176,6 +189,59 @@ export function sequelizeImport(sequelize, DataTypes) {
         }
 
         return worker;
+    };
+
+    PipelineWorker.updateStatus = async (workerInformation: IWorkerUpdateData): Promise<void> => {
+        let row = await PipelineWorker.getForWorkerId(workerInformation.worker.id);
+
+        if (row) {
+            const worker: IPipelineWorkerAttributes = {};
+
+            worker.worker_id = workerInformation.worker.id;
+            worker.local_work_capacity = workerInformation.worker.local_work_capacity;
+            worker.cluster_work_capacity = workerInformation.worker.cluster_work_capacity;
+            worker.name = workerInformation.service.name;
+            worker.address = workerInformation.service.networkAddress;
+            worker.port = parseInt(workerInformation.service.networkPort);
+            worker.os_type = workerInformation.machine.osType;
+            worker.platform = workerInformation.machine.platform;
+            worker.arch = workerInformation.machine.arch;
+            worker.release = workerInformation.machine.release;
+            worker.cpu_count = workerInformation.machine.cpuCount;
+            worker.total_memory = workerInformation.machine.totalMemory;
+            worker.last_seen = new Date();
+
+            await row.update(worker);
+        }
+    };
+
+    PipelineWorker.updateHeartbeat = async (heartbeatData: IWorkerHeartbeatData): Promise<void> => {
+        let row = await PipelineWorker.getForWorkerId(heartbeatData.worker.id);
+
+        if (row) {
+            const worker: IPipelineWorkerAttributes = {};
+
+            worker.local_work_capacity = heartbeatData.worker.local_work_capacity;
+            worker.cluster_work_capacity = heartbeatData.worker.cluster_work_capacity;
+            worker.local_task_load = heartbeatData.localTaskLoad;
+            worker.cluster_task_load = heartbeatData.clusterTaskLoad;
+            worker.last_seen = new Date();
+
+            worker.status = PipelineWorkerStatus.Unavailable;
+
+            switch (Math.max(heartbeatData.localTaskLoad, heartbeatData.clusterTaskLoad)) {
+                case -1:
+                    worker.status = PipelineWorkerStatus.Connected;
+                    break;
+                case 0:
+                    worker.status = PipelineWorkerStatus.Idle;
+                    break;
+                default:
+                    worker.status = PipelineWorkerStatus.Processing;
+            }
+
+            await row.update(worker);
+        }
     };
 
     return PipelineWorker;

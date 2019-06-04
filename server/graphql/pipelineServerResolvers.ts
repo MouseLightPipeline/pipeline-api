@@ -14,7 +14,7 @@ import {
     PipelineServerContext, SchedulerHealth
 } from "./pipelineServerContext";
 import {ITaskDefinition, ITaskDefinitionAttributes} from "../data-model/sequelize/taskDefinition";
-import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
+import {IPipelineWorkerAttributes, IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {IProjectAttributes, IProjectInput} from "../data-model/sequelize/project";
 import {IPipelineStage, IPipelineStageAttributes} from "../data-model/sequelize/pipelineStage";
 import {
@@ -29,7 +29,7 @@ interface IIdOnlyArgument {
 }
 
 interface IUpdateWorkerArguments {
-    worker: IPipelineWorker;
+    worker: IPipelineWorkerAttributes;
 }
 
 interface ITaskDefinitionIdArguments {
@@ -93,7 +93,7 @@ interface IConvertTileStatusArgs {
 let resolvers = {
     Query: {
         schedulerHealth(_, __, context: PipelineServerContext): SchedulerHealth {
-            return context.getSchedulerHealth();
+            return PipelineServerContext.getSchedulerHealth();
         },
         pipelineWorker(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IPipelineWorker> {
             return context.getPipelineWorker(args.id);

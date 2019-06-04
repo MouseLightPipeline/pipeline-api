@@ -1,6 +1,6 @@
 import {Instance, Model, Sequelize} from "sequelize";
 
-import {IPipelineWorker} from "./sequelize/pipelineWorker";
+import {IPipelineWorkerAttributes} from "./sequelize/pipelineWorker";
 import {ITaskDefinition} from "./sequelize/taskDefinition";
 
 export interface IStartTaskInput {
@@ -74,7 +74,7 @@ export interface ITaskExecution extends Instance<ITaskExecutionAttributes>, ITas
 }
 
 export interface ITaskExecutionModel extends Model<ITaskExecution, ITaskExecutionAttributes> {
-    createTaskExecution(worker: IPipelineWorker, taskDefinition: ITaskDefinition, startTaskInput: IStartTaskInput): Promise<ITaskExecution>;
+    createTaskExecution(worker: IPipelineWorkerAttributes, taskDefinition: ITaskDefinition, startTaskInput: IStartTaskInput): Promise<ITaskExecution>;
     getPage(reqOffset: number, reqLimit: number, completionCode: CompletionResult): Promise<ITaskExecution[]>;
 }
 

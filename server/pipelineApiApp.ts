@@ -1,48 +1,42 @@
+import * as os from "os";
 import * as express from "express";
 import * as bodyParser from "body-parser";
 import * as cors from "cors";
-
-const {graphqlExpress, graphiqlExpress} = require("apollo-server-express");
-const {makeExecutableSchema} = require("graphql-tools");
+import {ApolloServer, gql} from "apollo-server-express";
 
 const debug = require("debug")("pipeline:coordinator-api:server");
 
 import {typeDefinitions} from "./graphql/pipelineTypeDefinitions";
-import {SocketIoServer} from "./io/ioServer";
 import {ServiceOptions} from "./options/serverOptions";
 import {thumbnailParamQueryMiddleware, thumbnailQueryMiddleware} from "./middleware/thumbnailQueryMiddleware";
 import resolvers from "./graphql/pipelineServerResolvers";
 import {PipelineServerContext} from "./graphql/pipelineServerContext";
+import {MessageQueueClient} from "./message-queue/messageQueueClient";
+import {PersistentStorageManager} from "./data-access/sequelize/databaseConnector";
 
-let executableSchema = makeExecutableSchema({
-    typeDefs: typeDefinitions,
-    resolvers: resolvers,
-    resolverValidationOptions: {
-        requireResolversForNonScalar: false
-    }
-});
+start().then().catch((err) => debug(err));
 
-const app = express();
+async function start() {
+    await MessageQueueClient.StartMessageQueueClient(PersistentStorageManager.Instance());
 
-app.use(bodyParser.urlencoded({extended: true}));
-app.use(bodyParser.json());
+    const app = express();
 
-app.use(ServiceOptions.graphQlEndpoint, graphqlExpress(req => {
-    return {
-        schema: executableSchema,
-        context: new PipelineServerContext()
-        // other options here
-    };
-}));
+    app.use(bodyParser.urlencoded({extended: true}));
+    app.use(bodyParser.json());
 
-app.use("/thumbnailData", cors(), thumbnailQueryMiddleware);
+    const server = new ApolloServer({
+        typeDefs: gql`${typeDefinitions}`,
+        resolvers,
+        introspection: true,
+        playground: true,
+        context: () => new PipelineServerContext()
+    });
 
-app.use("/thumbnail/:pipelineStageId/:x/:y/:z/:thumbName", cors(), thumbnailParamQueryMiddleware);
+    app.use("/thumbnailData", cors(), thumbnailQueryMiddleware);
 
-app.use(["/", ServiceOptions.graphiQlEndpoint], graphiqlExpress({endpointURL: ServiceOptions.graphQlEndpoint}));
+    app.use("/thumbnail/:pipelineStageId/:x/:y/:z/:thumbName", cors(), thumbnailParamQueryMiddleware);
 
-const server = SocketIoServer.use(app);
+    server.applyMiddleware({app, path: ServiceOptions.graphQlEndpoint});
 
-server.listen(ServiceOptions.port, () => {
-    debug(`running on http://localhost:${ServiceOptions.port}`);
-});
+    app.listen(ServiceOptions.port, () => debug(`pipeline api available at http://${os.hostname()}:${ServiceOptions.port}/graphql`));
+}

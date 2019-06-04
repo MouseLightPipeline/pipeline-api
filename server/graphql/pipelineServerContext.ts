@@ -6,7 +6,7 @@ const debug = require("debug")("pipeline:coordinator-api:server-context");
 import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
 import {ITaskDefinition, ITaskDefinitionAttributes} from "../data-model/sequelize/taskDefinition";
 import {ITaskRepository} from "../data-model/sequelize/taskRepository";
-import {IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
+import {IPipelineWorker, IPipelineWorkerAttributes} from "../data-model/sequelize/pipelineWorker";
 import {
     IProject,
     IProjectAttributes,
@@ -16,7 +16,7 @@ import {
     ProjectInputSourceState
 } from "../data-model/sequelize/project";
 import {IPipelineStage, IPipelineStageAttributes} from "../data-model/sequelize/pipelineStage";
-import {PipelineWorkerClient} from "./client/pipelineWorkerClient";
+import {IClientUpdateWorkerOutput, PipelineWorkerClient} from "./client/pipelineWorkerClient";
 import {
     IPipelineStageTileCounts,
     IPipelineTile,
@@ -29,6 +29,7 @@ import {
 import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
 import {ServiceOptions} from "../options/serverOptions";
 import {SchedulerServiceOptions} from "../options/coreServicesOptions";
+import {Op} from "sequelize";
 
 interface IPipelineTileExt extends IPipelineTile {
     stage_id: string;
@@ -116,42 +117,42 @@ export type ITilePage = ISimplePage<IPipelineTileAttributes>;
 export class PipelineServerContext {
     private _persistentStorageManager: PersistentStorageManager = PersistentStorageManager.Instance();
 
-    public getSchedulerHealth(): SchedulerHealth {
+    public static getSchedulerHealth(): SchedulerHealth {
         return schedulerHealth;
     }
 
-    public getPipelineWorker(id: string): Promise<IPipelineWorker> {
+    public async getPipelineWorker(id: string): Promise<IPipelineWorker> {
         return this._persistentStorageManager.PipelineWorkers.findById(id);
     }
 
-    public getPipelineWorkers(): Promise<IPipelineWorker[]> {
+    public async getPipelineWorkers(): Promise<IPipelineWorker[]> {
         return this._persistentStorageManager.PipelineWorkers.findAll({});
     }
 
-    public async updateWorker(workerInput: IPipelineWorker): Promise<IWorkerMutationOutput> {
+    public async updateWorker(workerInput: IPipelineWorkerAttributes): Promise<IWorkerMutationOutput> {
         try {
-            let row = await this._persistentStorageManager.PipelineWorkers.findById(workerInput.id);
+            const row: IPipelineWorker = await this._persistentStorageManager.PipelineWorkers.findById(workerInput.id);
 
-            let output = await PipelineWorkerClient.Instance().updateWorker(Object.assign({}, {
+            let output : IClientUpdateWorkerOutput = await PipelineWorkerClient.Instance().updateWorker(Object.assign({}, {
                 id: workerInput.id,
                 local_work_capacity: workerInput.local_work_capacity,
                 cluster_work_capacity: workerInput.cluster_work_capacity
-            }, {
-                name: row.name,
-                address: row.address,
-                port: row.port
             }));
 
             if (output.error !== null) {
-                return output;
+                return {worker: null, error: output.error};
             }
 
-            row = await row.update({
+            const attr: IPipelineWorkerAttributes = {
                 local_work_capacity: output.worker.local_work_capacity,
                 cluster_work_capacity: output.worker.cluster_work_capacity
-            });
+            };
 
-            return {worker: row, error: ""};
+            await row.update(attr);
+
+            const row2 = await this._persistentStorageManager.PipelineWorkers.findById(workerInput.id);
+
+            return {worker: row2, error: ""};
         } catch (err) {
             return {worker: null, error: err.message}
         }
@@ -328,7 +329,7 @@ export class PipelineServerContext {
     public async getPipelineStages(): Promise<IPipelineStage[]> {
         const projects = await this.getProjects();
 
-        return this._persistentStorageManager.PipelineStages.findAll({where: {project_id: {$in: projects.map(p => p.id)}}});
+        return this._persistentStorageManager.PipelineStages.findAll({where: {project_id: {[Op.in]: projects.map(p => p.id)}}});
     }
 
     public async getPipelineStagesForProject(id: string): Promise<IPipelineStage[]> {
@@ -837,7 +838,7 @@ const PipelineStageStatusUnavailable: IPipelineStageTileCounts = {
     canceled: 0
 };
 
-const schedulerHealth = {
+const schedulerHealth: SchedulerHealth = {
     lastResponse: 404,
     lastSeen: null
 };
@@ -854,7 +855,7 @@ setInterval(async () => {
         schedulerHealth.lastResponse = response.status;
 
         if (schedulerHealth.lastResponse == 200) {
-            schedulerHealth.lastSeen = Date.now();
+            schedulerHealth.lastSeen = new Date();
         }
     } catch {
         schedulerHealth.lastResponse = 404;

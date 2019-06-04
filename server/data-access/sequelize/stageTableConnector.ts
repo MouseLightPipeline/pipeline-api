@@ -1,4 +1,4 @@
-import {Instance, Model, Sequelize} from "sequelize";
+import {Instance, Model, Op, Sequelize} from "sequelize";
 
 import {createTaskExecutionTable, ITaskExecutionAttributes, ITaskExecutionModel} from "../../data-model/taskExecution";
 import {TilePipelineStatus} from "../../data-model/TilePipelineStatus";
@@ -153,7 +153,7 @@ export class StageTableConnector {
 
     public async setTileStatus(tileIds: string[], status: TilePipelineStatus): Promise<IPipelineTileAttributes[]> {
         const [affectedCount, affectedRows] = await this._tileTable.update({this_stage_status: status}, {
-            where: {relative_path: {$in: tileIds}},
+            where: {relative_path: {[Op.in]: tileIds}},
             returning: true
         });
 

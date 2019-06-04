@@ -10,12 +10,12 @@ import {SequelizeOptions} from "../../options/coreServicesOptions";
 import {IProjectTable} from "../../data-model/sequelize/project";
 import {ITaskDefinitionTable} from "../../data-model/sequelize/taskDefinition";
 import {IPipelineStageTable} from "../../data-model/sequelize/pipelineStage";
+import {IPipelineWorkerTable} from "../../data-model/sequelize/pipelineWorker";
 
 export interface IPipelineModels {
     TaskDefinitions?: ITaskDefinitionTable;
     TaskRepositories?: any;
-    // TaskExecutions?: any;
-    PipelineWorkers?: any;
+    PipelineWorkers?: IPipelineWorkerTable;
     Projects?: IProjectTable;
     PipelineStages?: IPipelineStageTable;
     PipelineStagePerformances?: any;

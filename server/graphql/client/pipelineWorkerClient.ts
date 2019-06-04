@@ -4,9 +4,8 @@ import "isomorphic-fetch";
 
 const debug = require("debug")("pipeline:coordinator-api:pipeline-worker-client");
 
-import {IPipelineWorker, PipelineWorkerStatus} from "../../data-model/sequelize/pipelineWorker";
+import {IPipelineWorkerAttributes, PipelineWorkerStatus} from "../../data-model/sequelize/pipelineWorker";
 import {PipelineServerContext} from "../pipelineServerContext";
-
 
 export interface IClientWorker {
     id: string;
@@ -32,7 +31,7 @@ export class PipelineWorkerClient {
 
     private _idClientMap = new Map<string, ApolloClient>();
 
-    private getClient(worker: IPipelineWorker): ApolloClient {
+    private getClient(worker: IPipelineWorkerAttributes): ApolloClient {
         if (worker === null) {
             return null;
         }
@@ -63,7 +62,7 @@ export class PipelineWorkerClient {
         return client;
     }
 
-    private static async markWorkerUnavailable(worker: IPipelineWorker): Promise<void> {
+    private static async markWorkerUnavailable(worker: IPipelineWorkerAttributes): Promise<void> {
         let serverContext = new PipelineServerContext();
 
         const row = await serverContext.getPipelineWorker(worker.id);
@@ -71,7 +70,7 @@ export class PipelineWorkerClient {
         row.status = PipelineWorkerStatus.Unavailable;
     }
 
-    public async updateWorker(worker: IPipelineWorker): Promise<IClientUpdateWorkerOutput> {
+    public async updateWorker(worker: IPipelineWorkerAttributes): Promise<IClientUpdateWorkerOutput> {
         const client = this.getClient(worker);
 
         if (client === null) {
