@@ -1,4 +1,6 @@
-import ApolloClient, {createNetworkInterface} from "apollo-client";
+import {ApolloClient} from "apollo-client";
+import {InMemoryCache} from "apollo-cache-inmemory";
+import {HttpLink} from "apollo-link-http";
 import gql from "graphql-tag";
 import "isomorphic-fetch";
 
@@ -29,9 +31,9 @@ export class PipelineWorkerClient {
         return PipelineWorkerClient._instance;
     }
 
-    private _idClientMap = new Map<string, ApolloClient>();
+    private _idClientMap = new Map<string, ApolloClient<any>>();
 
-    private getClient(worker: IPipelineWorkerAttributes): ApolloClient {
+    private getClient(worker: IPipelineWorkerAttributes): ApolloClient<any> {
         if (worker === null) {
             return null;
         }
@@ -45,10 +47,10 @@ export class PipelineWorkerClient {
                 uri = `http://${worker.address}:${worker.port}/graphql`;
 
                 debug(`creating apollo client with uri ${uri}`);
-                const networkInterface = createNetworkInterface({uri});
 
                 client = new ApolloClient({
-                    networkInterface
+                    link: new HttpLink({uri}),
+                    cache: new InMemoryCache()
                 });
 
                 this._idClientMap[worker.id] = client;
@@ -88,7 +90,11 @@ export class PipelineWorkerClient {
                     }
                 }`,
                 variables: {
-                    worker: Object.assign({}, {id: worker.id, local_work_capacity: worker.local_work_capacity, cluster_work_capacity: worker.cluster_work_capacity})
+                    worker: Object.assign({}, {
+                        id: worker.id,
+                        local_work_capacity: worker.local_work_capacity,
+                        cluster_work_capacity: worker.cluster_work_capacity
+                    })
                 }
             });
 
