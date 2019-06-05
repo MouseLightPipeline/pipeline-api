@@ -1,7 +1,9 @@
 export const typeDefinitions = `
+scalar Date
+
 type SchedulerHealth {
     lastResponse: Int
-    lastSeen: Float
+    lastSeen: Date
 }
 
 type PageInfo {
@@ -42,14 +44,14 @@ type PipelineWorker {
   load_average: Float
   local_work_capacity: Float
   cluster_work_capacity: Float
-  last_seen: Float
+  last_seen: Date
   local_task_load: Float
   cluster_task_load: Float
   status: Int
   is_in_scheduler_pool: Boolean
-  created_at: Float
-  updated_at: Float
-  deleted_at: Float
+  created_at: Date
+  updated_at: Date
+  deleted_at: Date
 }
 
 type TaskRepository {
@@ -58,9 +60,9 @@ type TaskRepository {
   description: String!
   location: String!
   task_definitions: [TaskDefinition!]!
-  created_at: Float
-  updated_at: Float
-  deleted_at: Float
+  created_at: Date
+  updated_at: Date
+  deleted_at: Date
 }
 
 type TaskDefinition {
@@ -79,9 +81,9 @@ type TaskDefinition {
   task_repository: TaskRepository
   pipeline_stages: [PipelineStage!]!
   script_status: Boolean
-  created_at: Float
-  updated_at: Float
-  deleted_at: Float
+  created_at: Date
+  updated_at: Date
+  deleted_at: Date
 }
 
 type TaskExecution {
@@ -109,12 +111,12 @@ type TaskExecution {
   max_memory_mb: Float
   max_cpu_percent: Float
   exit_code: Int
-  submitted_at: Float
-  started_at: Float
-  completed_at: Float
-  created_at: Float
-  updated_at: Float
-  deleted_at: Float
+  submitted_at: Date
+  started_at: Date
+  completed_at: Date
+  created_at: Date
+  updated_at: Date
+  deleted_at: Date
 }
 
 type Project {
@@ -139,11 +141,11 @@ type Project {
   region_z_max: Int
   is_processing: Boolean
   input_source_state: Int
-  last_seen_input_source: Float
-  last_checked_input_source: Float
-  created_at: Float
-  updated_at: Float
-  deleted_at: Float
+  last_seen_input_source: Date
+  last_checked_input_source: Date
+  created_at: Date
+  updated_at: Date
+  deleted_at: Date
   stages: [PipelineStage]
 }
 
@@ -173,9 +175,9 @@ type PipelineStage {
   tile_status: PipelineTileStatus
   previous_stage: PipelineStage
   child_stages: [PipelineStage]
-  created_at: Float
-  updated_at: Float
-  deleted_at: Float
+  created_at: Date
+  updated_at: Date
+  deleted_at: Date
 }
 
 type Tile {
@@ -186,8 +188,8 @@ type Tile {
   prev_stage_status: Int
   this_stage_status: Int
   task_executions: [TaskExecution]
-  created_at: Float
-  updated_at: Float
+  created_at: Date
+  updated_at: Date
 }
 
 type TilePage {

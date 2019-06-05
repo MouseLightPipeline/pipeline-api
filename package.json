@@ -8,7 +8,7 @@
   "dockerRepository": "mouselightpipeline",
   "scripts": {
     "grammar": "nearleyc server/argument-parser/taskArgumentGrammar.ne -o server/argument-parser/taskArgumentGrammar.js",
-    "start": "node server/pipelineApiApp.js",
+    "devel": "npm run grammar && DEBUG=pipeline* node $NODE_DEBUG_OPTION --trace-warnings server/pipelineApiApp.js",
     "docker-build": "gulp docker-build",
     "docker-release": "gulp release"
   },

@@ -1,3 +1,6 @@
+import {GraphQLScalarType} from "graphql";
+import {Kind} from "graphql/language";
+
 import {ITaskRepository} from "../data-model/sequelize/taskRepository";
 
 import {
@@ -17,11 +20,7 @@ import {ITaskDefinition, ITaskDefinitionAttributes} from "../data-model/sequeliz
 import {IPipelineWorkerAttributes, IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {IProjectAttributes, IProjectInput} from "../data-model/sequelize/project";
 import {IPipelineStage, IPipelineStageAttributes} from "../data-model/sequelize/pipelineStage";
-import {
-    IPipelineStageTileCounts,
-    IPipelineTile,
-    IPipelineTileAttributes
-} from "../data-access/sequelize/stageTableConnector";
+import {IPipelineStageTileCounts, IPipelineTileAttributes} from "../data-access/sequelize/stageTableConnector";
 import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
 
 interface IIdOnlyArgument {
@@ -246,7 +245,23 @@ let resolvers = {
         task_definition(taskExecution, _, context: PipelineServerContext) {
             return context.getTaskDefinition(taskExecution.task_definition_id);
         }
-    }
+    },
+    Date: new GraphQLScalarType({
+        name: "Date",
+        description: "Date custom scalar type",
+        parseValue: (value) => {
+            return new Date(value); // value from the client
+        },
+        serialize: (value) => {
+            return value.getTime(); // value sent to the client
+        },
+        parseLiteral: (ast) => {
+            if (ast.kind === Kind.INT) {
+                return parseInt(ast.value, 10); // ast value is always in string format
+            }
+            return null;
+        },
+    })
 };
 
 export default resolvers;
