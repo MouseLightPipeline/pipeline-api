@@ -85,7 +85,7 @@ export function sequelizeImport(sequelize, DataTypes) {
         let previousDepth = 0;
 
         if (stageInput.previous_stage_id) {
-            let previousStage = await PipelineStage.findById(stageInput.previous_stage_id);
+            let previousStage = await PipelineStage.findByPk(stageInput.previous_stage_id);
 
             if (previousStage) {
                 previousDepth = previousStage.depth;
@@ -108,7 +108,7 @@ export function sequelizeImport(sequelize, DataTypes) {
     };
 
     PipelineStage.remove = async (t: Transaction, id: string): Promise<string> => {
-        const stage: IPipelineStage = await PipelineStage.findById(id);
+        const stage: IPipelineStage = await PipelineStage.findByPk(id);
 
         if (stage) {
             const children: IPipelineStage[] = await PipelineStage.findAll({where: {previous_stage_id: id}});

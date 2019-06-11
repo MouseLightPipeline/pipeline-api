@@ -121,7 +121,7 @@ export function sequelizeImport(sequelize, DataTypes) {
         let scriptPath = this.script;
 
         if (this.task_repository_id) {
-            const repo = await TaskRepositories.findById(this.task_repository_id);
+            const repo = await TaskRepositories.findByPk(this.task_repository_id);
 
             scriptPath = path.resolve(path.join(repo.location, scriptPath));
         } else {

@@ -153,7 +153,7 @@ const connectionMap = new Map<string, ProjectDatabaseConnector>();
 const connectorQueueAccess = asyncUtils.queue(accessQueueWorker, 1);
 
 export async function connectorForStage(pipelineStage: IPipelineStageAttributes): Promise<StageTableConnector> {
-    const project = await PersistentStorageManager.Instance().Projects.findById(pipelineStage.project_id);
+    const project = await PersistentStorageManager.Instance().Projects.findByPk(pipelineStage.project_id);
 
     const connector = await connectorForProject(project);
 

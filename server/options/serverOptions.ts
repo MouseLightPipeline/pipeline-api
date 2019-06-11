@@ -6,14 +6,12 @@ interface IDriveMapping {
 interface IServiceOptions {
     port: number;
     graphQlEndpoint: string;
-    graphiQlEndpoint: string;
     driveMapping: IDriveMapping[];
 }
 
 const configurations: IServiceOptions = {
     port: 6001,
     graphQlEndpoint: "/graphql",
-    graphiQlEndpoint: "/graphiql",
     driveMapping: JSON.parse("[]")
 };
 
