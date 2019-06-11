@@ -133,7 +133,7 @@ export class PipelineServerContext {
         try {
             const row: IPipelineWorker = await this._persistentStorageManager.PipelineWorkers.findByPk(workerInput.id);
 
-            let output : IClientUpdateWorkerOutput = await PipelineWorkerClient.Instance().updateWorker(Object.assign({}, {
+            let output : IClientUpdateWorkerOutput = await PipelineWorkerClient.Instance().updateWorker(Object.assign({address: row.address, port: row.port}, {
                 id: workerInput.id,
                 local_work_capacity: workerInput.local_work_capacity,
                 cluster_work_capacity: workerInput.cluster_work_capacity
