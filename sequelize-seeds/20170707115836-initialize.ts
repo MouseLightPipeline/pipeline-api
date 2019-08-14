@@ -74,7 +74,7 @@ function createTaskDefinitions(when: Date) {
                     type: TaskArgumentType.Literal
                 }]
             }),
-            cluster_args: JSON.stringify({arguments: ["-n 4 -R\"affinity[core(1)]\" -P mouselight"]}),
+            cluster_args: JSON.stringify({arguments: ["-n 2 -P mouselight"]}),
             expected_exit_code: 0,
             local_work_units: 2,
             cluster_work_units: 1,
@@ -84,7 +84,7 @@ function createTaskDefinitions(when: Date) {
         }, {
             id: "1161f8e6-29d5-44b0-b6a9-8d3e54d23292",
             name: "Axon UInt16",
-            description: "Axon UInt16",
+            description: "",
             script: "axon-uint16.sh",
             interpreter: "none",
             script_args: JSON.stringify({
@@ -99,7 +99,7 @@ function createTaskDefinitions(when: Date) {
                     type: TaskArgumentType.Literal
                 }]
             }),
-            cluster_args: JSON.stringify({arguments: ["-n 4 -R\"select[broadwell]\" -P mouselight"]}),
+            cluster_args: JSON.stringify({arguments: ["-n 4 -P mouselight"]}),
             expected_exit_code: 0,
             local_work_units: 18,
             cluster_work_units: 1,
@@ -123,15 +123,86 @@ function createTaskDefinitions(when: Date) {
                     value: path.join(taskLocationPrefix, "apps/dogDescriptor"),
                     type: TaskArgumentType.Literal
                 }, {
-                    value: "/groups/mousebrainmicro/mousebrainmicro/Software/mcr/v92",
+                    value: "/tools/mcr/v92",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "/home",
                     type: TaskArgumentType.Literal
                 }]
             }),
-            cluster_args: JSON.stringify({arguments: ["-n 4 -R\"affinity[core(1)]\" -P mouselight"]}),
+            cluster_args: JSON.stringify({arguments: ["-n 4 -P mouselight"]}),
             expected_exit_code: 0,
             local_work_units: 4,
             cluster_work_units: 1,
             log_prefix: "dd",
+            task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
+            created_at: when
+        }, {
+            id: "9772fd49-29be-419e-99a6-9e34ebe2f8f9",
+            name: "Descriptor Skel",
+            description: "",
+            script: "skelDescriptor.sh",
+            interpreter: "none",
+            script_args: JSON.stringify({
+                arguments: [{
+                    value: "${EXPECTED_EXIT_CODE}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "${TASK_ID}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: path.join(taskLocationPrefix, "/apps/skelDescriptor/configfiles/2018-08-15.cfg"),
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: path.join(taskLocationPrefix, "/apps/skelDescriptor"),
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "/tools/mcr/v92",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "/home",
+                    type: TaskArgumentType.Literal
+                }]
+            }),
+            cluster_args: JSON.stringify({arguments: ["-n 4 -P mouselight"]}),
+            expected_exit_code: 0,
+            local_work_units: 1,
+            cluster_work_units: 1,
+            log_prefix: "skd",
+            task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
+            created_at: when
+        }, {
+            id: "9285c4d3-80c2-473c-81d2-f42078ae3136",
+            name: "Descriptor Vessel",
+            description: "",
+            script: "vesselDescriptor.sh",
+            interpreter: "none",
+            script_args: JSON.stringify({
+                arguments: [{
+                    value: "${EXPECTED_EXIT_CODE}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "${TASK_ID}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: path.join(taskLocationPrefix, "/apps/skelDescriptor/configfiles/2018-08-15.cfg"),
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: path.join(taskLocationPrefix, "/apps/vesselDescriptor"),
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "/tools/mcr/v95",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "/home",
+                    type: TaskArgumentType.Literal
+                }]
+            }),
+            cluster_args: JSON.stringify({arguments: ["-n 4 -P mouselight"]}),
+            expected_exit_code: 0,
+            local_work_units: 1,
+            cluster_work_units: 1,
+            log_prefix: "skd",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }, {
@@ -154,10 +225,13 @@ function createTaskDefinitions(when: Date) {
                     value: "${TASK_ID}",
                     type: TaskArgumentType.Parameter
                 }, {
-                    value: path.join(taskLocationPrefix, "apps/pointmatch_test"),
+                    value: path.join(taskLocationPrefix, "apps/pointmatch"),
                     type: TaskArgumentType.Literal
                 }, {
-                    value: "/groups/mousebrainmicro/mousebrainmicro/Software/mcr/v92",
+                    value: "/tools/mcr/v92",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "/home",
                     type: TaskArgumentType.Literal
                 }, {
                     value: "[0,0,0]",
@@ -170,11 +244,106 @@ function createTaskDefinitions(when: Date) {
                     type: TaskArgumentType.Literal
                 }]
             }),
-            cluster_args: JSON.stringify({arguments: ["-n 2 -R\"affinity[core(1)]\" -P mouselight"]}),
+            cluster_args: JSON.stringify({arguments: ["-n 2 -P mouselight"]}),
             expected_exit_code: 0,
             local_work_units: 1,
             cluster_work_units: 1,
             log_prefix: "pm",
+            task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
+            created_at: when
+        }, {
+            id: "1b711b74-a1ff-42e9-a5de-03773fab9346",
+            name: "Point Match Vessel",
+            description: "literals:\nApp, mcr, relative shift, channel id, max num of descriptors",
+            script: "pointMatch_vessel.sh",
+            interpreter: "none",
+            script_args: JSON.stringify({
+                arguments: [{
+                    value: "${PROJECT_ROOT}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "${ADJACENT_TILE_RELATIVE_PATH}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "${EXPECTED_EXIT_CODE}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "${TASK_ID}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: path.join(taskLocationPrefix, "apps/pointmatch_vessel"),
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "/tools/mcr/v95",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "/home",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "[0,0,0]",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "1",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "10000",
+                    type: TaskArgumentType.Literal
+                }]
+            }),
+            cluster_args: JSON.stringify({arguments: ["-n 2 -P mouselight"]}),
+            expected_exit_code: 0,
+            local_work_units: 2,
+            cluster_work_units: 2,
+            log_prefix: "pmv",
+            task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
+            created_at: when
+        }, {
+            id: "1080bb16-3c60-4612-a476-de486d70386d",
+            name: "Skeletonization",
+            description: "",
+            script: "clusterSkel.sh",
+            interpreter: "none",
+            script_args: JSON.stringify({
+                arguments: [{
+                    value: "${X}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "${Y}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "${Z}",
+                    type: TaskArgumentType.Parameter
+                },{
+                    value: "${STEP_X}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "${STEP_Y}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "${STEP_Z}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "/nrs/mouselight/cluster/classifierOutputs/2017-09-25/20170925_prob0/20170",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "/prob0",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: path.join(taskLocationPrefix, "apps/skeletonization/cluster_skelh5"),
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "/tools/mcr/v95",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "/home",
+                    type: TaskArgumentType.Literal
+                }]
+            }),
+            cluster_args: JSON.stringify({arguments: ["-n 2 -P mouselight"]}),
+            expected_exit_code: 0,
+            local_work_units: 1,
+            cluster_work_units: 1,
+            log_prefix: "cs",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }];
@@ -210,7 +379,7 @@ function createTaskDefinitions(when: Date) {
                     type: TaskArgumentType.Literal
                 }]
             }),
-            cluster_args: JSON.stringify({arguments: ["-n 4 -R\"affinity[core(1)]\""]}),
+            cluster_args: JSON.stringify({arguments: ["-n 4"]}),
             expected_exit_code: 0,
             local_work_units: 4,
             cluster_work_units: 1,

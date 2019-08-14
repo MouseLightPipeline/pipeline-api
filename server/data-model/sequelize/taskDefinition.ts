@@ -1,6 +1,7 @@
 import * as path from "path";
 import {Instance, Model} from "sequelize";
 import {IPipelineStage} from "./pipelineStage";
+import {ServiceOptions} from "../../options/serverOptions";
 
 export enum TaskArgumentType {
     Literal = 0,
@@ -129,6 +130,12 @@ export function sequelizeImport(sequelize, DataTypes) {
                 scriptPath = path.join(process.cwd(), scriptPath);
             }
         }
+
+        ServiceOptions.driveMapping.map(d => {
+            if (scriptPath.startsWith(d.remote)) {
+                scriptPath = d.local + scriptPath.slice(d.remote.length);
+            }
+        });
 
         return scriptPath;
     };

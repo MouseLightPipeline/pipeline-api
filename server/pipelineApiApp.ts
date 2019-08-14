@@ -8,7 +8,7 @@ const debug = require("debug")("pipeline:coordinator-api:server");
 
 import {typeDefinitions} from "./graphql/pipelineTypeDefinitions";
 import {ServiceOptions} from "./options/serverOptions";
-import {thumbnailParamQueryMiddleware, thumbnailQueryMiddleware} from "./middleware/thumbnailQueryMiddleware";
+import {thumbnailParamQueryMiddleware} from "./middleware/thumbnailQueryMiddleware";
 import resolvers from "./graphql/pipelineServerResolvers";
 import {PipelineServerContext} from "./graphql/pipelineServerContext";
 import {MessageQueueClient} from "./message-queue/messageQueueClient";
@@ -32,7 +32,7 @@ async function start() {
         context: () => new PipelineServerContext()
     });
 
-    app.use("/thumbnailData", cors(), thumbnailQueryMiddleware);
+    // app.use("/thumbnailData", cors(), thumbnailQueryMiddleware);
 
     app.use("/thumbnail/:pipelineStageId/:x/:y/:z/:thumbName", cors(), thumbnailParamQueryMiddleware);
 
