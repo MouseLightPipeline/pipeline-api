@@ -347,7 +347,7 @@ function createTaskDefinitions(when: Date) {
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }, {
-            id: " 99990f9f-8951-4fbb-a632-41c52ed0c277",
+            id: "99990f9f-8951-4fbb-a632-41c52ed0c277",
             name: "Compression",
             description: "",
             script: "compression.sh",
