@@ -378,7 +378,7 @@ function createTaskDefinitions(when: Date) {
             local_work_units: 1,
             cluster_work_units: 1,
             log_prefix: "pm",
-            task_repository_id: "f22c6e43-782c-4e0e-b0ca-b34fcec3340a",
+            task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
         }];
     } else {
