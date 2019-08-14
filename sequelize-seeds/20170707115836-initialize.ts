@@ -346,6 +346,40 @@ function createTaskDefinitions(when: Date) {
             log_prefix: "cs",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
+        }, {
+            id: " 99990f9f-8951-4fbb-a632-41c52ed0c277",
+            name: "Compression",
+            description: "",
+            script: "compression.sh",
+            interpreter: "none",
+            script_args: JSON.stringify({
+                arguments: [{
+                    value: "${EXPECTED_EXIT_CODE}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "${TASK_ID}",
+                    type: TaskArgumentType.Parameter
+                }, {
+                    value: "/apps/tif2mj/tif2mj",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "10",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "1",
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "/home",
+                    type: TaskArgumentType.Literal
+                }]
+            }),
+            cluster_args: JSON.stringify({arguments: [""]}),
+            expected_exit_code: 0,
+            local_work_units: 1,
+            cluster_work_units: 1,
+            log_prefix: "pm",
+            task_repository_id: "f22c6e43-782c-4e0e-b0ca-b34fcec3340a",
+            created_at: when
         }];
     } else {
         return [{
