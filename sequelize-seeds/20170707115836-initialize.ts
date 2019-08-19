@@ -3,7 +3,8 @@ import * as path from "path";
 const seedEnv = process.env.PIPELINE_SEED_ENV || "production";
 const isProduction = seedEnv === "production";
 
-const taskLocationPrefix = process.env.PIPELINE_TASK_ROOT || "/groups/mousebrainmicro/mousebrainmicro/Software/pipeline";
+const taskLocationPrefix = process.env.PIPELINE_TASK_ROOT || "/data/code/pipeline";
+const appLocationPrefix = process.env.PIPELINE_TASK_ROOT || "/apps";
 const devProjectLocationPrefix = process.env.PIPELINE_DEV_ROOT || "/groups/mousebrainmicro/mousebrainmicro/";
 
 // Samples are archived periodically.  The data used for testing/configuration needs to be changed periodically.
@@ -71,7 +72,7 @@ function createTaskDefinitions(when: Date) {
             interpreter: "none",
             script_args: JSON.stringify({
                 arguments: [{
-                    value: path.join(taskLocationPrefix, "/apps/lineFix"),
+                    value: path.join(appLocationPrefix, "lineFix"),
                     type: TaskArgumentType.Literal
                 }]
             }),
@@ -96,7 +97,7 @@ function createTaskDefinitions(when: Date) {
                     value: "${IS_CLUSTER_JOB}",
                     type: TaskArgumentType.Parameter
                 }, {
-                    value: path.join(taskLocationPrefix, "/apps/axon-classifier/axon_uint16.ilp"),
+                    value: path.join(appLocationPrefix, "axon-classifier/axon_uint16.ilp"),
                     type: TaskArgumentType.Literal
                 }]
             }),
@@ -121,7 +122,7 @@ function createTaskDefinitions(when: Date) {
                     value: "${TASK_ID}",
                     type: TaskArgumentType.Parameter
                 }, {
-                    value: path.join(taskLocationPrefix, "apps/dogDescriptor"),
+                    value: path.join(appLocationPrefix, "dogDescriptor"),
                     type: TaskArgumentType.Literal
                 }, {
                     value: "/tools/mcr/v92",
@@ -152,10 +153,10 @@ function createTaskDefinitions(when: Date) {
                     value: "${TASK_ID}",
                     type: TaskArgumentType.Parameter
                 }, {
-                    value: path.join(taskLocationPrefix, "/apps/skelDescriptor/configfiles/2018-08-15.cfg"),
+                    value: path.join(appLocationPrefix, "skelDescriptor/configfiles/2018-08-15.cfg"),
                     type: TaskArgumentType.Literal
                 }, {
-                    value: path.join(taskLocationPrefix, "/apps/skelDescriptor"),
+                    value: path.join(appLocationPrefix, "skelDescriptor"),
                     type: TaskArgumentType.Literal
                 }, {
                     value: "/tools/mcr/v92",
@@ -186,10 +187,10 @@ function createTaskDefinitions(when: Date) {
                     value: "${TASK_ID}",
                     type: TaskArgumentType.Parameter
                 }, {
-                    value: path.join(taskLocationPrefix, "/apps/skelDescriptor/configfiles/2018-08-15.cfg"),
+                    value: path.join(appLocationPrefix, "skelDescriptor/configfiles/2018-08-15.cfg"),
                     type: TaskArgumentType.Literal
                 }, {
-                    value: path.join(taskLocationPrefix, "/apps/vesselDescriptor"),
+                    value: path.join(appLocationPrefix, "vesselDescriptor"),
                     type: TaskArgumentType.Literal
                 }, {
                     value: "/tools/mcr/v95",
@@ -226,7 +227,7 @@ function createTaskDefinitions(when: Date) {
                     value: "${TASK_ID}",
                     type: TaskArgumentType.Parameter
                 }, {
-                    value: path.join(taskLocationPrefix, "apps/pointmatch"),
+                    value: path.join(appLocationPrefix, "pointmatch"),
                     type: TaskArgumentType.Literal
                 }, {
                     value: "/tools/mcr/v92",
@@ -272,7 +273,7 @@ function createTaskDefinitions(when: Date) {
                     value: "${TASK_ID}",
                     type: TaskArgumentType.Parameter
                 }, {
-                    value: path.join(taskLocationPrefix, "apps/pointmatch_vessel"),
+                    value: path.join(appLocationPrefix, "pointmatch_vessel"),
                     type: TaskArgumentType.Literal
                 }, {
                     value: "/tools/mcr/v95",
@@ -306,6 +307,9 @@ function createTaskDefinitions(when: Date) {
             interpreter: "none",
             script_args: JSON.stringify({
                 arguments: [{
+                    value: "${TASK_ID}",
+                    type: TaskArgumentType.Parameter
+                }, {
                     value: "${X}",
                     type: TaskArgumentType.Parameter
                 }, {
@@ -314,7 +318,7 @@ function createTaskDefinitions(when: Date) {
                 }, {
                     value: "${Z}",
                     type: TaskArgumentType.Parameter
-                },{
+                }, {
                     value: "${STEP_X}",
                     type: TaskArgumentType.Parameter
                 }, {
@@ -324,16 +328,19 @@ function createTaskDefinitions(when: Date) {
                     value: "${STEP_Z}",
                     type: TaskArgumentType.Parameter
                 }, {
-                    value: "/nrs/mouselight/cluster/classifierOutputs/2017-09-25/20170925_prob0/20170",
+                    value: "/data/external/skeletonization/20170925_prob0_lev-6_chunk-111_111_masked-0.h5",
                     type: TaskArgumentType.Literal
                 }, {
                     value: "/prob0",
                     type: TaskArgumentType.Literal
                 }, {
-                    value: path.join(taskLocationPrefix, "apps/skeletonization/cluster_skelh5"),
+                    value: path.join(appLocationPrefix, "skeletonization/config_files/20170925_prob0_config_skelh5.cfg"),
                     type: TaskArgumentType.Literal
                 }, {
-                    value: "/tools/mcr/v95",
+                    value: path.join(appLocationPrefix, "skeletonization/cluster_skelh5"),
+                    type: TaskArgumentType.Literal
+                }, {
+                    value: "/tools/mcr/v92",
                     type: TaskArgumentType.Literal
                 }, {
                     value: "/home",
@@ -342,8 +349,8 @@ function createTaskDefinitions(when: Date) {
             }),
             cluster_args: JSON.stringify({arguments: ["-n 2 -P mouselight"]}),
             expected_exit_code: 0,
-            local_work_units: 1,
-            cluster_work_units: 1,
+            local_work_units: 2,
+            cluster_work_units: 2,
             log_prefix: "cs",
             task_repository_id: "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9",
             created_at: when
@@ -361,7 +368,7 @@ function createTaskDefinitions(when: Date) {
                     value: "${TASK_ID}",
                     type: TaskArgumentType.Parameter
                 }, {
-                    value: "/apps/tif2mj/tif2mj",
+                    value: path.join(appLocationPrefix, "tif2mj/tif2mj"),
                     type: TaskArgumentType.Literal
                 }, {
                     value: "10",
