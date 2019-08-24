@@ -133,7 +133,7 @@ export class PipelineServerContext {
         try {
             const row: IPipelineWorker = await this._persistentStorageManager.PipelineWorkers.findByPk(workerInput.id);
 
-            let output : IClientUpdateWorkerOutput = await PipelineWorkerClient.Instance().updateWorker(Object.assign({address: row.address, port: row.port}, {
+            let output: IClientUpdateWorkerOutput = await PipelineWorkerClient.Instance().updateWorker(Object.assign({address: row.address, port: row.port}, {
                 id: workerInput.id,
                 local_work_capacity: workerInput.local_work_capacity,
                 cluster_work_capacity: workerInput.cluster_work_capacity
@@ -674,6 +674,10 @@ export class PipelineServerContext {
             }
 
             if (!project) {
+                if (!stageWarn.has(id)) {
+                    debug(`failed to look up project/stage ${id} for thumbnail request`);
+                    stageWarn.set(id, true);
+                }
                 return null;
             }
 
@@ -682,6 +686,10 @@ export class PipelineServerContext {
             const stageConnector = isProject ? await connector.connectorForProject() : await connector.connectorForStage({id});
 
             if (!stageConnector) {
+                if (!stageWarn.has(id)) {
+                    debug(`failed to load stage connector ${id} for thumbnail request`);
+                    stageWarn.set(id, true);
+                }
                 return null;
             }
 
@@ -697,6 +705,8 @@ export class PipelineServerContext {
                 });
 
                 return fullPath
+            } else {
+                debug(`failed to load tile at ${x} ${y} ${z} for stage ${id} for thumbnail request`);
             }
         } catch (err) {
             debug(err);
@@ -861,3 +871,5 @@ setInterval(async () => {
         schedulerHealth.lastResponse = 404;
     }
 }, 10000);
+
+const stageWarn = new Map<string, boolean>();

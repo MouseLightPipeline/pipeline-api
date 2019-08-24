@@ -1,6 +1,8 @@
 import * as path from "path";
 import * as fs from "fs";
 import {isNullOrUndefined} from "util";
+const debug = require("debug")("pipeline:thumbnail-middleware");
+
 import {PipelineServerContext} from "../graphql/pipelineServerContext";
 
 export async function thumbnailQueryMiddleware(req, res) {
@@ -45,6 +47,9 @@ export async function thumbnailQueryMiddleware(req, res) {
     }
 }
 
+const warnMap = new Map<string, boolean>();
+const tileWarnMap = new Map<string, boolean>();
+
 export async function thumbnailParamQueryMiddleware(req, res) {
     try {
         const pipelineStageId = req.params.pipelineStageId;
@@ -55,6 +60,10 @@ export async function thumbnailParamQueryMiddleware(req, res) {
 
 
         if ([pipelineStageId, x, y, z].some(o => isNullOrUndefined(o))) {
+            if (!warnMap.has(pipelineStageId)) {
+                debug(`failed to look up thumbnail for ${pipelineStageId}`);
+                warnMap.set(pipelineStageId, true);
+            }
             res.sendStatus(404);
             return;
         }
@@ -62,6 +71,10 @@ export async function thumbnailParamQueryMiddleware(req, res) {
         let thumbnailPath = await PipelineServerContext.thumbnailPath(pipelineStageId, x, y, z);
 
         if (!thumbnailPath) {
+            if (!tileWarnMap.has(pipelineStageId)) {
+                debug(`failed to look up thumbnail x, y, z for ${pipelineStageId}`);
+                tileWarnMap.set(pipelineStageId, true);
+            }
             res.sendStatus(404);
             return;
         }
