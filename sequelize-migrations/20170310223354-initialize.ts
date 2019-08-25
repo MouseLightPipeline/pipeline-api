@@ -88,6 +88,10 @@ export = {
                     type: Sequelize.TEXT,
                     defaultValue: ""
                 },
+                user_parameters: {
+                    type: Sequelize.TEXT,
+                    defaultValue: "[]"
+                },
                 root_path: {
                     type: Sequelize.TEXT,
                     defaultValue: ""
@@ -161,6 +165,10 @@ export = {
                         model: "PipelineStages",
                         key: "id"
                     }
+                },
+                user_parameters: {
+                    type: Sequelize.TEXT,
+                    defaultValue: "[]"
                 },
                 created_at: Sequelize.DATE,
                 updated_at: Sequelize.DATE,
