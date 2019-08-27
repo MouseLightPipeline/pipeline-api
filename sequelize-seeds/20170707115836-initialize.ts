@@ -12,6 +12,8 @@ const appLocationPrefix = process.env.PIPELINE_SEED_APP_ROOT || "/apps";
 const toolsLocationPrefix = process.env.PIPELINE_SEED_TOOLS_ROOT || "/tools";
 const dataLocationPrefix = process.env.PIPELINE_SEED_DATA_ROOT || "/data/input/";
 const outputLocationPrefix = process.env.PIPELINE_SEED_OUTPUT_ROOT || "/data/output/";
+const userScratchPrefix = process.env.PIPELINE_SEED_USER_SCRATCH || "/home";
+
 const sampleBrainStageOutputBasePath = path.join(outputLocationPrefix, sampleBrainProject);
 
 const mcrPath = path.join(toolsLocationPrefix, "mcr");
@@ -137,7 +139,7 @@ function createTaskDefinitions(when: Date) {
                 value: mcrv92Path,
                 type: TaskArgumentType.Literal
             }, {
-                value: "/home",
+                value: userScratchPrefix,
                 type: TaskArgumentType.Literal
             }]
         }),
@@ -171,7 +173,7 @@ function createTaskDefinitions(when: Date) {
                 value: mcrv92Path,
                 type: TaskArgumentType.Literal
             }, {
-                value: "/home",
+                value: userScratchPrefix,
                 type: TaskArgumentType.Literal
             }]
         }),
@@ -205,7 +207,7 @@ function createTaskDefinitions(when: Date) {
                 value: mcrv95Path,
                 type: TaskArgumentType.Literal
             }, {
-                value: "/home",
+                value: userScratchPrefix,
                 type: TaskArgumentType.Literal
             }]
         }),
@@ -242,7 +244,7 @@ function createTaskDefinitions(when: Date) {
                 value: mcrv92Path,
                 type: TaskArgumentType.Literal
             }, {
-                value: "/home",
+                value: userScratchPrefix,
                 type: TaskArgumentType.Literal
             }, {
                 value: "[0,0,0]",
@@ -288,7 +290,7 @@ function createTaskDefinitions(when: Date) {
                 value: mcrv95Path,
                 type: TaskArgumentType.Literal
             }, {
-                value: "/home",
+                value: userScratchPrefix,
                 type: TaskArgumentType.Literal
             }, {
                 value: "[0,0,0]",
@@ -352,7 +354,7 @@ function createTaskDefinitions(when: Date) {
                 value: mcrv92Path,
                 type: TaskArgumentType.Literal
             }, {
-                value: "/home",
+                value: userScratchPrefix,
                 type: TaskArgumentType.Literal
             }]
         }),
@@ -386,7 +388,7 @@ function createTaskDefinitions(when: Date) {
                 value: "1",
                 type: TaskArgumentType.Literal
             }, {
-                value: "/home",
+                value: userScratchPrefix,
                 type: TaskArgumentType.Literal
             }]
         }),
