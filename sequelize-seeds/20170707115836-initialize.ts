@@ -9,7 +9,7 @@ const skeletonizationProject = process.env.PIPELINE_SEED_SKELETONIZATION_PROJECT
 
 const taskLocationPrefix = process.env.PIPELINE_SEED_TASK_ROOT || "/data/code/pipeline";
 const appLocationPrefix = process.env.PIPELINE_SEED_APP_ROOT || "/apps";
-const toolsLocationPrefix = process.env.PIPELINE_SEED_APP_ROOT || "/tools";
+const toolsLocationPrefix = process.env.PIPELINE_SEED_TOOLS_ROOT || "/tools";
 const dataLocationPrefix = process.env.PIPELINE_SEED_DATA_ROOT || "/data/input/";
 const outputLocationPrefix = process.env.PIPELINE_SEED_OUTPUT_ROOT || "/data/output/";
 const sampleBrainStageOutputBasePath = path.join(outputLocationPrefix, sampleBrainProject);
@@ -337,14 +337,14 @@ function createTaskDefinitions(when: Date) {
                 value: "${STEP_Z}",
                 type: TaskArgumentType.Parameter
             }, {
-                value: "/data/external/skeletonization/20170925_prob0_lev-6_chunk-111_111_masked-0.h5",
-                type: TaskArgumentType.Literal
+                value: "${INPUTFILE}",
+                type: TaskArgumentType.Parameter
             }, {
-                value: "/prob0",
-                type: TaskArgumentType.Literal
+                value: "${DATASET}",
+                type: TaskArgumentType.Parameter
             }, {
-                value: path.join(appLocationPrefix, "skeletonization/config_files/20170925_prob0_config_skelh5.cfg"),
-                type: TaskArgumentType.Literal
+                value: "${CONFIGURATIONFILE}",
+                type: TaskArgumentType.Parameter
             }, {
                 value: path.join(appLocationPrefix, "skeletonization/cluster_skelh5"),
                 type: TaskArgumentType.Literal
