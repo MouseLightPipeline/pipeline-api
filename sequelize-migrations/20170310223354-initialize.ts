@@ -90,7 +90,7 @@ export = {
                 },
                 user_parameters: {
                     type: Sequelize.TEXT,
-                    defaultValue: "[]"
+                    defaultValue: "{}"
                 },
                 root_path: {
                     type: Sequelize.TEXT,
@@ -168,7 +168,7 @@ export = {
                 },
                 user_parameters: {
                     type: Sequelize.TEXT,
-                    defaultValue: "[]"
+                    defaultValue: "{}"
                 },
                 created_at: Sequelize.DATE,
                 updated_at: Sequelize.DATE,
