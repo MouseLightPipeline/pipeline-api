@@ -3,7 +3,6 @@ import {Connection, Channel} from "amqplib";
 const debug = require("debug")("pipeline:api:worker-status-channel");
 
 import {IWorkerHeartbeatCallback, IWorkerStatusQueue, IWorkerUpdateCallback, IWorkerUpdateData} from "../../messageQueue";
-import {PersistentStorageManager} from "../../../data-access/sequelize/databaseConnector";
 
 const WorkerStatusUpdateExchange = "WorkerStatusUpdateExchange";
 

@@ -17,7 +17,7 @@ export class RabbitMQMessageQueueClient implements IMessageQueueClient {
         return this._workerStatusExchange;
     }
 
-    public async connect() : Promise<void> {
+    public async connect(): Promise<void> {
         this._connectionUrl = `amqp://${MessageQueueOptions.host}:${MessageQueueOptions.port}`;
 
         return new Promise(async (resolve) => {

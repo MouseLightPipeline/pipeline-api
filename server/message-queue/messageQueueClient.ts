@@ -28,6 +28,7 @@ export class MessageQueueClient {
     private async onWorkerStatus(data: IWorkerUpdateData) {
         await this._storageManager.PipelineWorkers.updateStatus((data));
     }
+
     private async onWorkerHeartbeat(data: IWorkerHeartbeatData) {
         await this._storageManager.PipelineWorkers.updateHeartbeat((data));
     }

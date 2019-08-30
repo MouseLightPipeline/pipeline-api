@@ -32,8 +32,6 @@ async function start() {
         context: () => new PipelineServerContext()
     });
 
-    // app.use("/thumbnailData", cors(), thumbnailQueryMiddleware);
-
     app.use("/thumbnail/:pipelineStageId/:x/:y/:z/:thumbName", cors(), thumbnailParamQueryMiddleware);
 
     server.applyMiddleware({app, path: ServiceOptions.graphQlEndpoint});
