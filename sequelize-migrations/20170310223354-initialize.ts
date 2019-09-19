@@ -88,9 +88,9 @@ export = {
                     type: Sequelize.TEXT,
                     defaultValue: ""
                 },
-                user_parameters: {
-                    type: Sequelize.TEXT,
-                    defaultValue: "{}"
+                sample_number: {
+                    type: Sequelize.INTEGER,
+                    defaultValue: -1
                 },
                 root_path: {
                     type: Sequelize.TEXT,
@@ -99,10 +99,6 @@ export = {
                 log_root_path: {
                     type: Sequelize.TEXT,
                     defaultValue: ""
-                },
-                sample_number: {
-                    type: Sequelize.INTEGER,
-                    defaultValue: -1
                 },
                 sample_x_min: Sequelize.INTEGER,
                 sample_x_max: Sequelize.INTEGER,
@@ -116,6 +112,14 @@ export = {
                 region_y_max: Sequelize.INTEGER,
                 region_z_min: Sequelize.INTEGER,
                 region_z_max: Sequelize.INTEGER,
+                user_parameters: {
+                    type: Sequelize.TEXT,
+                    defaultValue: "{}"
+                },
+                plane_markers: {
+                    type: Sequelize.TEXT,
+                    defaultValue: `{"x": [], "y": [], "z": []}`
+                },
                 is_processing: {
                     type: Sequelize.BOOLEAN,
                     defaultValue: false

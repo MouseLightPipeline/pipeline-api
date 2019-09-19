@@ -55,6 +55,8 @@ export interface IProjectAttributes {
     region_y_max?: number;
     region_z_min?: number;
     region_z_max?: number;
+    user_parameters?: string;
+    plane_markers?: string;
     is_processing?: boolean;
     input_source_state?: ProjectInputSourceState;
     last_seen_input_source?: Date;
@@ -130,6 +132,12 @@ export function sequelizeImport(sequelize, DataTypes) {
         },
         region_z_max: {
             type: DataTypes.DOUBLE
+        },
+        user_parameters: {
+            type: DataTypes.TEXT,
+        },
+        plane_markers: {
+            type: DataTypes.TEXT,
         },
         is_processing: {
             type: DataTypes.BOOLEAN
