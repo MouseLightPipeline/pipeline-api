@@ -139,6 +139,8 @@ type Project {
   region_y_max: Int
   region_z_min: Int
   region_z_max: Int
+  user_parameters: String
+  plane_markers: String
   is_processing: Boolean
   input_source_state: Int
   last_seen_input_source: Date
@@ -283,6 +285,8 @@ input ProjectInput {
   root_path: String
   log_root_path: String
   sample_number: Int
+  user_parameters: String
+  plane_markers: String
   input_source_state: Int
   last_seen_input_source: Float
   last_checked_input_source: Float

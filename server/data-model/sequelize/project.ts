@@ -31,6 +31,8 @@ export interface IProjectInput {
     sample_number?: number;
     region_bounds?: IProjectGridRegion;
     region_z_max?: number;
+    user_parameters?: string;
+    plane_markers?: string;
     input_source_state?: ProjectInputSourceState;
     last_seen_input_source?: Date;
     last_checked_input_source?: Date;
