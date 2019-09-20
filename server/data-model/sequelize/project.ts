@@ -69,6 +69,9 @@ export interface IProjectAttributes {
 }
 
 export interface IProject extends Instance<IProjectAttributes>, IProjectAttributes {
+    planeMarkers: any;
+    zPlaneSkipIndices: number[];
+
     getStages(): Promise<IPipelineStage[]>
 }
 
@@ -158,7 +161,23 @@ export function sequelizeImport(sequelize, DataTypes) {
         createdAt: "created_at",
         updatedAt: "updated_at",
         deletedAt: "deleted_at",
-        paranoid: true
+        paranoid: true,
+        getterMethods: {
+            planeMarkers: function() {
+                return JSON.parse(this.plane_markers);
+            },
+            zPlaneSkipIndices: function() {
+                return this.planeMarkers.z;
+            }
+        },
+        setterMethods: {
+            planeMarkers: function(value) {
+                this.setDataValue("plane_markers", JSON.stringify(value));
+            },
+            zPlaneSkipIndices: function(value) {
+                this.setDataValue("plane_markers", JSON.stringify(Object.assign({}, this.planeMarkers, {z: value})));
+            }
+        }
     });
 
     Project.associate = models => {

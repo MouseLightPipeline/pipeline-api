@@ -141,6 +141,7 @@ type Project {
   region_z_max: Int
   user_parameters: String
   plane_markers: String
+  zPlaneSkipIndices: [Int]
   is_processing: Boolean
   input_source_state: Int
   last_seen_input_source: Date
