@@ -288,6 +288,7 @@ input ProjectInput {
   sample_number: Int
   user_parameters: String
   plane_markers: String
+  zPlaneSkipIndices: [Int]
   input_source_state: Int
   last_seen_input_source: Float
   last_checked_input_source: Float

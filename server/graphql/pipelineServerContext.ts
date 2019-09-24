@@ -231,6 +231,11 @@ export class PipelineServerContext {
                     region_z_max: projectInput.region_bounds.z_max
                 }) : projectInput;
 
+            if (projectInput.zPlaneSkipIndices !== undefined) {
+                project.plane_markers = JSON.stringify(Object.assign({}, JSON.parse(row.plane_markers), {z: projectInput.zPlaneSkipIndices}));
+                delete project.zPlaneSkipIndices;
+            }
+
             await row.update(project);
 
             row = await this._persistentStorageManager.Projects.findByPk(project.id);

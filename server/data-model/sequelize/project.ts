@@ -33,6 +33,7 @@ export interface IProjectInput {
     region_z_max?: number;
     user_parameters?: string;
     plane_markers?: string;
+    zPlaneSkipIndices?: number[];
     input_source_state?: ProjectInputSourceState;
     last_seen_input_source?: Date;
     last_checked_input_source?: Date;
@@ -175,7 +176,7 @@ export function sequelizeImport(sequelize, DataTypes) {
                 this.setDataValue("plane_markers", JSON.stringify(value));
             },
             zPlaneSkipIndices: function(value) {
-                this.setDataValue("plane_markers", JSON.stringify(Object.assign({}, this.planeMarkers, {z: value})));
+                this.setDataValue("zPlaneSkipIndices", JSON.stringify(Object.assign({}, this.planeMarkers, {z: value})));
             }
         }
     });
