@@ -30,6 +30,7 @@ import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
 import {ServiceOptions} from "../options/serverOptions";
 import {SchedulerServiceOptions} from "../options/coreServicesOptions";
 import {Op} from "sequelize";
+import {ITaskExecution} from "../data-model/taskExecution";
 
 interface IPipelineTileExt extends IPipelineTile {
     stage_id: string;
@@ -133,7 +134,10 @@ export class PipelineServerContext {
         try {
             const row: IPipelineWorker = await this._persistentStorageManager.PipelineWorkers.findByPk(workerInput.id);
 
-            let output: IClientUpdateWorkerOutput = await PipelineWorkerClient.Instance().updateWorker(Object.assign({address: row.address, port: row.port}, {
+            let output: IClientUpdateWorkerOutput = await PipelineWorkerClient.Instance().updateWorker(Object.assign({
+                address: row.address,
+                port: row.port
+            }, {
                 id: workerInput.id,
                 local_work_capacity: workerInput.local_work_capacity,
                 cluster_work_capacity: workerInput.cluster_work_capacity
@@ -841,6 +845,38 @@ export class PipelineServerContext {
         const stageConnector = await connectorForStage(pipelineStage);
 
         return stageConnector.convertTileStatus(currentStatus, desiredStatus);
+    }
+
+    public async stopTaskExecution(pipelineStageId: string, taskExecutionId: string): Promise<ITaskExecution> {
+        const pipelineStage = await this._persistentStorageManager.PipelineStages.findByPk(pipelineStageId);
+
+        if (!pipelineStage) {
+            return null;
+        }
+
+        const stageConnector = await connectorForStage(pipelineStage);
+
+        if (!stageConnector) {
+            return null;
+        }
+
+        return stageConnector.taskExecutionForId(taskExecutionId);
+    }
+
+    public async removeTaskExecution(pipelineStageId: string, taskExecutionId: string): Promise<ITaskExecution> {
+        const pipelineStage = await this._persistentStorageManager.PipelineStages.findByPk(pipelineStageId);
+
+        if (!pipelineStage) {
+            return null;
+        }
+
+        const stageConnector = await connectorForStage(pipelineStage);
+
+        if (!stageConnector) {
+            return null;
+        }
+
+        return stageConnector.taskExecutionForId(taskExecutionId);
     }
 }
 

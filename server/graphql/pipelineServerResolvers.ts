@@ -22,6 +22,7 @@ import {IProjectAttributes, IProjectInput} from "../data-model/sequelize/project
 import {IPipelineStage, IPipelineStageAttributes} from "../data-model/sequelize/pipelineStage";
 import {IPipelineStageTileCounts, IPipelineTileAttributes} from "../data-access/sequelize/stageTableConnector";
 import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
+import {ITaskExecution} from "../data-model/taskExecution";
 
 interface IIdOnlyArgument {
     id: string;
@@ -87,6 +88,11 @@ interface IConvertTileStatusArgs {
     pipelineStageId: string;
     currentStatus: TilePipelineStatus;
     desiredStatus: TilePipelineStatus;
+}
+
+interface IStopTaskExecutionArguments {
+    pipelineStageId: string;
+    taskExecutionId: string;
 }
 
 let resolvers = {
@@ -194,6 +200,12 @@ let resolvers = {
         },
         convertTileStatus(_, args: IConvertTileStatusArgs, context: PipelineServerContext): Promise<IPipelineTileAttributes[]> {
             return context.convertTileStatus(args.pipelineStageId, args.currentStatus, args.desiredStatus);
+        },
+        stopTaskExecution(_, args: IStopTaskExecutionArguments, context: PipelineServerContext): Promise<ITaskExecution> {
+            return context.stopTaskExecution(args.pipelineStageId, args.taskExecutionId);
+        },
+        removeTaskExecution(_, args: IStopTaskExecutionArguments, context: PipelineServerContext): Promise<ITaskExecution> {
+            return context.removeTaskExecution(args.pipelineStageId, args.taskExecutionId);
         }
     },
     Project: {

@@ -1,6 +1,11 @@
 import {Instance, Model, Op, Sequelize} from "sequelize";
 
-import {createTaskExecutionTable, ITaskExecutionAttributes, ITaskExecutionModel} from "../../data-model/taskExecution";
+import {
+    createTaskExecutionTable,
+    ITaskExecution,
+    ITaskExecutionAttributes,
+    ITaskExecutionModel
+} from "../../data-model/taskExecution";
 import {TilePipelineStatus} from "../../data-model/TilePipelineStatus";
 
 export function generatePipelineCustomTableName(pipelineStageId: string, tableName) {
@@ -171,6 +176,10 @@ export class StageTableConnector {
 
     public async taskExecutionsForTile(id: string) {
         return await this._taskExecutionTable.findAll({where: {tile_id: id}, order: ["created_at"]});
+    }
+
+    public async taskExecutionForId(id: string): Promise<ITaskExecution> {
+        return this._taskExecutionTable.findByPk(id);
     }
 
     // -----------------------------------------------------------------------------------------------------------------
