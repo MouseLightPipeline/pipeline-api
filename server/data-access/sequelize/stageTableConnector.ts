@@ -182,6 +182,20 @@ export class StageTableConnector {
         return this._taskExecutionTable.findByPk(id);
     }
 
+    public async removeTaskExecution(id: string): Promise<boolean> {
+        try {
+            const taskExecution = await this.taskExecutionForId(id);
+
+            if (taskExecution != null) {
+                await taskExecution.destroy();
+                return true;
+            }
+        } catch {
+        }
+
+        return false;
+    }
+
     // -----------------------------------------------------------------------------------------------------------------
 
     protected defineTables() {

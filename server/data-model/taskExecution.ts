@@ -48,6 +48,7 @@ export interface ITaskExecutionAttributes {
     resolved_log_path?: string;
     expected_exit_code?: number;
     worker_id?: string;
+    worker_task_execution_id?: string,
     local_work_units?: number;
     cluster_work_units?: number;
     queue_type?: number;
@@ -121,6 +122,9 @@ export function createTaskExecutionTable(sequelize: Sequelize, tableName: string
             type: DataTypes.INTEGER
         },
         worker_id: {
+            type: DataTypes.UUID
+        },
+        worker_task_execution_id: {
             type: DataTypes.UUID
         },
         local_work_units: {

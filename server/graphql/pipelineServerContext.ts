@@ -854,29 +854,45 @@ export class PipelineServerContext {
             return null;
         }
 
+        debug(`stopExecution: found pipeline stage ${pipelineStage.name}`);
+
         const stageConnector = await connectorForStage(pipelineStage);
 
         if (!stageConnector) {
             return null;
         }
 
-        return stageConnector.taskExecutionForId(taskExecutionId);
+        debug(`stopExecution: found stageConnector`);
+
+        const taskExecution: ITaskExecution = await stageConnector.taskExecutionForId(taskExecutionId);
+
+        debug(`stopExecution: found taskExecution ${taskExecution.id}`);
+
+        debug(`stopExecution: has remote taskExecution ${taskExecution.worker_task_execution_id}`);
+
+        const worker: IPipelineWorker = await this._persistentStorageManager.PipelineWorkers.findByPk(taskExecution.worker_id);
+
+        let id = await PipelineWorkerClient.Instance().stopTaskExecution(worker, taskExecution.worker_task_execution_id);
+
+        debug(id);
+
+        return taskExecution;
     }
 
-    public async removeTaskExecution(pipelineStageId: string, taskExecutionId: string): Promise<ITaskExecution> {
+    public async removeTaskExecution(pipelineStageId: string, taskExecutionId: string): Promise<boolean> {
         const pipelineStage = await this._persistentStorageManager.PipelineStages.findByPk(pipelineStageId);
 
         if (!pipelineStage) {
-            return null;
+            return false;
         }
 
         const stageConnector = await connectorForStage(pipelineStage);
 
         if (!stageConnector) {
-            return null;
+            return false;
         }
 
-        return stageConnector.taskExecutionForId(taskExecutionId);
+        return stageConnector.removeTaskExecution(taskExecutionId);
     }
 }
 
@@ -905,7 +921,7 @@ setInterval(async () => {
 
         schedulerHealth.lastResponse = response.status;
 
-        if (schedulerHealth.lastResponse == 200) {
+        if (schedulerHealth.lastResponse === 200) {
             schedulerHealth.lastSeen = new Date();
         }
     } catch {

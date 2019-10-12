@@ -204,7 +204,7 @@ let resolvers = {
         stopTaskExecution(_, args: IStopTaskExecutionArguments, context: PipelineServerContext): Promise<ITaskExecution> {
             return context.stopTaskExecution(args.pipelineStageId, args.taskExecutionId);
         },
-        removeTaskExecution(_, args: IStopTaskExecutionArguments, context: PipelineServerContext): Promise<ITaskExecution> {
+        removeTaskExecution(_, args: IStopTaskExecutionArguments, context: PipelineServerContext): Promise<boolean> {
             return context.removeTaskExecution(args.pipelineStageId, args.taskExecutionId);
         }
     },

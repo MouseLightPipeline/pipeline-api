@@ -392,7 +392,7 @@ type Mutation {
   convertTileStatus(pipelineStageId: String, currentStatus: Int, desiredStatus: Int): [Tile]
 
   stopTaskExecution(pipelineStageId: String!, taskExecutionId: String!): TaskExecution
-  removeTaskExecution(pipelineStageId: String!, taskExecutionId: String!): TaskExecution
+  removeTaskExecution(pipelineStageId: String!, taskExecutionId: String!): Boolean
 }
 
 schema {

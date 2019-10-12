@@ -106,4 +106,32 @@ export class PipelineWorkerClient {
             return {worker: null, error: err};
         }
     }
+
+    public async stopTaskExecution(worker: IPipelineWorkerAttributes, taskExecutionId: string): Promise<any> {
+        const client = this.getClient(worker);
+
+        if (client === null) {
+            return {worker: null, error: "Could not connect to worker"};
+        }
+
+        try {
+            let response = await client.mutate({
+                mutation: gql`
+                mutation StopTaskMutation($taskExecutionId: String!) {
+                    stopTask(taskExecutionId: $taskExecutionId) {
+                      id
+                    }
+                }`,
+                variables: {
+                    taskExecutionId
+                }
+            });
+
+            return {taskExecutionId: response.data.id, error: null};
+        } catch (err) {
+            debug(`error requesting stop task execution ${taskExecutionId} for ${worker.name}`);
+
+            return {taskExecutionId: null, error: err};
+        }
+    }
 }
