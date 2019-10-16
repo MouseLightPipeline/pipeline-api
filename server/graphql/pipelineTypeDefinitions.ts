@@ -225,7 +225,7 @@ type TilePlane {
 }
 
 type MutateProjectOutput {
-    project: Project
+    source: Project
     error: String
 }
 
