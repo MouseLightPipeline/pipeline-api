@@ -1,6 +1,7 @@
-import {Sequelize, Model, DataTypes, HasManyGetAssociationsMixin, Association} from "sequelize";
+import {Sequelize, Model, DataTypes, HasManyGetAssociationsMixin} from "sequelize";
 
-import {PipelineStage} from "./pipelineStage";
+import {IPipelineStageInput, PipelineStage} from "./pipelineStage";
+import {ArchiveMutationOutput, MutationOutput} from "../../graphql/pipelineServerResolvers";
 
 export const NO_BOUND: number = null;
 export const NO_SAMPLE: number = -1;
@@ -33,7 +34,6 @@ export interface IProjectInput {
     region_bounds?: IProjectGridRegion;
     region_z_max?: number;
     user_parameters?: string;
-    plane_markers?: string;
     zPlaneSkipIndices?: number[];
     input_source_state?: ProjectInputSourceState;
     last_seen_input_source?: Date;
@@ -69,9 +69,187 @@ export class Project extends Model {
     public readonly updated_at: Date;
     public readonly deleted_at: Date;
 
-    public zPlaneSkipIndices: number[];
-
     public getStages!: HasManyGetAssociationsMixin<PipelineStage>;
+
+    public get zPlaneSkipIndices(): number[] {
+        return JSON.parse(this.plane_markers).z;
+    }
+
+    public set zPlaneSkipIndices(value: number[]) {
+        this.setDataValue("plane_markers", JSON.stringify(Object.assign({}, JSON.parse(this.plane_markers), {z: value})));
+    }
+
+    /**
+     * Update a project with the required mapping from an input object structure to flattened database structure.
+     * @param projectInput
+     */
+    public async updateProject(projectInput: IProjectInput): Promise<MutationOutput<Project>> {
+        try {
+            // Flatten into database columns
+            const projectUpdate = projectInput.region_bounds ?
+                Object.assign(projectInput, {
+                    region_x_min: projectInput.region_bounds.x_min,
+                    region_x_max: projectInput.region_bounds.x_max,
+                    region_y_min: projectInput.region_bounds.y_min,
+                    region_y_max: projectInput.region_bounds.y_max,
+                    region_z_min: projectInput.region_bounds.z_min,
+                    region_z_max: projectInput.region_bounds.z_max
+                }) : projectInput;
+
+            await this.update(projectUpdate);
+
+            if (projectInput.zPlaneSkipIndices !== undefined) {
+                this.zPlaneSkipIndices = projectInput.zPlaneSkipIndices;
+                await this.save();
+            }
+
+            return {source: this, error: null};
+        } catch (err) {
+            return {source: null, error: err.message}
+        }
+    }
+
+    /**
+     * Create a project with the required mapping from an input object structure to flattened database structure.
+     * @param projectInput
+     */
+    public static async createProject(projectInput: IProjectInput): Promise<MutationOutput<Project>> {
+        try {
+            const region: IProjectGridRegion = projectInput.region_bounds || {
+                x_min: NO_BOUND,
+                x_max: NO_BOUND,
+                y_min: NO_BOUND,
+                y_max: NO_BOUND,
+                z_min: NO_BOUND,
+                z_max: NO_BOUND
+            };
+
+            const project = {
+                name: projectInput.name || "",
+                description: projectInput.description || "",
+                root_path: projectInput.root_path || "",
+                sample_number: projectInput.sample_number || NO_SAMPLE,
+                sample_x_min: NO_BOUND,
+                sample_x_max: NO_BOUND,
+                sample_y_min: NO_BOUND,
+                sample_y_max: NO_BOUND,
+                sample_z_min: NO_BOUND,
+                sample_z_max: NO_BOUND,
+                region_x_min: region.x_min,
+                region_x_max: region.x_max,
+                region_y_min: region.y_min,
+                region_y_max: region.y_max,
+                region_z_min: region.z_min,
+                region_z_max: region.z_max,
+                is_processing: false
+            };
+
+            const result = await Project.create(project);
+
+            return {source: result, error: null};
+        } catch (err) {
+            return {source: null, error: err.message}
+        }
+    }
+
+    public static async findAndUpdateProject(projectInput: IProjectInput): Promise<MutationOutput<Project>> {
+        try {
+            let row = await Project.findByPk(projectInput.id);
+
+            if (row == null) {
+                return {source: null, error: `project with id ${projectInput.id} does not exist.`}
+            }
+
+            return await row.updateProject(projectInput);
+        } catch (err) {
+            return {source: null, error: err.message}
+        }
+    }
+
+    public static async duplicateProject(id: string): Promise<MutationOutput<Project>> {
+        try {
+            const input: any = (await Project.findByPk(id)).toJSON();
+
+            input.id = undefined;
+            input.name += " copy";
+            input.root_path += "copy";
+            input.sample_number = NO_SAMPLE;
+            input.sample_x_min = NO_BOUND;
+            input.sample_x_max = NO_BOUND;
+            input.sample_y_min = NO_BOUND;
+            input.sample_y_max = NO_BOUND;
+            input.sample_z_min = NO_BOUND;
+            input.sample_z_max = NO_BOUND;
+            input.region_x_min = NO_BOUND;
+            input.region_x_max = NO_BOUND;
+            input.region_y_min = NO_BOUND;
+            input.region_y_max = NO_BOUND;
+            input.region_z_min = NO_BOUND;
+            input.region_z_max = NO_BOUND;
+            input.input_source_state = ProjectInputSourceState.Unknown;
+            input.last_checked_input_source = null;
+            input.last_seen_input_source = null;
+            input.is_processing = false;
+
+            const project = await Project.create(input);
+
+            const inputStages = await PipelineStage.findAll({
+                where: {project_id: id},
+                order: [["depth", "ASC"]]
+            });
+
+            const duplicateMap = new Map<string, PipelineStage>();
+
+            const dupeStage = async (inputStage): Promise<PipelineStage> => {
+                const stageData: IPipelineStageInput = inputStage.toJSON();
+
+                stageData.project_id = project.id;
+                if (inputStage.previous_stage_id !== null) {
+                    stageData.previous_stage_id = duplicateMap.get(inputStage.previous_stage_id).id;
+                } else {
+                    stageData.previous_stage_id = null;
+                }
+                stageData.dst_path += "copy";
+                stageData.is_processing = false;
+
+                const stage = await PipelineStage.createFromInput(stageData);
+
+                duplicateMap.set(inputStage.id, stage);
+
+                return stage;
+            };
+
+            await inputStages.reduce(async (promise, stage) => {
+                await promise;
+                return dupeStage(stage);
+            }, Promise.resolve(null));
+
+            return {source: project, error: null};
+        } catch (err) {
+            console.log(err);
+            return {source: null, error: err.message}
+        }
+    }
+
+    /**
+     * Perform a soft-delete on a project.  This does not change the deleted status of the associated stages so that if
+     * this action is reversed the correct stages reappear (otherwise we could not differentiate between those
+     * archived due to project archive and those who has already been deleted independently).
+     * @param id project to archive id
+     */
+    public static async archiveProject(id: string): Promise<ArchiveMutationOutput> {
+        try {
+            const affectedRowCount = await Project.destroy({where: {id}});
+
+            if (affectedRowCount > 0) {
+                return {id, error: null};
+            } else {
+                return {id, error: "The project could not be deleted for unknown reasons."};
+            }
+        } catch (err) {
+            return {id, error: err.message}
+        }
+    }
 }
 
 const TableName = "Projects";
@@ -159,16 +337,6 @@ export const modelInit = (sequelize: Sequelize) => {
         updatedAt: "updated_at",
         deletedAt: "deleted_at",
         paranoid: true,
-        getterMethods: {
-            zPlaneSkipIndices: function (): number[] {
-                return JSON.parse(this.plane_markers).z;
-            }
-        },
-        setterMethods: {
-            zPlaneSkipIndices: function (value: number[]) {
-                this.setDataValue("plane_markers", JSON.stringify(Object.assign({}, JSON.parse(this.plane_markers), {z: value})));
-            }
-        },
         sequelize
     });
 };

@@ -41,6 +41,19 @@ test("data-access:projects:z-plane", async () => {
 
     expect(project.zPlaneSkipIndices.length).toBe(1);
     expect(project.zPlaneSkipIndices).toContain(1);
+
+    const mutationOutput = await Project.findAndUpdateProject({id: project.id, zPlaneSkipIndices: [2, 3]});
+    expect(mutationOutput.error).toBeNull();
+
+    await project.reload();
+
+    expect(project.zPlaneSkipIndices.length).toBe(2);
+    expect(project.zPlaneSkipIndices).toContain(2);
+    expect(project.zPlaneSkipIndices).toContain(3);
+
+    expect(mutationOutput.source.zPlaneSkipIndices.length).toBe(2);
+    expect(mutationOutput.source.zPlaneSkipIndices).toContain(2);
+    expect(mutationOutput.source.zPlaneSkipIndices).toContain(3);
 });
 
 test("data-access:projects:user-arguments", async () => {

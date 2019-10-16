@@ -60,27 +60,6 @@ export class PipelineStage extends Model {
     public getTaskDefinition!: BelongsToGetAssociationMixin<TaskDefinition>;
     public getPreviousStage!: BelongsToGetAssociationMixin<PipelineStage>;
 
-    public static async remove(id: string): Promise<string> {
-        return this.sequelize.transaction(async (t: Transaction) => {
-            const stage: PipelineStage = await PipelineStage.findByPk(id);
-
-            if (stage) {
-                const children: PipelineStage[] = await PipelineStage.findAll({
-                    where: {previous_stage_id: id},
-                    transaction: t
-                });
-
-                await Promise.all(children.map(async (c) => {
-                    return c.update({previous_stage_id: stage.previous_stage_id}, {transaction: t});
-                }));
-
-                await PipelineStage.destroy({where: {id}, transaction: t});
-            }
-
-            return id;
-        });
-    };
-
     public static createFromInput = async (stageInput: IPipelineStageInput): Promise<PipelineStage> => {
         let previousDepth = 0;
 
@@ -105,6 +84,27 @@ export class PipelineStage extends Model {
         };
 
         return PipelineStage.create(pipelineStage);
+    };
+
+    public static async remove(id: string): Promise<string> {
+        return this.sequelize.transaction(async (t: Transaction) => {
+            const stage: PipelineStage = await PipelineStage.findByPk(id);
+
+            if (stage) {
+                const children: PipelineStage[] = await PipelineStage.findAll({
+                    where: {previous_stage_id: id},
+                    transaction: t
+                });
+
+                await Promise.all(children.map(async (c) => {
+                    return c.update({previous_stage_id: stage.previous_stage_id}, {transaction: t});
+                }));
+
+                await PipelineStage.destroy({where: {id}, transaction: t});
+            }
+
+            return id;
+        });
     };
 }
 

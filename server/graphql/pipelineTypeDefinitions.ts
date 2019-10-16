@@ -125,7 +125,6 @@ type Project {
   description: String
   root_path: String
   log_root_path: String
-  dashboard_json_status: Boolean
   sample_number: Int
   sample_x_min: Int
   sample_x_max: Int
@@ -287,7 +286,6 @@ input ProjectInput {
   log_root_path: String
   sample_number: Int
   user_parameters: String
-  plane_markers: String
   zPlaneSkipIndices: [Int]
   input_source_state: Int
   last_seen_input_source: Float
@@ -344,8 +342,8 @@ type Query {
   pipelineWorker(id: String!): PipelineWorker
   pipelineWorkers: [PipelineWorker!]!
 
-  project(id: String!): Project
   projects: [Project!]!
+  project(id: String!): Project
 
   pipelineStage(id: String!): PipelineStage
   pipelineStages: [PipelineStage!]!

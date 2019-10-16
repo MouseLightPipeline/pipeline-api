@@ -4,8 +4,6 @@ import {Kind} from "graphql/language";
 import {
     IPipelineStageDeleteOutput,
     IPipelineStageMutationOutput,
-    IProjectDeleteOutput,
-    IProjectMutationOutput,
     ITaskDefinitionDeleteOutput,
     ITaskDefinitionMutationOutput,
     ITaskRepositoryDeleteOutput,
@@ -94,7 +92,17 @@ interface IStopTaskExecutionArguments {
     taskExecutionId: string;
 }
 
-let resolvers = {
+export type MutationOutput<T> = {
+    source: T;
+    error: string | null;
+}
+
+export type ArchiveMutationOutput = {
+    id: string;
+    error: string | null;
+}
+
+const resolvers = {
     Query: {
         schedulerHealth(_, __, context: PipelineServerContext): SchedulerHealth {
             return PipelineServerContext.getSchedulerHealth();
@@ -105,11 +113,11 @@ let resolvers = {
         pipelineWorkers(_, __, context: PipelineServerContext): Promise<PipelineWorker[]> {
             return context.getPipelineWorkers();
         },
-        project(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<Project> {
-            return context.getProject(args.id);
-        },
         projects(_, __, context: PipelineServerContext): Promise<Project[]> {
-            return context.getProjects();
+            return Project.findAll({order: [["sample_number", "ASC"], ["name", "ASC"]]});
+        },
+        project(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<Project> {
+            return Project.findByPk(args.id);
         },
         pipelineStage(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<PipelineStage> {
             return context.getPipelineStage(args.id);
@@ -146,17 +154,17 @@ let resolvers = {
         }
     },
     Mutation: {
-        createProject(_, args: ICreateProjectArguments, context: PipelineServerContext): Promise<IProjectMutationOutput> {
-            return context.createProject(args.project);
+        createProject(_, args: ICreateProjectArguments, context: PipelineServerContext): Promise<MutationOutput<Project>> {
+            return Project.createProject(args.project);
         },
-        updateProject(_, args: IUpdateProjectArguments, context: PipelineServerContext): Promise<IProjectMutationOutput> {
-            return context.updateProject(args.project);
+        updateProject(_, args: IUpdateProjectArguments, context: PipelineServerContext): Promise<MutationOutput<Project>> {
+            return Project.findAndUpdateProject(args.project);
         },
-        duplicateProject(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IProjectMutationOutput> {
-            return context.duplicateProject(args.id);
+        duplicateProject(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<MutationOutput<Project>> {
+            return Project.duplicateProject(args.id);
         },
-        archiveProject(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IProjectDeleteOutput> {
-            return context.archiveProject(args.id);
+        archiveProject(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ArchiveMutationOutput> {
+            return Project.archiveProject(args.id);
         },
         createPipelineStage(_, args: ICreatePipelineStageArguments, context: PipelineServerContext): Promise<IPipelineStageMutationOutput> {
             return context.createPipelineStage(args.pipelineStage);
@@ -208,27 +216,24 @@ let resolvers = {
         }
     },
     Project: {
-        stages(project, _, context: PipelineServerContext): any {
+        stages(project: Project, _, context: PipelineServerContext): any {
             return context.getPipelineStagesForProject(project.id);
-        },
-        dashboard_json_status(project: Project, _, context: PipelineServerContext): boolean {
-            return PipelineServerContext.getDashboardJsonStatusForProject(project);
         }
     },
     PipelineStage: {
-        task(stage, _, context: PipelineServerContext): any {
+        task(stage: PipelineStage, _, context: PipelineServerContext): any {
             return context.getTaskDefinition(stage.task_id);
         },
-        project(stage, _, context: PipelineServerContext): any {
-            return context.getProject(stage.project_id);
+        project(stage: PipelineStage, _, context: PipelineServerContext): any {
+            return stage.getProject();
         },
-        previous_stage(stage, _, context: PipelineServerContext): Promise<PipelineStage> {
+        previous_stage(stage: PipelineStage, _, context: PipelineServerContext): Promise<PipelineStage> {
             return context.getPipelineStage(stage.previous_stage_id);
         },
-        child_stages(stage, _, context: PipelineServerContext): Promise<PipelineStage[]> {
+        child_stages(stage: PipelineStage, _, context: PipelineServerContext): Promise<PipelineStage[]> {
             return context.getPipelineStageChildren(stage.id);
         },
-        tile_status(stage, _, context: PipelineServerContext): Promise<IPipelineStageTileCounts> {
+        tile_status(stage: PipelineStage, _, context: PipelineServerContext): Promise<IPipelineStageTileCounts> {
             return context.getPipelineStageTileStatus(stage.id);
         }
     },
