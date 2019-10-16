@@ -1,8 +1,6 @@
 import {GraphQLScalarType} from "graphql";
 import {Kind} from "graphql/language";
 
-import {ITaskRepository} from "../data-model/sequelize/taskRepository";
-
 import {
     IPipelineStageDeleteOutput,
     IPipelineStageMutationOutput,
@@ -16,20 +14,21 @@ import {
     IWorkerMutationOutput,
     PipelineServerContext, SchedulerHealth
 } from "./pipelineServerContext";
-import {ITaskDefinition, ITaskDefinitionAttributes} from "../data-model/sequelize/taskDefinition";
-import {IPipelineWorkerAttributes, IPipelineWorker} from "../data-model/sequelize/pipelineWorker";
-import {IProjectAttributes, IProjectInput} from "../data-model/sequelize/project";
-import {IPipelineStage, IPipelineStageAttributes} from "../data-model/sequelize/pipelineStage";
-import {IPipelineStageTileCounts, IPipelineTileAttributes} from "../data-access/sequelize/stageTableConnector";
+import {TaskRepository, ITaskRepositoryInput} from "../data-model/sequelize/taskRepository";
+import {TaskDefinition, ITaskDefinitionInput} from "../data-model/sequelize/taskDefinition";
+import {PipelineWorker, IPipelineWorkerInput} from "../data-model/sequelize/pipelineWorker";
+import {Project, IProjectInput} from "../data-model/sequelize/project";
+import {PipelineStage, IPipelineStageInput} from "../data-model/sequelize/pipelineStage";
+import {IPipelineStageTileCounts, PipelineTile} from "../data-access/sequelize/stageTableConnector";
 import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
-import {ITaskExecution} from "../data-model/taskExecution";
+import {TaskExecution} from "../data-model/taskExecution";
 
 interface IIdOnlyArgument {
     id: string;
 }
 
 interface IUpdateWorkerArguments {
-    worker: IPipelineWorkerAttributes;
+    worker: IPipelineWorkerInput;
 }
 
 interface ITaskDefinitionIdArguments {
@@ -46,19 +45,19 @@ interface IUpdateProjectArguments {
 }
 
 interface ICreatePipelineStageArguments {
-    pipelineStage: IPipelineStageAttributes;
+    pipelineStage: IPipelineStageInput;
 }
 
 interface IUpdatePipelineStageArguments {
-    pipelineStage: IPipelineStageAttributes;
+    pipelineStage: IPipelineStageInput;
 }
 
 interface IMutateRepositoryArguments {
-    taskRepository: ITaskRepository;
+    taskRepository: ITaskRepositoryInput;
 }
 
 interface IMutateTaskDefinitionArguments {
-    taskDefinition: ITaskDefinitionAttributes;
+    taskDefinition: ITaskDefinitionInput;
 }
 
 interface IPipelinePlaneStatusArguments {
@@ -100,37 +99,37 @@ let resolvers = {
         schedulerHealth(_, __, context: PipelineServerContext): SchedulerHealth {
             return PipelineServerContext.getSchedulerHealth();
         },
-        pipelineWorker(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IPipelineWorker> {
+        pipelineWorker(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<PipelineWorker> {
             return context.getPipelineWorker(args.id);
         },
-        pipelineWorkers(_, __, context: PipelineServerContext): Promise<IPipelineWorker[]> {
+        pipelineWorkers(_, __, context: PipelineServerContext): Promise<PipelineWorker[]> {
             return context.getPipelineWorkers();
         },
-        project(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IProjectAttributes> {
+        project(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<Project> {
             return context.getProject(args.id);
         },
-        projects(_, __, context: PipelineServerContext): Promise<IProjectAttributes[]> {
+        projects(_, __, context: PipelineServerContext): Promise<Project[]> {
             return context.getProjects();
         },
-        pipelineStage(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IPipelineStage> {
+        pipelineStage(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<PipelineStage> {
             return context.getPipelineStage(args.id);
         },
-        pipelineStages(_, __, context: PipelineServerContext): Promise<IPipelineStage[]> {
+        pipelineStages(_, __, context: PipelineServerContext): Promise<PipelineStage[]> {
             return context.getPipelineStages();
         },
-        pipelineStagesForProject(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IPipelineStage[]> {
+        pipelineStagesForProject(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<PipelineStage[]> {
             return context.getPipelineStagesForProject(args.id);
         },
-        taskDefinition(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskDefinitionAttributes> {
+        taskDefinition(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<TaskDefinition> {
             return context.getTaskDefinition(args.id);
         },
-        taskDefinitions(_, __, context: PipelineServerContext): Promise<ITaskDefinitionAttributes[]> {
+        taskDefinitions(_, __, context: PipelineServerContext): Promise<TaskDefinition[]> {
             return context.getTaskDefinitions();
         },
-        taskRepository(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskRepository> {
+        taskRepository(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<TaskRepository> {
             return context.getTaskRepository(args.id);
         },
-        taskRepositories(_, __, context: PipelineServerContext): Promise<ITaskRepository[]> {
+        taskRepositories(_, __, context: PipelineServerContext): Promise<TaskRepository[]> {
             return context.getTaskRepositories();
         },
         projectPlaneTileStatus(_, args: IPipelinePlaneStatusArguments, context: PipelineServerContext): Promise<any> {
@@ -195,13 +194,13 @@ let resolvers = {
         setWorkerAvailability(_, args: IActiveWorkerArguments, context: PipelineServerContext) {
             return context.setWorkerAvailability(args.id, args.shouldBeInSchedulerPool);
         },
-        setTileStatus(_, args: ISetTileStatusArgs, context: PipelineServerContext): Promise<IPipelineTileAttributes[]> {
+        setTileStatus(_, args: ISetTileStatusArgs, context: PipelineServerContext): Promise<PipelineTile[]> {
             return context.setTileStatus(args.pipelineStageId, args.tileIds, args.status);
         },
-        convertTileStatus(_, args: IConvertTileStatusArgs, context: PipelineServerContext): Promise<IPipelineTileAttributes[]> {
+        convertTileStatus(_, args: IConvertTileStatusArgs, context: PipelineServerContext): Promise<PipelineTile[]> {
             return context.convertTileStatus(args.pipelineStageId, args.currentStatus, args.desiredStatus);
         },
-        stopTaskExecution(_, args: IStopTaskExecutionArguments, context: PipelineServerContext): Promise<ITaskExecution> {
+        stopTaskExecution(_, args: IStopTaskExecutionArguments, context: PipelineServerContext): Promise<TaskExecution> {
             return context.stopTaskExecution(args.pipelineStageId, args.taskExecutionId);
         },
         removeTaskExecution(_, args: IStopTaskExecutionArguments, context: PipelineServerContext): Promise<boolean> {
@@ -212,7 +211,7 @@ let resolvers = {
         stages(project, _, context: PipelineServerContext): any {
             return context.getPipelineStagesForProject(project.id);
         },
-        dashboard_json_status(project: IProjectAttributes, _, context: PipelineServerContext): boolean {
+        dashboard_json_status(project: Project, _, context: PipelineServerContext): boolean {
             return PipelineServerContext.getDashboardJsonStatusForProject(project);
         }
     },
@@ -223,10 +222,10 @@ let resolvers = {
         project(stage, _, context: PipelineServerContext): any {
             return context.getProject(stage.project_id);
         },
-        previous_stage(stage, _, context: PipelineServerContext): Promise<IPipelineStageAttributes> {
+        previous_stage(stage, _, context: PipelineServerContext): Promise<PipelineStage> {
             return context.getPipelineStage(stage.previous_stage_id);
         },
-        child_stages(stage, _, context: PipelineServerContext): Promise<IPipelineStage[]> {
+        child_stages(stage, _, context: PipelineServerContext): Promise<PipelineStage[]> {
             return context.getPipelineStageChildren(stage.id);
         },
         tile_status(stage, _, context: PipelineServerContext): Promise<IPipelineStageTileCounts> {
@@ -234,22 +233,22 @@ let resolvers = {
         }
     },
     TaskRepository: {
-        task_definitions(repository: ITaskRepository, _, context: PipelineServerContext): any {
+        task_definitions(repository: TaskRepository, _, context: PipelineServerContext): any {
             return context.getRepositoryTasks(repository.id);
         }
     },
     TaskDefinition: {
-        task_repository(taskDefinition: ITaskDefinition, _, context: PipelineServerContext): any {
+        task_repository(taskDefinition: TaskDefinition, _, context: PipelineServerContext): any {
             if (taskDefinition.task_repository_id) {
                 return context.getTaskRepository(taskDefinition.task_repository_id);
             }
 
             return null;
         },
-        pipeline_stages(taskDefinition: ITaskDefinition, _, context: PipelineServerContext): any {
+        pipeline_stages(taskDefinition: TaskDefinition, _, context: PipelineServerContext): any {
             return context.getPipelineStagesForTaskDefinition(taskDefinition.id);
         },
-        script_status(taskDefinition: ITaskDefinition, _, context: PipelineServerContext): any {
+        script_status(taskDefinition: TaskDefinition, _, context: PipelineServerContext): any {
             return PipelineServerContext.getScriptStatusForTaskDefinition(taskDefinition);
         }
     },

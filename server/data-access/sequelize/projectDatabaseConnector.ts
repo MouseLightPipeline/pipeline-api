@@ -1,26 +1,24 @@
-import {PersistentStorageManager} from "./databaseConnector";
-
 const sequelize = require("sequelize");
 const asyncUtils = require("async");
 import {Sequelize} from "sequelize";
 
 const debug = require("debug")("pipeline:coordinator-api:project-database-connector");
 
-import {IProjectAttributes} from "../../data-model/sequelize/project";
-import {IPipelineStageAttributes, PipelineStageMethod} from "../../data-model/sequelize/pipelineStage";
+import {Project} from "../../data-model/sequelize/project";
+import {PipelineStage, PipelineStageMethod} from "../../data-model/sequelize/pipelineStage";
 import {StageTableConnector} from "./stageTableConnector";
 import {SequelizeOptions} from "../../options/coreServicesOptions";
 import {AdjacentTileStageConnector} from "./adjacentTileStageConnector";
 
 interface IAccessQueueToken {
-    project: IProjectAttributes;
+    project: Project;
     resolve: any;
     reject: any;
 }
 
 interface IStageQueueToken {
     projectConnector: ProjectDatabaseConnector;
-    stage: IPipelineStageAttributes;
+    stage: PipelineStage;
     resolve: any;
     reject: any;
 }
@@ -34,14 +32,14 @@ interface IProjectQueueToken {
 export class ProjectDatabaseConnector {
     private _isConnected: boolean;
     private _connection: Sequelize;
-    private _project: IProjectAttributes;
+    private _project: Project;
     private _databaseName: string;
 
     private _stageConnectors = new Map<string, StageTableConnector>();
     private _stageConnectorQueueAccess = asyncUtils.queue(accessStageQueue, 1);
     private _projectConnectorQueueAccess = asyncUtils.queue(accessProjectQueue, 1);
 
-    public async initialize(project: IProjectAttributes) {
+    public async initialize(project: Project) {
         this._project = project;
         this._databaseName = this._project.id;
 
@@ -58,11 +56,11 @@ export class ProjectDatabaseConnector {
         this._isConnected = true;
     }
 
-    public get Project(): IProjectAttributes {
+    public get Project(): Project {
         return this._project;
     }
 
-    public async connectorForStage(stage: IPipelineStageAttributes): Promise<StageTableConnector> {
+    public async connectorForStage(stage: PipelineStage): Promise<StageTableConnector> {
         if (this._stageConnectors.has(stage.id)) {
             return this._stageConnectors.get(stage.id);
         }
@@ -78,12 +76,16 @@ export class ProjectDatabaseConnector {
         });
     }
 
-    public async internalConnectorForStage(stage: IPipelineStageAttributes) {
+    public async internalConnectorForStage(stage: PipelineStage) {
         // This method can only be called serially despite async due to async queue.  Could arrive to find
         if (!this._stageConnectors.has(stage.id)) {
 
             // The API does not create stage tables, only the scheduler does.
-            let haveTables = (await this._connection.query(`SELECT to_regclass('public.${stage.id}');`, {type: sequelize.QueryTypes.SELECT})).some(r => r.to_regclass !== null);
+            // let haveTables = (await this._connection.query(`SELECT to_regclass('public.${stage.id}');`, {type: sequelize.QueryTypes.SELECT})).some(r => r.to_regclass !== null);
+
+            const test = await this._connection.query<any>(`SELECT to_regclass('public.${stage.id}');`, {type: sequelize.QueryTypes.SELECT});
+
+            const haveTables = (await this._connection.query<any>(`SELECT to_regclass('public.${stage.id}');`, {type: sequelize.QueryTypes.SELECT})).some(r => r.to_regclass !== null);
 
             if (!haveTables) {
                 return null;
@@ -152,15 +154,15 @@ const connectionMap = new Map<string, ProjectDatabaseConnector>();
 
 const connectorQueueAccess = asyncUtils.queue(accessQueueWorker, 1);
 
-export async function connectorForStage(pipelineStage: IPipelineStageAttributes): Promise<StageTableConnector> {
-    const project = await PersistentStorageManager.Instance().Projects.findByPk(pipelineStage.project_id);
+export async function connectorForStage(pipelineStage: PipelineStage): Promise<StageTableConnector> {
+    const project = await Project.findByPk(pipelineStage.project_id);
 
     const connector = await connectorForProject(project);
 
     return connector.connectorForStage(pipelineStage);
 }
 
-export async function connectorForProject(project: IProjectAttributes): Promise<ProjectDatabaseConnector> {
+export async function connectorForProject(project: Project): Promise<ProjectDatabaseConnector> {
     if (connectionMap.has(project.id)) {
         return connectionMap.get(project.id);
     }

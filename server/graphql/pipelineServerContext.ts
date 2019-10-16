@@ -3,24 +3,21 @@ import * as fs from "fs";
 
 const debug = require("debug")("pipeline:coordinator-api:server-context");
 
-import {PersistentStorageManager} from "../data-access/sequelize/databaseConnector";
-import {ITaskDefinition, ITaskDefinitionAttributes} from "../data-model/sequelize/taskDefinition";
-import {ITaskRepository} from "../data-model/sequelize/taskRepository";
-import {IPipelineWorker, IPipelineWorkerAttributes} from "../data-model/sequelize/pipelineWorker";
+import {TaskDefinition, ITaskDefinitionInput} from "../data-model/sequelize/taskDefinition";
+import {TaskRepository, ITaskRepositoryInput} from "../data-model/sequelize/taskRepository";
+import {PipelineWorker, IPipelineWorkerInput} from "../data-model/sequelize/pipelineWorker";
 import {
-    IProject,
-    IProjectAttributes,
+    Project,
     IProjectInput,
     NO_BOUND,
     NO_SAMPLE,
     ProjectInputSourceState
 } from "../data-model/sequelize/project";
-import {IPipelineStage, IPipelineStageAttributes} from "../data-model/sequelize/pipelineStage";
+import {PipelineStage, IPipelineStageInput} from "../data-model/sequelize/pipelineStage";
 import {IClientUpdateWorkerOutput, PipelineWorkerClient} from "./client/pipelineWorkerClient";
 import {
     IPipelineStageTileCounts,
-    IPipelineTile,
-    IPipelineTileAttributes
+    PipelineTile
 } from "../data-access/sequelize/stageTableConnector";
 import {
     connectorForProject,
@@ -30,9 +27,9 @@ import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
 import {ServiceOptions} from "../options/serverOptions";
 import {SchedulerServiceOptions} from "../options/coreServicesOptions";
 import {Op} from "sequelize";
-import {ITaskExecution} from "../data-model/taskExecution";
+import {TaskExecution} from "../data-model/taskExecution";
 
-interface IPipelineTileExt extends IPipelineTile {
+interface IPipelineTileExt extends PipelineTile {
     stage_id: string;
     depth: number;
 }
@@ -61,12 +58,12 @@ export class SchedulerHealth {
 }
 
 export interface IWorkerMutationOutput {
-    worker: IPipelineWorker;
+    worker: PipelineWorker;
     error: string;
 }
 
 export interface IProjectMutationOutput {
-    project: IProject;
+    project: Project;
     error: string;
 }
 
@@ -76,7 +73,7 @@ export interface IProjectDeleteOutput {
 }
 
 export interface IPipelineStageMutationOutput {
-    pipelineStage: IPipelineStageAttributes;
+    pipelineStage: PipelineStage;
     error: string;
 }
 
@@ -86,7 +83,7 @@ export interface IPipelineStageDeleteOutput {
 }
 
 export interface ITaskRepositoryMutationOutput {
-    taskRepository: ITaskRepository;
+    taskRepository: TaskRepository;
     error: string;
 }
 
@@ -96,7 +93,7 @@ export interface ITaskRepositoryDeleteOutput {
 }
 
 export interface ITaskDefinitionMutationOutput {
-    taskDefinition: ITaskDefinitionAttributes;
+    taskDefinition: TaskDefinition;
     error: string;
 }
 
@@ -113,26 +110,24 @@ export interface ISimplePage<T> {
     items: T[]
 }
 
-export type ITilePage = ISimplePage<IPipelineTileAttributes>;
+export type ITilePage = ISimplePage<PipelineTile>;
 
 export class PipelineServerContext {
-    private _persistentStorageManager: PersistentStorageManager = PersistentStorageManager.Instance();
-
     public static getSchedulerHealth(): SchedulerHealth {
         return schedulerHealth;
     }
 
-    public async getPipelineWorker(id: string): Promise<IPipelineWorker> {
-        return this._persistentStorageManager.PipelineWorkers.findByPk(id);
+    public async getPipelineWorker(id: string): Promise<PipelineWorker> {
+        return PipelineWorker.findByPk(id);
     }
 
-    public async getPipelineWorkers(): Promise<IPipelineWorker[]> {
-        return this._persistentStorageManager.PipelineWorkers.findAll({});
+    public async getPipelineWorkers(): Promise<PipelineWorker[]> {
+        return PipelineWorker.findAll({});
     }
 
-    public async updateWorker(workerInput: IPipelineWorkerAttributes): Promise<IWorkerMutationOutput> {
+    public async updateWorker(workerInput: IPipelineWorkerInput): Promise<IWorkerMutationOutput> {
         try {
-            const row: IPipelineWorker = await this._persistentStorageManager.PipelineWorkers.findByPk(workerInput.id);
+            const row: PipelineWorker = await PipelineWorker.findByPk(workerInput.id);
 
             let output: IClientUpdateWorkerOutput = await PipelineWorkerClient.Instance().updateWorker(Object.assign({
                 address: row.address,
@@ -147,14 +142,14 @@ export class PipelineServerContext {
                 return {worker: null, error: output.error};
             }
 
-            const attr: IPipelineWorkerAttributes = {
+            const attr: IPipelineWorkerInput = {
                 local_work_capacity: output.worker.local_work_capacity,
                 cluster_work_capacity: output.worker.cluster_work_capacity
             };
 
             await row.update(attr);
 
-            const row2 = await this._persistentStorageManager.PipelineWorkers.findByPk(workerInput.id);
+            const row2 = await PipelineWorker.findByPk(workerInput.id);
 
             return {worker: row2, error: ""};
         } catch (err) {
@@ -162,24 +157,24 @@ export class PipelineServerContext {
         }
     }
 
-    public async setWorkerAvailability(id: string, shouldBeInSchedulerPool: boolean): Promise<IPipelineWorker> {
-        const worker = await this._persistentStorageManager.PipelineWorkers.findByPk(id);
+    public async setWorkerAvailability(id: string, shouldBeInSchedulerPool: boolean): Promise<PipelineWorker> {
+        const worker = await PipelineWorker.findByPk(id);
 
         await worker.update({is_in_scheduler_pool: shouldBeInSchedulerPool});
 
-        return this._persistentStorageManager.PipelineWorkers.findByPk(id);
+        return PipelineWorker.findByPk(id);
     }
 
-    public static getDashboardJsonStatusForProject(project: IProjectAttributes): boolean {
+    public static getDashboardJsonStatusForProject(project: Project): boolean {
         return fs.existsSync(path.join(project.root_path, "dashboard.json"));
     }
 
-    public async getProject(id: string): Promise<IProject> {
-        return this._persistentStorageManager.Projects.findByPk(id);
+    public async getProject(id: string): Promise<Project> {
+        return Project.findByPk(id);
     }
 
-    public async getProjects(): Promise<IProject[]> {
-        return this._persistentStorageManager.Projects.findAll({order: [["sample_number", "ASC"], ["name", "ASC"]]});
+    public async getProjects(): Promise<Project[]> {
+        return Project.findAll({order: [["sample_number", "ASC"], ["name", "ASC"]]});
     }
 
     public async createProject(projectInput: IProjectInput): Promise<IProjectMutationOutput> {
@@ -213,7 +208,7 @@ export class PipelineServerContext {
                 is_processing: false
             };
 
-            const result = await this._persistentStorageManager.Projects.create(project);
+            const result = await Project.create(project);
 
             return {project: result, error: ""};
         } catch (err) {
@@ -223,7 +218,7 @@ export class PipelineServerContext {
 
     public async updateProject(projectInput: IProjectInput): Promise<IProjectMutationOutput> {
         try {
-            let row = await this._persistentStorageManager.Projects.findByPk(projectInput.id);
+            let row = await Project.findByPk(projectInput.id);
 
             let project = projectInput.region_bounds ?
                 Object.assign(projectInput, {
@@ -242,7 +237,7 @@ export class PipelineServerContext {
 
             await row.update(project);
 
-            row = await this._persistentStorageManager.Projects.findByPk(project.id);
+            row = await Project.findByPk(project.id);
 
             return {project: row, error: ""};
         } catch (err) {
@@ -252,7 +247,7 @@ export class PipelineServerContext {
 
     public async duplicateProject(id: string): Promise<IProjectMutationOutput> {
         try {
-            const input = (await this._persistentStorageManager.Projects.findByPk(id)).toJSON();
+            const input: any = (await Project.findByPk(id)).toJSON();
 
             input.id = undefined;
             input.name += " copy";
@@ -274,20 +269,18 @@ export class PipelineServerContext {
             input.last_checked_input_source = null;
             input.last_seen_input_source = null;
             input.is_processing = false;
-            input.created_at = new Date();
-            input.updated_at = input.created_at;
 
-            const project = await this._persistentStorageManager.Projects.create(input);
+            const project = await Project.create(input);
 
-            const inputStages = await this._persistentStorageManager.PipelineStages.findAll({
+            const inputStages = await PipelineStage.findAll({
                 where: {project_id: id},
                 order: [["depth", "ASC"]]
             });
 
-            const duplicateMap = new Map<string, IPipelineStage>();
+            const duplicateMap = new Map<string, PipelineStage>();
 
-            const dupeStage = async (inputStage): Promise<IPipelineStage> => {
-                const stageData: IPipelineStageAttributes = inputStage.toJSON();
+            const dupeStage = async (inputStage): Promise<PipelineStage> => {
+                const stageData: IPipelineStageInput = inputStage.toJSON();
 
                 stageData.project_id = project.id;
                 if (inputStage.previous_stage_id !== null) {
@@ -298,7 +291,7 @@ export class PipelineServerContext {
                 stageData.dst_path += "copy";
                 stageData.is_processing = false;
 
-                const stage = await this._persistentStorageManager.PipelineStages.createFromInput(stageData);
+                const stage = await PipelineStage.createFromInput(stageData);
 
                 duplicateMap.set(inputStage.id, stage);
 
@@ -319,7 +312,7 @@ export class PipelineServerContext {
 
     public async archiveProject(id: string): Promise<IProjectDeleteOutput> {
         try {
-            const affectedRowCount = await this._persistentStorageManager.Projects.destroy({where: {id}});
+            const affectedRowCount = await Project.destroy({where: {id}});
 
             if (affectedRowCount > 0) {
                 return {id, error: ""};
@@ -331,35 +324,35 @@ export class PipelineServerContext {
         }
     }
 
-    public async getPipelineStage(id: string): Promise<IPipelineStage> {
-        return this._persistentStorageManager.PipelineStages.findByPk(id);
+    public async getPipelineStage(id: string): Promise<PipelineStage> {
+        return PipelineStage.findByPk(id);
     }
 
-    public async getPipelineStages(): Promise<IPipelineStage[]> {
+    public async getPipelineStages(): Promise<PipelineStage[]> {
         const projects = await this.getProjects();
 
-        return this._persistentStorageManager.PipelineStages.findAll({where: {project_id: {[Op.in]: projects.map(p => p.id)}}});
+        return PipelineStage.findAll({where: {project_id: {[Op.in]: projects.map(p => p.id)}}});
     }
 
-    public async getPipelineStagesForProject(id: string): Promise<IPipelineStage[]> {
-        const project = await this._persistentStorageManager.Projects.findByPk(id);
+    public async getPipelineStagesForProject(id: string): Promise<PipelineStage[]> {
+        const project = await Project.findByPk(id);
 
         return project.getStages();
     }
 
-    public async getPipelineStagesForTaskDefinition(id: string): Promise<IPipelineStageAttributes[]> {
-        const task = await this._persistentStorageManager.TaskDefinitions.findByPk(id);
+    public async getPipelineStagesForTaskDefinition(id: string): Promise<PipelineStage[]> {
+        const task = await TaskDefinition.findByPk(id);
 
         return task.getStages();
     }
 
-    public async getPipelineStageChildren(id: string): Promise<IPipelineStage[]> {
-        return this._persistentStorageManager.PipelineStages.findAll({where: {previous_stage_id: id}});
+    public async getPipelineStageChildren(id: string): Promise<PipelineStage[]> {
+        return PipelineStage.findAll({where: {previous_stage_id: id}});
     }
 
-    public async createPipelineStage(pipelineStage: IPipelineStageAttributes): Promise<IPipelineStageMutationOutput> {
+    public async createPipelineStage(pipelineStage: IPipelineStageInput): Promise<IPipelineStageMutationOutput> {
         try {
-            const result: IPipelineStageAttributes = await this._persistentStorageManager.PipelineStages.createFromInput(pipelineStage);
+            const result: PipelineStage = await PipelineStage.createFromInput(pipelineStage);
 
             return {pipelineStage: result, error: ""};
         } catch (err) {
@@ -367,20 +360,20 @@ export class PipelineServerContext {
         }
     }
 
-    public async updatePipelineStage(pipelineStage: IPipelineStageAttributes): Promise<IPipelineStageMutationOutput> {
+    public async updatePipelineStage(pipelineStage: IPipelineStageInput): Promise<IPipelineStageMutationOutput> {
         try {
-            let row = await this._persistentStorageManager.PipelineStages.findByPk(pipelineStage.id);
+            let row = await PipelineStage.findByPk(pipelineStage.id);
 
             if (row.previous_stage_id === null) {
                 pipelineStage.depth = 1;
             } else {
-                const stage = await this._persistentStorageManager.PipelineStages.findByPk(row.previous_stage_id);
+                const stage = await PipelineStage.findByPk(row.previous_stage_id);
                 pipelineStage.depth = stage.depth + 1;
             }
 
             await row.update(pipelineStage);
 
-            row = await this._persistentStorageManager.PipelineStages.findByPk(pipelineStage.id);
+            row = await PipelineStage.findByPk(pipelineStage.id);
 
             return {pipelineStage: row, error: ""};
         } catch (err) {
@@ -390,7 +383,7 @@ export class PipelineServerContext {
 
     public async archivePipelineStage(id: string): Promise<IPipelineStageDeleteOutput> {
         try {
-            await this._persistentStorageManager.removeStage(id);
+            await PipelineStage.remove(id);
 
             return {id, error: null};
         } catch (err) {
@@ -398,21 +391,21 @@ export class PipelineServerContext {
         }
     }
 
-    public getTaskRepository(id: string): Promise<ITaskRepository> {
-        return this._persistentStorageManager.TaskRepositories.findByPk(id);
+    public getTaskRepository(id: string): Promise<TaskRepository> {
+        return TaskRepository.findByPk(id);
     }
 
-    public getTaskRepositories(): Promise<ITaskRepository[]> {
-        return this._persistentStorageManager.TaskRepositories.findAll({});
+    public getTaskRepositories(): Promise<TaskRepository[]> {
+        return TaskRepository.findAll({});
     }
 
-    public async getRepositoryTasks(id: string): Promise<ITaskDefinitionAttributes[]> {
-        return this._persistentStorageManager.TaskDefinitions.findAll({where: {task_repository_id: id}});
+    public async getRepositoryTasks(id: string): Promise<TaskDefinition[]> {
+        return TaskDefinition.findAll({where: {task_repository_id: id}});
     }
 
-    public async createTaskRepository(taskRepository: ITaskRepository): Promise<ITaskRepositoryMutationOutput> {
+    public async createTaskRepository(taskRepository: ITaskRepositoryInput): Promise<ITaskRepositoryMutationOutput> {
         try {
-            const result = await this._persistentStorageManager.TaskRepositories.create(taskRepository);
+            const result = await TaskRepository.create(taskRepository);
 
             return {taskRepository: result, error: null};
 
@@ -421,13 +414,13 @@ export class PipelineServerContext {
         }
     }
 
-    public async updateTaskRepository(taskRepository: ITaskRepository): Promise<ITaskRepositoryMutationOutput> {
+    public async updateTaskRepository(taskRepository: ITaskRepositoryInput): Promise<ITaskRepositoryMutationOutput> {
         try {
-            let row = await this._persistentStorageManager.TaskRepositories.findByPk(taskRepository.id);
+            let row = await TaskRepository.findByPk(taskRepository.id);
 
             await row.update(taskRepository);
 
-            row = await this._persistentStorageManager.TaskRepositories.findByPk(taskRepository.id);
+            row = await TaskRepository.findByPk(taskRepository.id);
 
             return {taskRepository: row, error: null};
         } catch (err) {
@@ -437,7 +430,7 @@ export class PipelineServerContext {
 
     public async archiveTaskRepository(id: string): Promise<ITaskRepositoryDeleteOutput> {
         try {
-            const affectedRowCount = await this._persistentStorageManager.TaskRepositories.destroy({where: {id}});
+            const affectedRowCount = await TaskRepository.destroy({where: {id}});
 
             if (affectedRowCount > 0) {
                 return {id, error: null};
@@ -449,17 +442,17 @@ export class PipelineServerContext {
         }
     }
 
-    public async getTaskDefinition(id: string): Promise<ITaskDefinition> {
-        return await this._persistentStorageManager.TaskDefinitions.findByPk(id);
+    public async getTaskDefinition(id: string): Promise<TaskDefinition> {
+        return TaskDefinition.findByPk(id);
     }
 
-    public async getTaskDefinitions(): Promise<ITaskDefinition[]> {
-        return await this._persistentStorageManager.TaskDefinitions.findAll({});
+    public async getTaskDefinitions(): Promise<TaskDefinition[]> {
+        return TaskDefinition.findAll({});
     }
 
-    public async createTaskDefinition(taskDefinition: ITaskDefinitionAttributes): Promise<ITaskDefinitionMutationOutput> {
+    public async createTaskDefinition(taskDefinition: ITaskDefinitionInput): Promise<ITaskDefinitionMutationOutput> {
         try {
-            const result = await this._persistentStorageManager.TaskDefinitions.create(taskDefinition);
+            const result = await TaskDefinition.create(taskDefinition);
 
             return {taskDefinition: result, error: null};
         } catch (err) {
@@ -467,13 +460,13 @@ export class PipelineServerContext {
         }
     }
 
-    public async updateTaskDefinition(taskDefinition: ITaskDefinitionAttributes): Promise<ITaskDefinitionMutationOutput> {
+    public async updateTaskDefinition(taskDefinition: ITaskDefinitionInput): Promise<ITaskDefinitionMutationOutput> {
         try {
-            let row = await this._persistentStorageManager.TaskDefinitions.findByPk(taskDefinition.id);
+            let row = await TaskDefinition.findByPk(taskDefinition.id);
 
             await row.update(taskDefinition);
 
-            row = await this._persistentStorageManager.TaskDefinitions.findByPk(taskDefinition.id);
+            row = await TaskDefinition.findByPk(taskDefinition.id);
 
             return {taskDefinition: row, error: null};
         } catch (err) {
@@ -483,14 +476,12 @@ export class PipelineServerContext {
 
     public async duplicateTask(id: string): Promise<ITaskDefinitionMutationOutput> {
         try {
-            const input = (await this._persistentStorageManager.TaskDefinitions.findByPk(id)).toJSON();
+            const input: ITaskDefinitionInput = (await TaskDefinition.findByPk(id)).toJSON();
 
             input.id = undefined;
             input.name += " copy";
-            input.created_at = new Date();
-            input.updated_at = input.created_at;
 
-            const taskDefinition = await this._persistentStorageManager.TaskDefinitions.create(input);
+            const taskDefinition = await TaskDefinition.create(input);
 
             return {taskDefinition, error: ""};
         } catch (err) {
@@ -501,7 +492,7 @@ export class PipelineServerContext {
 
     public async archiveTaskDefinition(id: string): Promise<ITaskDefinitionDeleteOutput> {
         try {
-            const affectedRowCount = await this._persistentStorageManager.TaskDefinitions.destroy({where: {id}});
+            const affectedRowCount = await TaskDefinition.destroy({where: {id}});
 
             if (affectedRowCount > 0) {
                 return {id, error: null};
@@ -513,7 +504,7 @@ export class PipelineServerContext {
         }
     }
 
-    public static async getScriptStatusForTaskDefinition(taskDefinition: ITaskDefinition): Promise<boolean> {
+    public static async getScriptStatusForTaskDefinition(taskDefinition: TaskDefinition): Promise<boolean> {
         const scriptPath = await taskDefinition.getFullScriptPath(true);
 
         return fs.existsSync(scriptPath);
@@ -542,16 +533,14 @@ export class PipelineServerContext {
                 return kEmptyTileMap;
             }
 
-            const projectsManager = PersistentStorageManager.Instance().Projects;
-
-            const project = await projectsManager.findByPk(project_id);
+            const project = await Project.findByPk(project_id);
 
             if (!project) {
                 debug("project not defined");
                 return kEmptyTileMap;
             }
 
-            const stages: IPipelineStage[] = await project.getStages();
+            const stages: PipelineStage[] = await project.getStages();
 
             if (stages.length === 0) {
                 debug("no stages for project");
@@ -671,15 +660,15 @@ export class PipelineServerContext {
     public static async thumbnailPath(id: string, x, y, z): Promise<string> {
         try {
             let isProject = false;
-            let project: IProject = null;
+            let project: Project = null;
 
-            const stage: IPipelineStageAttributes = await PersistentStorageManager.Instance().PipelineStages.findByPk(id);
+            const stage: PipelineStage = await PipelineStage.findByPk(id);
 
             if (!stage) {
-                project = await PersistentStorageManager.Instance().Projects.findByPk(id);
+                project = await Project.findByPk(id);
                 isProject = true;
             } else {
-                project = await PersistentStorageManager.Instance().Projects.findByPk(stage.project_id);
+                project = await Project.findByPk(stage.project_id);
             }
 
             if (!project) {
@@ -692,7 +681,7 @@ export class PipelineServerContext {
 
             const connector = await connectorForProject(project);
 
-            const stageConnector = isProject ? await connector.connectorForProject() : await connector.connectorForStage({id});
+            const stageConnector = isProject ? await connector.connectorForProject() : await connector.connectorForStage(stage);
 
             if (!stageConnector) {
                 if (!stageWarn.has(id)) {
@@ -725,7 +714,7 @@ export class PipelineServerContext {
     }
 
     public async tilesForStage(pipelineStageId: string, status: TilePipelineStatus, reqOffset: number, reqLimit: number): Promise<ITilePage> {
-        const pipelineStage = await this._persistentStorageManager.PipelineStages.findByPk(pipelineStageId);
+        const pipelineStage = await PipelineStage.findByPk(pipelineStageId);
 
         if (!pipelineStage) {
             return {
@@ -793,7 +782,7 @@ export class PipelineServerContext {
 
     public async getPipelineStageTileStatus(pipelineStageId: string): Promise<IPipelineStageTileCounts> {
         try {
-            const pipelineStage = await this._persistentStorageManager.PipelineStages.findByPk(pipelineStageId);
+            const pipelineStage = await PipelineStage.findByPk(pipelineStageId);
 
             if (!pipelineStage) {
                 return null;
@@ -801,7 +790,7 @@ export class PipelineServerContext {
 
             const stageConnector = await connectorForStage(pipelineStage);
 
-            return stageConnector ? stageConnector.getTileCounts() : PipelineStageStatusUnavailable;
+            return stageConnector ? await stageConnector.getTileCounts() : PipelineStageStatusUnavailable;
         } catch (err) {
             return PipelineStageStatusUnavailable;
         }
@@ -813,10 +802,10 @@ export class PipelineServerContext {
      * @param {string} pipelineStageId
      * @param {string[]} tileIds
      * @param {TilePipelineStatus} status
-     * @returns {Promise<IPipelineTileAttributes[]>}
+     * @returns {Promise<PipelineTile[]>}
      */
-    public async setTileStatus(pipelineStageId: string, tileIds: string[], status: TilePipelineStatus): Promise<IPipelineTileAttributes[]> {
-        const pipelineStage = await this._persistentStorageManager.PipelineStages.findByPk(pipelineStageId);
+    public async setTileStatus(pipelineStageId: string, tileIds: string[], status: TilePipelineStatus): Promise<PipelineTile[]> {
+        const pipelineStage = await PipelineStage.findByPk(pipelineStageId);
 
         if (!pipelineStage) {
             return null;
@@ -833,10 +822,10 @@ export class PipelineServerContext {
      * @param {string} pipelineStageId
      * @param {TilePipelineStatus} currentStatus
      * @param {TilePipelineStatus} desiredStatus
-     * @returns {Promise<IPipelineTileAttributes[]>}
+     * @returns {Promise<PipelineTile[]>}
      */
-    public async convertTileStatus(pipelineStageId: string, currentStatus: TilePipelineStatus, desiredStatus: TilePipelineStatus): Promise<IPipelineTileAttributes[]> {
-        const pipelineStage = await this._persistentStorageManager.PipelineStages.findByPk(pipelineStageId);
+    public async convertTileStatus(pipelineStageId: string, currentStatus: TilePipelineStatus, desiredStatus: TilePipelineStatus): Promise<PipelineTile[]> {
+        const pipelineStage = await PipelineStage.findByPk(pipelineStageId);
 
         if (!pipelineStage) {
             return null;
@@ -847,8 +836,8 @@ export class PipelineServerContext {
         return stageConnector.convertTileStatus(currentStatus, desiredStatus);
     }
 
-    public async stopTaskExecution(pipelineStageId: string, taskExecutionId: string): Promise<ITaskExecution> {
-        const pipelineStage = await this._persistentStorageManager.PipelineStages.findByPk(pipelineStageId);
+    public async stopTaskExecution(pipelineStageId: string, taskExecutionId: string): Promise<TaskExecution> {
+        const pipelineStage = await PipelineStage.findByPk(pipelineStageId);
 
         if (!pipelineStage) {
             return null;
@@ -864,13 +853,13 @@ export class PipelineServerContext {
 
         debug(`stopExecution: found stageConnector`);
 
-        const taskExecution: ITaskExecution = await stageConnector.taskExecutionForId(taskExecutionId);
+        const taskExecution: TaskExecution = await stageConnector.taskExecutionForId(taskExecutionId);
 
         debug(`stopExecution: found taskExecution ${taskExecution.id}`);
 
         debug(`stopExecution: has remote taskExecution ${taskExecution.worker_task_execution_id}`);
 
-        const worker: IPipelineWorker = await this._persistentStorageManager.PipelineWorkers.findByPk(taskExecution.worker_id);
+        const worker: PipelineWorker = await PipelineWorker.findByPk(taskExecution.worker_id);
 
         let id = await PipelineWorkerClient.Instance().stopTaskExecution(worker, taskExecution.worker_task_execution_id);
 
@@ -880,7 +869,7 @@ export class PipelineServerContext {
     }
 
     public async removeTaskExecution(pipelineStageId: string, taskExecutionId: string): Promise<boolean> {
-        const pipelineStage = await this._persistentStorageManager.PipelineStages.findByPk(pipelineStageId);
+        const pipelineStage = await PipelineStage.findByPk(pipelineStageId);
 
         if (!pipelineStage) {
             return false;

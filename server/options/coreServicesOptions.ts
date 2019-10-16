@@ -1,8 +1,23 @@
-const coreServicesOptions = {
+import {Dialect, Options} from "sequelize";
+
+export type CoreServicesOptions = {
+    database: Options,
+    schedulerServer: {
+        host: string;
+        port: number;
+    },
+    messageQueue: {
+        host: string;
+        port: number;
+        uiPort: number;
+    }
+}
+
+const defaultCoreServicesOptions: CoreServicesOptions = {
     database: {
         host: "pipeline-db",    // Default container name for when this is in a container orchestration
         port: 5432,             // Default port name for when this is in a container orchestration
-        dialect: "postgres",
+        dialect: "postgres" as Dialect,
         database: "pipeline_production",
         username: "postgres",
         password: "pgsecret",
@@ -52,7 +67,7 @@ function loadMessageQueueOptions(options: any) {
 }
 
 function loadOptions() {
-    const options = Object.assign({}, coreServicesOptions);
+    const options = Object.assign({}, defaultCoreServicesOptions);
 
     // When outside a pure container environment.
     options.database = loadDatabaseOptions(options.database);
@@ -62,10 +77,10 @@ function loadOptions() {
     return options;
 }
 
-export const CoreServicesOptions = loadOptions();
+export const DefaultCoreServicesOptions = loadOptions();
 
-export const SequelizeOptions = CoreServicesOptions.database;
+export const SequelizeOptions = DefaultCoreServicesOptions.database;
 
-export const SchedulerServiceOptions = CoreServicesOptions.schedulerServer;
+export const SchedulerServiceOptions = DefaultCoreServicesOptions.schedulerServer;
 
-export const MessageQueueOptions = CoreServicesOptions.messageQueue;
+export const MessageQueueOptions = DefaultCoreServicesOptions.messageQueue;

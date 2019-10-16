@@ -6,7 +6,7 @@ import "isomorphic-fetch";
 
 const debug = require("debug")("pipeline:coordinator-api:pipeline-worker-client");
 
-import {IPipelineWorkerAttributes, PipelineWorkerStatus} from "../../data-model/sequelize/pipelineWorker";
+import {IPipelineWorkerInput, PipelineWorker, PipelineWorkerStatus} from "../../data-model/sequelize/pipelineWorker";
 import {PipelineServerContext} from "../pipelineServerContext";
 
 export interface IClientWorker {
@@ -33,7 +33,7 @@ export class PipelineWorkerClient {
 
     private _idClientMap = new Map<string, ApolloClient<any>>();
 
-    private getClient(worker: IPipelineWorkerAttributes): ApolloClient<any> {
+    private getClient(worker: PipelineWorker | IPipelineWorkerInput): ApolloClient<any> {
         if (worker === null) {
             return null;
         }
@@ -64,7 +64,7 @@ export class PipelineWorkerClient {
         return client;
     }
 
-    private static async markWorkerUnavailable(worker: IPipelineWorkerAttributes): Promise<void> {
+    private static async markWorkerUnavailable(worker: IPipelineWorkerInput): Promise<void> {
         let serverContext = new PipelineServerContext();
 
         const row = await serverContext.getPipelineWorker(worker.id);
@@ -72,7 +72,7 @@ export class PipelineWorkerClient {
         row.status = PipelineWorkerStatus.Unavailable;
     }
 
-    public async updateWorker(worker: IPipelineWorkerAttributes): Promise<IClientUpdateWorkerOutput> {
+    public async updateWorker(worker: IPipelineWorkerInput): Promise<IClientUpdateWorkerOutput> {
         const client = this.getClient(worker);
 
         if (client === null) {
@@ -107,7 +107,7 @@ export class PipelineWorkerClient {
         }
     }
 
-    public async stopTaskExecution(worker: IPipelineWorkerAttributes, taskExecutionId: string): Promise<any> {
+    public async stopTaskExecution(worker: PipelineWorker, taskExecutionId: string): Promise<any> {
         const client = this.getClient(worker);
 
         if (client === null) {

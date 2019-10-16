@@ -1,5 +1,6 @@
-import {Instance, Model} from "sequelize";
-import {IPipelineStage} from "./pipelineStage";
+import {Sequelize, Model, DataTypes, HasManyGetAssociationsMixin, Association} from "sequelize";
+
+import {PipelineStage} from "./pipelineStage";
 
 export const NO_BOUND: number = null;
 export const NO_SAMPLE: number = -1;
@@ -39,50 +40,44 @@ export interface IProjectInput {
     last_checked_input_source?: Date;
 }
 
-export interface IProjectAttributes {
-    id?: string;
-    name?: string;
-    description?: string;
-    root_path?: string;
-    log_root_path?: string;
-    sample_number?: number;
-    sample_x_min?: number;
-    sample_x_max?: number;
-    sample_y_min?: number;
-    sample_y_max?: number;
-    sample_z_min?: number;
-    sample_z_max?: number;
-    region_x_min?: number;
-    region_x_max?: number;
-    region_y_min?: number;
-    region_y_max?: number;
-    region_z_min?: number;
-    region_z_max?: number;
-    user_parameters?: string;
-    plane_markers?: string;
-    is_processing?: boolean;
-    input_source_state?: ProjectInputSourceState;
-    last_seen_input_source?: Date;
-    last_checked_input_source?: Date;
-    created_at?: Date;
-    updated_at?: Date;
-    deleted_at?: Date;
+export class Project extends Model {
+    public id: string;
+    public name: string;
+    public description: string;
+    public root_path: string;
+    public log_root_path: string;
+    public sample_number: number;
+    public sample_x_min: number;
+    public sample_x_max: number;
+    public sample_y_min: number;
+    public sample_y_max: number;
+    public sample_z_min: number;
+    public sample_z_max: number;
+    public region_x_min: number;
+    public region_x_max: number;
+    public region_y_min: number;
+    public region_y_max: number;
+    public region_z_min: number;
+    public region_z_max: number;
+    public user_parameters: string;
+    public plane_markers: string;
+    public is_processing: boolean;
+    public input_source_state: ProjectInputSourceState;
+    public last_seen_input_source: Date;
+    public last_checked_input_source: Date;
+    public readonly created_at: Date;
+    public readonly updated_at: Date;
+    public readonly deleted_at: Date;
+
+    public zPlaneSkipIndices: number[];
+
+    public getStages!: HasManyGetAssociationsMixin<PipelineStage>;
 }
 
-export interface IProject extends Instance<IProjectAttributes>, IProjectAttributes {
-    planeMarkers: any;
-    zPlaneSkipIndices: number[];
+const TableName = "Projects";
 
-    getStages(): Promise<IPipelineStage[]>
-}
-
-export interface IProjectTable extends Model<IProject, IProjectAttributes> {
-}
-
-export const TableName = "Projects";
-
-export function sequelizeImport(sequelize, DataTypes) {
-    const Project = sequelize.define(TableName, {
+export const modelInit = (sequelize: Sequelize) => {
+    Project.init({
         id: {
             primaryKey: true,
             type: DataTypes.UUID,
@@ -158,32 +153,26 @@ export function sequelizeImport(sequelize, DataTypes) {
             type: DataTypes.DATE
         },
     }, {
+        tableName: TableName,
         timestamps: true,
         createdAt: "created_at",
         updatedAt: "updated_at",
         deletedAt: "deleted_at",
         paranoid: true,
         getterMethods: {
-            planeMarkers: function() {
-                return JSON.parse(this.plane_markers);
-            },
-            zPlaneSkipIndices: function() {
-                return this.planeMarkers.z;
+            zPlaneSkipIndices: function (): number[] {
+                return JSON.parse(this.plane_markers).z;
             }
         },
         setterMethods: {
-            planeMarkers: function(value) {
-                this.setDataValue("plane_markers", JSON.stringify(value));
-            },
-            zPlaneSkipIndices: function(value) {
-                this.setDataValue("zPlaneSkipIndices", JSON.stringify(Object.assign({}, this.planeMarkers, {z: value})));
+            zPlaneSkipIndices: function (value: number[]) {
+                this.setDataValue("plane_markers", JSON.stringify(Object.assign({}, JSON.parse(this.plane_markers), {z: value})));
             }
-        }
+        },
+        sequelize
     });
+};
 
-    Project.associate = models => {
-        Project.hasMany(models.PipelineStages, {foreignKey: "project_id", as: {singular: "stage", plural: "stages"}});
-    };
-
-    return Project;
-}
+export const modelAssociate = () => {
+    Project.hasMany(PipelineStage, {foreignKey: "project_id", as: {singular: "stage", plural: "stages"}});
+};

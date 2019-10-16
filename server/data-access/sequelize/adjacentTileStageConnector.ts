@@ -1,14 +1,15 @@
-import {Instance, Model} from "sequelize";
+import {BuildOptions, Model, DataTypes} from "sequelize";
 
-import {generatePipelineCustomTableName, IToProcessTileAttributes, StageTableConnector} from "./stageTableConnector";
+import {generatePipelineCustomTableName, StageTableConnector} from "./stageTableConnector";
 
-export interface IAdjacentTileAttributes {
+export interface AdjacentTile extends Model {
     relative_path: string,
     adjacent_relative_path: string;
     adjacent_tile_name: string;
 }
 
-export interface IAdjacentTile extends Instance<IAdjacentTileAttributes>, IAdjacentTileAttributes {
+export type AdjacentTileStatic = typeof Model & {
+    new (values?: object, options?: BuildOptions): AdjacentTile;
 }
 
 function generatePipelineStageAdjacentTileTableName(pipelineStageId: string) {
@@ -16,7 +17,7 @@ function generatePipelineStageAdjacentTileTableName(pipelineStageId: string) {
 }
 
 export class AdjacentTileStageConnector extends StageTableConnector {
-    private _adjacentTileModel: Model<IAdjacentTile, IAdjacentTileAttributes> = null;
+    private _adjacentTileModel: AdjacentTileStatic = null;
 
     protected defineTables() {
         super.defineTables();
@@ -24,19 +25,19 @@ export class AdjacentTileStageConnector extends StageTableConnector {
         this._adjacentTileModel = this.defineAdjacentTileModel();
     }
 
-    private defineAdjacentTileModel(): any {
-        return this._connection.define(generatePipelineStageAdjacentTileTableName(this._tableBaseName), {
+    private defineAdjacentTileModel(): AdjacentTileStatic {
+        return <AdjacentTileStatic>this._connection.define(generatePipelineStageAdjacentTileTableName(this._tableBaseName), {
             relative_path: {
                 primaryKey: true,
                 unique: true,
-                type: this._connection.Sequelize.TEXT
+                type: DataTypes.TEXT
             },
             adjacent_relative_path: {
-                type: this._connection.Sequelize.TEXT,
+                type: DataTypes.TEXT,
                 defaultValue: null
             },
             adjacent_tile_name: {
-                type: this._connection.Sequelize.TEXT,
+                type: DataTypes.TEXT,
                 defaultValue: null
             }
         }, {

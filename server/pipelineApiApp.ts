@@ -12,12 +12,14 @@ import {thumbnailParamQueryMiddleware} from "./middleware/thumbnailQueryMiddlewa
 import resolvers from "./graphql/pipelineServerResolvers";
 import {PipelineServerContext} from "./graphql/pipelineServerContext";
 import {MessageQueueClient} from "./message-queue/messageQueueClient";
-import {PersistentStorageManager} from "./data-access/sequelize/databaseConnector";
+import {RemoteDatabaseClient} from "./data-access/sequelize/databaseConnector";
 
 start().then().catch((err) => debug(err));
 
 async function start() {
-    await MessageQueueClient.StartMessageQueueClient(PersistentStorageManager.Instance());
+    await RemoteDatabaseClient.Start();
+
+    await MessageQueueClient.Start();
 
     const app = express();
 
