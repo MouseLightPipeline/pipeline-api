@@ -106,6 +106,21 @@ export class PipelineStage extends Model {
             return id;
         });
     };
+
+    public async duplicate(project: Project, t: Transaction): Promise<PipelineStage> {
+        const data: any = Object.assign(this.toJSON(), {
+            project_id: project.id,
+            previous_stage_id: null,
+            dst_path: this.dst_path + "-copy",
+            is_processing: false
+        });
+
+        delete data.id;
+        delete data.created_at;
+        delete data.updated_at;
+
+        return PipelineStage.create(data, {transaction: t});
+    }
 }
 
 const TableName = "PipelineStages";

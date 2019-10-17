@@ -1,6 +1,6 @@
-import {Sequelize, Model, DataTypes, HasManyGetAssociationsMixin} from "sequelize";
+import {Sequelize, Model, DataTypes, HasManyGetAssociationsMixin, Transaction} from "sequelize";
 
-import {IPipelineStageInput, PipelineStage} from "./pipelineStage";
+import {PipelineStage} from "./pipelineStage";
 import {ArchiveMutationOutput, MutationOutput} from "../../graphql/pipelineServerResolvers";
 
 export const NO_BOUND: number = null;
@@ -24,6 +24,8 @@ export interface IProjectGridRegion {
     z_max: number;
 }
 
+// TODO pass user_parameters as ab object and stringify at database boundary rather than API
+// TODO allow full x, y, z, skip plane configuration.
 export interface IProjectInput {
     id?: string;
     name?: string;
@@ -32,7 +34,6 @@ export interface IProjectInput {
     is_processing?: boolean;
     sample_number?: number;
     region_bounds?: IProjectGridRegion;
-    region_z_max?: number;
     user_parameters?: string;
     zPlaneSkipIndices?: number[];
     input_source_state?: ProjectInputSourceState;
@@ -109,6 +110,20 @@ export class Project extends Model {
         }
     }
 
+    public static async findAndUpdateProject(projectInput: IProjectInput): Promise<MutationOutput<Project>> {
+        try {
+            let row = await Project.findByPk(projectInput.id);
+
+            if (row == null) {
+                return {source: null, error: `project with id ${projectInput.id} does not exist.`}
+            }
+
+            return await row.updateProject(projectInput);
+        } catch (err) {
+            return {source: null, error: err.message}
+        }
+    }
+
     /**
      * Create a project with the required mapping from an input object structure to flattened database structure.
      * @param projectInput
@@ -123,6 +138,10 @@ export class Project extends Model {
                 z_min: NO_BOUND,
                 z_max: NO_BOUND
             };
+
+            const plane_markers = projectInput.zPlaneSkipIndices ? {
+                x: [], y: [], z: projectInput.zPlaneSkipIndices
+            } : {x: [], y: [], z: []};
 
             const project = {
                 name: projectInput.name || "",
@@ -141,6 +160,8 @@ export class Project extends Model {
                 region_y_max: region.y_max,
                 region_z_min: region.z_min,
                 region_z_max: region.z_max,
+                plane_markers: JSON.stringify(plane_markers),
+                user_parameters: projectInput.user_parameters || "{}",
                 is_processing: false
             };
 
@@ -152,83 +173,67 @@ export class Project extends Model {
         }
     }
 
-    public static async findAndUpdateProject(projectInput: IProjectInput): Promise<MutationOutput<Project>> {
-        try {
-            let row = await Project.findByPk(projectInput.id);
-
-            if (row == null) {
-                return {source: null, error: `project with id ${projectInput.id} does not exist.`}
-            }
-
-            return await row.updateProject(projectInput);
-        } catch (err) {
-            return {source: null, error: err.message}
-        }
-    }
-
+    /**
+     * Duplicate a project and all downstream stages.
+     * @param id
+     */
     public static async duplicateProject(id: string): Promise<MutationOutput<Project>> {
-        try {
-            const input: any = (await Project.findByPk(id)).toJSON();
+        return this.sequelize.transaction(async (t: Transaction) => {
+            try {
+                const input: any = (await Project.findByPk(id)).toJSON();
 
-            input.id = undefined;
-            input.name += " copy";
-            input.root_path += "copy";
-            input.sample_number = NO_SAMPLE;
-            input.sample_x_min = NO_BOUND;
-            input.sample_x_max = NO_BOUND;
-            input.sample_y_min = NO_BOUND;
-            input.sample_y_max = NO_BOUND;
-            input.sample_z_min = NO_BOUND;
-            input.sample_z_max = NO_BOUND;
-            input.region_x_min = NO_BOUND;
-            input.region_x_max = NO_BOUND;
-            input.region_y_min = NO_BOUND;
-            input.region_y_max = NO_BOUND;
-            input.region_z_min = NO_BOUND;
-            input.region_z_max = NO_BOUND;
-            input.input_source_state = ProjectInputSourceState.Unknown;
-            input.last_checked_input_source = null;
-            input.last_seen_input_source = null;
-            input.is_processing = false;
+                input.id = undefined;
+                input.name += " copy";
+                input.root_path += "-copy";
+                input.sample_number = NO_SAMPLE;
+                input.sample_x_min = NO_BOUND;
+                input.sample_x_max = NO_BOUND;
+                input.sample_y_min = NO_BOUND;
+                input.sample_y_max = NO_BOUND;
+                input.sample_z_min = NO_BOUND;
+                input.sample_z_max = NO_BOUND;
+                input.region_x_min = NO_BOUND;
+                input.region_x_max = NO_BOUND;
+                input.region_y_min = NO_BOUND;
+                input.region_y_max = NO_BOUND;
+                input.region_z_min = NO_BOUND;
+                input.region_z_max = NO_BOUND;
+                input.input_source_state = ProjectInputSourceState.Unknown;
+                input.last_checked_input_source = null;
+                input.last_seen_input_source = null;
+                input.is_processing = false;
 
-            const project = await Project.create(input);
+                const project = await Project.create(input, {transaction: t});
 
-            const inputStages = await PipelineStage.findAll({
-                where: {project_id: id},
-                order: [["depth", "ASC"]]
-            });
+                const inputStages = await PipelineStage.findAll({
+                    where: {project_id: id},
+                    order: [["depth", "ASC"]]
+                });
 
-            const duplicateMap = new Map<string, PipelineStage>();
+                const duplicateMap = new Map<string, string>();
 
-            const dupeStage = async (inputStage): Promise<PipelineStage> => {
-                const stageData: IPipelineStageInput = inputStage.toJSON();
+                const dupeStage = async (inputStage: PipelineStage): Promise<void> => {
+                    const stage = await inputStage.duplicate(project, t);
 
-                stageData.project_id = project.id;
-                if (inputStage.previous_stage_id !== null) {
-                    stageData.previous_stage_id = duplicateMap.get(inputStage.previous_stage_id).id;
-                } else {
-                    stageData.previous_stage_id = null;
-                }
-                stageData.dst_path += "copy";
-                stageData.is_processing = false;
+                    if (inputStage.previous_stage_id !== null) {
+                        stage.previous_stage_id = duplicateMap.get(inputStage.previous_stage_id) || null;
+                        await stage.save({transaction: t});
+                    }
 
-                const stage = await PipelineStage.createFromInput(stageData);
+                    duplicateMap.set(inputStage.id, stage.id);
+                };
 
-                duplicateMap.set(inputStage.id, stage);
+                await inputStages.reduce(async (promise, stage) => {
+                    await promise;
+                    return dupeStage(stage);
+                }, Promise.resolve(null));
 
-                return stage;
-            };
-
-            await inputStages.reduce(async (promise, stage) => {
-                await promise;
-                return dupeStage(stage);
-            }, Promise.resolve(null));
-
-            return {source: project, error: null};
-        } catch (err) {
-            console.log(err);
-            return {source: null, error: err.message}
-        }
+                return {source: project, error: null};
+            } catch (err) {
+                console.log(err);
+                return {source: null, error: err.message}
+            }
+        });
     }
 
     /**
