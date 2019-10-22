@@ -142,7 +142,7 @@ export class PipelineStage extends Model {
 
                 const delta = depth - row.depth;
 
-                // Depth will be handled by recusrive shift.
+                // Depth will be handled by recursive shift.
                 row = await row.update(pipelineStage, {transaction});
 
                 if (delta !== 0) {

@@ -122,6 +122,8 @@ test("data-access:pipeline-stage:update-stage", async () => {
         description: "foo bar"
     });
 
+    expect(output.source.description).toBe("foo bar");
+
     await source.reload();
     const updatedStages = (await source.getStages()).sort((a, b) => {
         if (a.depth === b.depth) {
@@ -138,6 +140,7 @@ test("data-access:pipeline-stage:update-stage", async () => {
     expect(updatedStages[1].depth).toBe(2);
     expect(updatedStages[2].task_id).toBe(DescriptorsTaskDefinitionId);
     expect(updatedStages[2].depth).toBe(2);
+    expect(updatedStages[2].description).toBe("foo bar");
     expect(updatedStages[3].task_id).toBe(PointMatchTaskDefinitionId);
     expect(updatedStages[3].depth).toBe(3);
 });
