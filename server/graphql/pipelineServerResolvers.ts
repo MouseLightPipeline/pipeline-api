@@ -2,8 +2,6 @@ import {GraphQLScalarType} from "graphql";
 import {Kind} from "graphql/language";
 
 import {
-    IPipelineStageDeleteOutput,
-    IPipelineStageMutationOutput,
     ITaskDefinitionDeleteOutput,
     ITaskDefinitionMutationOutput,
     ITaskRepositoryDeleteOutput,
@@ -102,7 +100,7 @@ export type ArchiveMutationOutput = {
     error: string | null;
 }
 
-const resolvers = {
+export const resolvers = {
     Query: {
         schedulerHealth(_, __, context: PipelineServerContext): SchedulerHealth {
             return PipelineServerContext.getSchedulerHealth();
@@ -120,13 +118,10 @@ const resolvers = {
             return Project.findByPk(args.id);
         },
         pipelineStage(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<PipelineStage> {
-            return context.getPipelineStage(args.id);
+            return PipelineStage.findByPk(args.id);
         },
         pipelineStages(_, __, context: PipelineServerContext): Promise<PipelineStage[]> {
-            return context.getPipelineStages();
-        },
-        pipelineStagesForProject(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<PipelineStage[]> {
-            return context.getPipelineStagesForProject(args.id);
+            return PipelineStage.getAll();
         },
         taskDefinition(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<TaskDefinition> {
             return context.getTaskDefinition(args.id);
@@ -166,14 +161,14 @@ const resolvers = {
         archiveProject(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ArchiveMutationOutput> {
             return Project.archiveProject(args.id);
         },
-        createPipelineStage(_, args: ICreatePipelineStageArguments, context: PipelineServerContext): Promise<IPipelineStageMutationOutput> {
-            return context.createPipelineStage(args.pipelineStage);
+        createPipelineStage(_, args: ICreatePipelineStageArguments, context: PipelineServerContext): Promise<MutationOutput<PipelineStage>> {
+            return PipelineStage.createPipelineStage(args.pipelineStage);
         },
-        updatePipelineStage(_, args: IUpdatePipelineStageArguments, context: PipelineServerContext): Promise<IPipelineStageMutationOutput> {
-            return context.updatePipelineStage(args.pipelineStage);
+        updatePipelineStage(_, args: IUpdatePipelineStageArguments, context: PipelineServerContext): Promise<MutationOutput<PipelineStage>> {
+            return PipelineStage.updatePipelineStage(args.pipelineStage);
         },
-        archivePipelineStage(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<IPipelineStageDeleteOutput> {
-            return context.archivePipelineStage(args.id);
+        archivePipelineStage(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ArchiveMutationOutput> {
+            return PipelineStage.archivePipelineStage(args.id);
         },
         createTaskRepository(_, args: IMutateRepositoryArguments, context: PipelineServerContext): Promise<ITaskRepositoryMutationOutput> {
             return context.createTaskRepository(args.taskRepository);
@@ -216,8 +211,8 @@ const resolvers = {
         }
     },
     Project: {
-        stages(project: Project, _, context: PipelineServerContext): any {
-            return context.getPipelineStagesForProject(project.id);
+        stages(project: Project, _, context: PipelineServerContext): Promise<PipelineStage[]> {
+            return project.getStages();
         }
     },
     PipelineStage: {
@@ -228,10 +223,10 @@ const resolvers = {
             return stage.getProject();
         },
         previous_stage(stage: PipelineStage, _, context: PipelineServerContext): Promise<PipelineStage> {
-            return context.getPipelineStage(stage.previous_stage_id);
+            return PipelineStage.findByPk(stage.previous_stage_id);
         },
         child_stages(stage: PipelineStage, _, context: PipelineServerContext): Promise<PipelineStage[]> {
-            return context.getPipelineStageChildren(stage.id);
+            return stage.getChildStages();
         },
         tile_status(stage: PipelineStage, _, context: PipelineServerContext): Promise<IPipelineStageTileCounts> {
             return context.getPipelineStageTileStatus(stage.id);
@@ -250,8 +245,8 @@ const resolvers = {
 
             return null;
         },
-        pipeline_stages(taskDefinition: TaskDefinition, _, context: PipelineServerContext): any {
-            return context.getPipelineStagesForTaskDefinition(taskDefinition.id);
+        pipeline_stages(taskDefinition: TaskDefinition, _, context: PipelineServerContext): Promise<PipelineStage[]> {
+            return taskDefinition.getStages();
         },
         script_status(taskDefinition: TaskDefinition, _, context: PipelineServerContext): any {
             return PipelineServerContext.getScriptStatusForTaskDefinition(taskDefinition);
@@ -279,5 +274,3 @@ const resolvers = {
         },
     })
 };
-
-export default resolvers;

@@ -9,7 +9,7 @@ const debug = require("debug")("pipeline:coordinator-api:server");
 import {typeDefinitions} from "./graphql/pipelineTypeDefinitions";
 import {ServiceOptions} from "./options/serverOptions";
 import {thumbnailParamQueryMiddleware} from "./middleware/thumbnailQueryMiddleware";
-import resolvers from "./graphql/pipelineServerResolvers";
+import {resolvers} from "./graphql/pipelineServerResolvers";
 import {PipelineServerContext} from "./graphql/pipelineServerContext";
 import {MessageQueueClient} from "./message-queue/messageQueueClient";
 import {RemoteDatabaseClient} from "./data-access/sequelize/databaseConnector";

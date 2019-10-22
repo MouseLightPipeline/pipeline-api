@@ -1,40 +1,25 @@
-import {Dialect} from "sequelize";
-
-const path = require("path");
-import * as fs from "fs";
-
-import {RemoteDatabaseClient} from "../server/data-access/sequelize/databaseConnector";
-import {IProjectGridRegion, Project, ProjectInputSourceState} from "../server/data-model/sequelize/project";
-
-beforeAll(async () => {
-    fs.copyFileSync(path.join(__dirname, "test-template.sqlite"), path.join(__dirname, "test-active.sqlite"));
-
-    await RemoteDatabaseClient.Start({
-        dialect: "sqlite" as Dialect,
-        storage: path.join(__dirname, "test-active.sqlite"),
-        logging: null
-    });
-});
-
-afterAll(() => {
-    if (fs.existsSync(path.join(__dirname, "test-active.sqlite"))) {
-        fs.unlinkSync(path.join(__dirname, "test-active.sqlite"));
-    }
-});
+import {
+    copyDatabase,
+    DuplicateNameAppendText, DuplicatePathAppendText,
+    removeDatabase,
+    SampleBrainProjectId,
+    SkeletonizationProjectId
+} from "./testUtill";
+import {Project} from "../server/data-model/sequelize/project";
 
 test("data-access:projects:getStages", async () => {
-    let project = await Project.findByPk("44e49773-1c19-494b-b283-54466b94b70f");
+    let project = await Project.findByPk(SampleBrainProjectId);
     expect(project).toBeDefined();
     expect(project.getStages()).toBeDefined();
     expect((await project.getStages()).length).toBe(4);
 
-    project = await Project.findByPk("74f684fb-9e9f-4b2e-b853-4c43a3b92f38");
+    project = await Project.findByPk(SkeletonizationProjectId);
     expect(project).toBeDefined();
     expect((await project.getStages()).length).toBe(1);
 });
 
 test("data-access:projects:z-plane", async () => {
-    const project = await Project.findByPk("44e49773-1c19-494b-b283-54466b94b70f");
+    const project = await Project.findByPk(SampleBrainProjectId);
 
     expect(project.zPlaneSkipIndices.length).toBe(1);
     expect(project.zPlaneSkipIndices).toContain(1);
@@ -54,7 +39,7 @@ test("data-access:projects:z-plane", async () => {
 });
 
 test("data-access:projects:user-arguments", async () => {
-    const project = await Project.findByPk("74f684fb-9e9f-4b2e-b853-4c43a3b92f38");
+    const project = await Project.findByPk(SkeletonizationProjectId);
 
     expect(project).toBeDefined();
 
@@ -68,31 +53,32 @@ test("data-access:projects:user-arguments", async () => {
 });
 
 test("data-access:projects:duplicate", async () => {
-    const output = await Project.duplicateProject("44e49773-1c19-494b-b283-54466b94b70f");
+    const output = await Project.duplicateProject(SampleBrainProjectId);
+    expect(output.error).toBeNull();
 
     const project = output.source;
 
     expect(project).toBeDefined();
-    expect(project.name.slice(-5)).toBe(" copy");
-    expect(project.root_path.slice(-5)).toBe("-copy");
+    expect(project.name.slice(-5)).toBe(DuplicateNameAppendText);
+    expect(project.root_path.slice(-5)).toBe(DuplicatePathAppendText);
 
     const stages = (await project.getStages()).sort((a, b) => a.depth - b.depth);
     expect(stages.length).toBe(4);
 
     expect(stages[0].depth).toBe(1);
-    expect(stages[0].dst_path.slice(-5)).toBe("-copy");
+    expect(stages[0].dst_path.slice(-5)).toBe(DuplicatePathAppendText);
     expect(stages[0].previous_stage_id).toBeNull();
 
     expect(stages[1].depth).toBe(2);
-    expect(stages[1].dst_path.slice(-5)).toBe("-copy");
+    expect(stages[1].dst_path.slice(-5)).toBe(DuplicatePathAppendText);
     expect(stages[1].previous_stage_id).toBe(stages[0].id);
 
     expect(stages[2].depth).toBe(3);
-    expect(stages[2].dst_path.slice(-5)).toBe("-copy");
+    expect(stages[2].dst_path.slice(-5)).toBe(DuplicatePathAppendText);
     expect(stages[2].previous_stage_id).toBe(stages[1].id);
 
     expect(stages[3].depth).toBe(4);
-    expect(stages[3].dst_path.slice(-5)).toBe("-copy");
+    expect(stages[3].dst_path.slice(-5)).toBe(DuplicatePathAppendText);
     expect(stages[3].previous_stage_id).toBe(stages[2].id);
 });
 
@@ -117,6 +103,8 @@ test("data-access:projects:create-and-archive", async () => {
         zPlaneSkipIndices: [7, 11]
     });
 
+    expect(output.error).toBeNull();
+
     expect(await Project.count()).toBe(start + 1);
 
     const project = output.source;
@@ -138,4 +126,14 @@ test("data-access:projects:create-and-archive", async () => {
     await Project.archiveProject(project.id);
 
     expect(await Project.count()).toBe(start);
+});
+
+let tempDatabaseName = "";
+
+beforeAll(async () => {
+    tempDatabaseName = await copyDatabase();
+});
+
+afterAll(() => {
+    removeDatabase(tempDatabaseName);
 });

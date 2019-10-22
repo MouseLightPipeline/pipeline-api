@@ -235,7 +235,7 @@ type DeleteProjectOutput {
 }
 
 type MutatePipelineStageOutput {
-    pipelineStage: PipelineStage
+    source: PipelineStage
     error: String
 }
 
@@ -347,7 +347,6 @@ type Query {
 
   pipelineStage(id: String!): PipelineStage
   pipelineStages: [PipelineStage!]!
-  pipelineStagesForProject(id: String!): [PipelineStage!]!
 
   taskDefinition(id: String!): TaskDefinition
   taskDefinitions: [TaskDefinition!]!

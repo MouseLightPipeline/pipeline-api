@@ -9,18 +9,11 @@ import {PipelineWorker, IPipelineWorkerInput} from "../data-model/sequelize/pipe
 import {Project} from "../data-model/sequelize/project";
 import {PipelineStage, IPipelineStageInput} from "../data-model/sequelize/pipelineStage";
 import {IClientUpdateWorkerOutput, PipelineWorkerClient} from "./client/pipelineWorkerClient";
-import {
-    IPipelineStageTileCounts,
-    PipelineTile
-} from "../data-access/sequelize/stageTableConnector";
-import {
-    connectorForProject,
-    connectorForStage,
-} from "../data-access/sequelize/projectDatabaseConnector";
+import {IPipelineStageTileCounts, PipelineTile} from "../data-access/sequelize/stageTableConnector";
+import {connectorForProject, connectorForStage} from "../data-access/sequelize/projectDatabaseConnector";
 import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
 import {ServiceOptions} from "../options/serverOptions";
 import {SchedulerServiceOptions} from "../options/coreServicesOptions";
-import {Op} from "sequelize";
 import {TaskExecution} from "../data-model/taskExecution";
 
 interface IPipelineTileExt extends PipelineTile {
@@ -151,73 +144,6 @@ export class PipelineServerContext {
     }
 
     // endregion
-
-    public async getPipelineStage(id: string): Promise<PipelineStage> {
-        return PipelineStage.findByPk(id);
-    }
-
-    public async getPipelineStages(): Promise<PipelineStage[]> {
-        const projects = await Project.findAll();
-
-        return PipelineStage.findAll({where: {project_id: {[Op.in]: projects.map(p => p.id)}}});
-    }
-
-    public async getPipelineStagesForProject(id: string): Promise<PipelineStage[]> {
-        const project = await Project.findByPk(id);
-
-        return project.getStages();
-    }
-
-    public async getPipelineStagesForTaskDefinition(id: string): Promise<PipelineStage[]> {
-        const task = await TaskDefinition.findByPk(id);
-
-        return task.getStages();
-    }
-
-    public async getPipelineStageChildren(id: string): Promise<PipelineStage[]> {
-        return PipelineStage.findAll({where: {previous_stage_id: id}});
-    }
-
-    public async createPipelineStage(pipelineStage: IPipelineStageInput): Promise<IPipelineStageMutationOutput> {
-        try {
-            const result: PipelineStage = await PipelineStage.createFromInput(pipelineStage);
-
-            return {pipelineStage: result, error: ""};
-        } catch (err) {
-            return {pipelineStage: null, error: err.message};
-        }
-    }
-
-    public async updatePipelineStage(pipelineStage: IPipelineStageInput): Promise<IPipelineStageMutationOutput> {
-        try {
-            let row = await PipelineStage.findByPk(pipelineStage.id);
-
-            if (row.previous_stage_id === null) {
-                pipelineStage.depth = 1;
-            } else {
-                const stage = await PipelineStage.findByPk(row.previous_stage_id);
-                pipelineStage.depth = stage.depth + 1;
-            }
-
-            await row.update(pipelineStage);
-
-            row = await PipelineStage.findByPk(pipelineStage.id);
-
-            return {pipelineStage: row, error: ""};
-        } catch (err) {
-            return {pipelineStage: null, error: err.message}
-        }
-    }
-
-    public async archivePipelineStage(id: string): Promise<IPipelineStageDeleteOutput> {
-        try {
-            await PipelineStage.remove(id);
-
-            return {id, error: null};
-        } catch (err) {
-            return {id: null, error: err.message}
-        }
-    }
 
     public getTaskRepository(id: string): Promise<TaskRepository> {
         return TaskRepository.findByPk(id);
