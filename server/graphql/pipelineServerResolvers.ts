@@ -2,10 +2,6 @@ import {GraphQLScalarType} from "graphql";
 import {Kind} from "graphql/language";
 
 import {
-    ITaskDefinitionDeleteOutput,
-    ITaskDefinitionMutationOutput,
-    ITaskRepositoryDeleteOutput,
-    ITaskRepositoryMutationOutput,
     ITilePage,
     IWorkerMutationOutput,
     PipelineServerContext, SchedulerHealth
@@ -14,7 +10,7 @@ import {TaskRepository, ITaskRepositoryInput} from "../data-model/sequelize/task
 import {TaskDefinition, ITaskDefinitionInput} from "../data-model/sequelize/taskDefinition";
 import {PipelineWorker, IPipelineWorkerInput} from "../data-model/sequelize/pipelineWorker";
 import {Project, IProjectInput} from "../data-model/sequelize/project";
-import {PipelineStage, IPipelineStageInput} from "../data-model/sequelize/pipelineStage";
+import {PipelineStage, PipelineStageCreateInput, PipelineStageUpdateInput} from "../data-model/sequelize/pipelineStage";
 import {IPipelineStageTileCounts, PipelineTile} from "../data-access/sequelize/stageTableConnector";
 import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
 import {TaskExecution} from "../data-model/taskExecution";
@@ -41,11 +37,11 @@ interface IUpdateProjectArguments {
 }
 
 interface ICreatePipelineStageArguments {
-    pipelineStage: IPipelineStageInput;
+    pipelineStage: PipelineStageCreateInput;
 }
 
 interface IUpdatePipelineStageArguments {
-    pipelineStage: IPipelineStageInput;
+    pipelineStage: PipelineStageUpdateInput;
 }
 
 interface IMutateRepositoryArguments {
@@ -105,36 +101,41 @@ export const resolvers = {
         schedulerHealth(_, __, context: PipelineServerContext): SchedulerHealth {
             return PipelineServerContext.getSchedulerHealth();
         },
+        // Workers
         pipelineWorker(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<PipelineWorker> {
             return context.getPipelineWorker(args.id);
         },
         pipelineWorkers(_, __, context: PipelineServerContext): Promise<PipelineWorker[]> {
             return context.getPipelineWorkers();
         },
+        // Projects
         projects(_, __, context: PipelineServerContext): Promise<Project[]> {
             return Project.findAll({order: [["sample_number", "ASC"], ["name", "ASC"]]});
         },
         project(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<Project> {
             return Project.findByPk(args.id);
         },
+        // Stages
         pipelineStage(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<PipelineStage> {
             return PipelineStage.findByPk(args.id);
         },
         pipelineStages(_, __, context: PipelineServerContext): Promise<PipelineStage[]> {
             return PipelineStage.getAll();
         },
+        // Tasks
         taskDefinition(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<TaskDefinition> {
-            return context.getTaskDefinition(args.id);
+            return TaskDefinition.findByPk(args.id);
         },
         taskDefinitions(_, __, context: PipelineServerContext): Promise<TaskDefinition[]> {
-            return context.getTaskDefinitions();
+            return TaskDefinition.getAll();
         },
         taskRepository(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<TaskRepository> {
-            return context.getTaskRepository(args.id);
+            return TaskRepository.findByPk(args.id);
         },
         taskRepositories(_, __, context: PipelineServerContext): Promise<TaskRepository[]> {
-            return context.getTaskRepositories();
+            return TaskRepository.findAll({order: [["name", "ASC"]]});
         },
+        // General
         projectPlaneTileStatus(_, args: IPipelinePlaneStatusArguments, context: PipelineServerContext): Promise<any> {
             return PipelineServerContext.getProjectPlaneTileStatus(args.project_id, args.plane);
         },
@@ -149,6 +150,7 @@ export const resolvers = {
         }
     },
     Mutation: {
+        // Projects
         createProject(_, args: ICreateProjectArguments, context: PipelineServerContext): Promise<MutationOutput<Project>> {
             return Project.createProject(args.project);
         },
@@ -161,6 +163,7 @@ export const resolvers = {
         archiveProject(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ArchiveMutationOutput> {
             return Project.archiveProject(args.id);
         },
+        // Stages
         createPipelineStage(_, args: ICreatePipelineStageArguments, context: PipelineServerContext): Promise<MutationOutput<PipelineStage>> {
             return PipelineStage.createPipelineStage(args.pipelineStage);
         },
@@ -170,27 +173,30 @@ export const resolvers = {
         archivePipelineStage(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ArchiveMutationOutput> {
             return PipelineStage.archivePipelineStage(args.id);
         },
-        createTaskRepository(_, args: IMutateRepositoryArguments, context: PipelineServerContext): Promise<ITaskRepositoryMutationOutput> {
-            return context.createTaskRepository(args.taskRepository);
+        // Repositories
+        createTaskRepository(_, args: IMutateRepositoryArguments, context: PipelineServerContext): Promise<MutationOutput<TaskRepository>> {
+            return TaskRepository.createTaskRepository(args.taskRepository);
         },
-        updateTaskRepository(_, args: IMutateRepositoryArguments, context: PipelineServerContext): Promise<ITaskRepositoryMutationOutput> {
-            return context.updateTaskRepository(args.taskRepository);
+        updateTaskRepository(_, args: IMutateRepositoryArguments, context: PipelineServerContext): Promise<MutationOutput<TaskRepository>> {
+            return TaskRepository.updateTaskRepository(args.taskRepository);
         },
-        archiveTaskRepository(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskRepositoryDeleteOutput> {
-            return context.archiveTaskRepository(args.id);
+        archiveTaskRepository(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ArchiveMutationOutput> {
+            return TaskRepository.archiveTaskRepository(args.id);
         },
-        createTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: PipelineServerContext): Promise<ITaskDefinitionMutationOutput> {
-            return context.createTaskDefinition(args.taskDefinition);
+        // Task Definitions
+        createTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: PipelineServerContext): Promise<MutationOutput<TaskDefinition>> {
+            return TaskDefinition.createTaskDefinition(args.taskDefinition);
         },
-        updateTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: PipelineServerContext): Promise<ITaskDefinitionMutationOutput> {
-            return context.updateTaskDefinition(args.taskDefinition);
+        updateTaskDefinition(_, args: IMutateTaskDefinitionArguments, context: PipelineServerContext): Promise<MutationOutput<TaskDefinition>> {
+            return TaskDefinition.updateTaskDefinition(args.taskDefinition);
         },
-        duplicateTaskDefinition(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskDefinitionMutationOutput> {
-            return context.duplicateTask(args.id);
+        duplicateTaskDefinition(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<MutationOutput<TaskDefinition>> {
+            return TaskDefinition.duplicateTask(args.id);
         },
-        archiveTaskDefinition(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ITaskDefinitionDeleteOutput> {
-            return context.archiveTaskDefinition(args.id);
+        archiveTaskDefinition(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<ArchiveMutationOutput> {
+            return TaskDefinition.archiveTaskDefinition(args.id);
         },
+        // Workers
         updateWorker(_, args: IUpdateWorkerArguments, context: PipelineServerContext): Promise<IWorkerMutationOutput> {
             return context.updateWorker(args.worker);
         },
@@ -217,7 +223,7 @@ export const resolvers = {
     },
     PipelineStage: {
         task(stage: PipelineStage, _, context: PipelineServerContext): any {
-            return context.getTaskDefinition(stage.task_id);
+            return stage.getTaskDefinition();
         },
         project(stage: PipelineStage, _, context: PipelineServerContext): any {
             return stage.getProject();
@@ -234,16 +240,12 @@ export const resolvers = {
     },
     TaskRepository: {
         task_definitions(repository: TaskRepository, _, context: PipelineServerContext): any {
-            return context.getRepositoryTasks(repository.id);
+            return repository.getTasks();
         }
     },
     TaskDefinition: {
         task_repository(taskDefinition: TaskDefinition, _, context: PipelineServerContext): any {
-            if (taskDefinition.task_repository_id) {
-                return context.getTaskRepository(taskDefinition.task_repository_id);
-            }
-
-            return null;
+            return taskDefinition.getTaskRepository();
         },
         pipeline_stages(taskDefinition: TaskDefinition, _, context: PipelineServerContext): Promise<PipelineStage[]> {
             return taskDefinition.getStages();
@@ -254,7 +256,7 @@ export const resolvers = {
     },
     TaskExecution: {
         task_definition(taskExecution, _, context: PipelineServerContext) {
-            return context.getTaskDefinition(taskExecution.task_definition_id);
+            return TaskDefinition.findByPk(taskExecution.task_definition_id);
         }
     },
     Date: new GraphQLScalarType({

@@ -11,7 +11,6 @@ import {
 import {Project} from "./project";
 import {TaskDefinition} from "./taskDefinition";
 import {ArchiveMutationOutput, MutationOutput} from "../../graphql/pipelineServerResolvers";
-import {IPipelineStageDeleteOutput, IPipelineStageMutationOutput} from "../../graphql/pipelineServerContext";
 
 export enum PipelineStageMethod {
     DashboardProjectRefresh = 1,
@@ -187,7 +186,7 @@ export class PipelineStage extends Model {
 
             return {id, error: null};
         } catch (err) {
-            return {id: null, error: err.message}
+            return {id, error: err.message}
         }
     }
 

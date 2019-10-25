@@ -7,7 +7,7 @@ import {
     LineFixTaskDefinitionId,
     ClassifierTaskDefinitionId,
     PointMatchTaskDefinitionId, DescriptorsTaskDefinitionId
-} from "./testUtill";
+} from "./testUtil";
 
 import {
     PipelineStage,

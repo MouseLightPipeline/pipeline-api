@@ -1,9 +1,10 @@
 import * as path from "path";
-import {Sequelize, Model, DataTypes, HasManyGetAssociationsMixin, BelongsToGetAssociationMixin} from "sequelize"
+import {Sequelize, Model, DataTypes, HasManyGetAssociationsMixin, BelongsToGetAssociationMixin, Op} from "sequelize"
 
 import {ServiceOptions} from "../../options/serverOptions";
 import {TaskRepository} from "./taskRepository";
 import {PipelineStage} from "./pipelineStage";
+import {ArchiveMutationOutput, MutationOutput} from "../../graphql/pipelineServerResolvers";
 
 export enum TaskArgumentType {
     Literal = 0,
@@ -30,18 +31,6 @@ export interface ITaskDefinitionInput {
     task_repository_id?: string;
 }
 
-/*
-export interface ITaskDefinition extends Instance<ITaskDefinitionAttributes>, ITaskDefinitionAttributes {
-    user_arguments: ITaskArgument[];
-
-    getStages(): Promise<IPipelineStage[]>
-
-    getFullScriptPath(resolveRelative: boolean): Promise<string>;
-}
-
-export interface ITaskDefinitionTable extends Model<ITaskDefinition, ITaskDefinitionAttributes> {
-}
-*/
 const TableName = "TaskDefinitions";
 
 export class TaskDefinition extends Model {
@@ -85,6 +74,69 @@ export class TaskDefinition extends Model {
 
         return scriptPath;
     };
+
+    /**
+     * Find all tasks in repos that have not been deleted.
+     */
+    public static async getAll(): Promise<TaskDefinition[]> {
+        const repos = await TaskRepository.findAll();
+
+        return TaskDefinition.findAll({where: {task_repository_id: {[Op.in]: repos.map(p => p.id)}}});
+    }
+
+    public static async createTaskDefinition(taskDefinition: ITaskDefinitionInput): Promise<MutationOutput<TaskDefinition>> {
+        try {
+            const result = await TaskDefinition.create(taskDefinition);
+
+            return {source: result, error: null};
+        } catch (err) {
+            return {source: null, error: err.message}
+        }
+    }
+
+    public static async updateTaskDefinition(taskDefinition: ITaskDefinitionInput): Promise<MutationOutput<TaskDefinition>> {
+        try {
+            let row = await TaskDefinition.findByPk(taskDefinition.id);
+
+            await row.update(taskDefinition);
+
+            row = await TaskDefinition.findByPk(taskDefinition.id);
+
+            return {source: row, error: null};
+        } catch (err) {
+            return {source: null, error: err.message}
+        }
+    }
+
+    public static async duplicateTask(id: string): Promise<MutationOutput<TaskDefinition>> {
+        try {
+            const input: ITaskDefinitionInput = (await TaskDefinition.findByPk(id)).toJSON();
+
+            input.id = undefined;
+            input.name += " copy";
+
+            const taskDefinition = await TaskDefinition.create(input);
+
+            return {source: taskDefinition, error: null};
+        } catch (err) {
+            console.log(err);
+            return {source: null, error: err.message}
+        }
+    }
+
+    public static async archiveTaskDefinition(id: string): Promise<ArchiveMutationOutput> {
+        try {
+            const affectedRowCount = await TaskDefinition.destroy({where: {id}});
+
+            if (affectedRowCount > 0) {
+                return {id, error: null};
+            } else {
+                return {id: null, error: `Could not delete task definition with id ${id}`};
+            }
+        } catch (err) {
+            return {id: null, error: err.message}
+        }
+    }
 }
 
 export const modelInit = (sequelize: Sequelize) => {
@@ -141,16 +193,6 @@ export const modelInit = (sequelize: Sequelize) => {
         updatedAt: "updated_at",
         deletedAt: "deleted_at",
         paranoid: true,
-        getterMethods: {
-            user_arguments: function (): ITaskArgument[] {
-                return JSON.parse(this.script_args).arguments;
-            }
-        },
-        setterMethods: {
-            user_arguments: function (value: ITaskArgument[]) {
-                this.setDataValue("script_args", JSON.stringify({arguments: value}));
-            }
-        },
         sequelize
     });
 };
@@ -159,104 +201,3 @@ export const modelAssociate = () => {
     TaskDefinition.belongsTo(TaskRepository, {foreignKey: "task_repository_id"});
     TaskDefinition.hasMany(PipelineStage, {foreignKey: "task_id", as: {singular: "stage", plural: "stages"}});
 };
-
-/*
-export function sequelizeImport(sequelize, DataTypes) {
-    let TaskRepositories: any = null;
-
-    const TaskDefinition = sequelize.define(TableName, {
-        id: {
-            primaryKey: true,
-            type: DataTypes.UUID,
-            defaultValue: DataTypes.UUIDV4
-        },
-        name: {
-            type: DataTypes.TEXT,
-            defaultValue: ""
-        },
-        description: {
-            type: DataTypes.TEXT,
-            defaultValue: ""
-        },
-        script: {
-            type: DataTypes.TEXT,
-            defaultValue: ""
-        },
-        interpreter: {
-            type: DataTypes.TEXT,
-            defaultValue: ""
-        },
-        script_args: {
-            type: DataTypes.TEXT,
-            defaultValue: ""
-        },
-        cluster_args: {
-            type: DataTypes.TEXT,
-            defaultValue: ""
-        },
-        expected_exit_code: {
-            type: DataTypes.INTEGER,
-            defaultValue: 0
-        },
-        local_work_units: {
-            type: DataTypes.DOUBLE,
-            defaultValue: 0
-        },
-        cluster_work_units: {
-            type: DataTypes.DOUBLE,
-            defaultValue: 0
-        },
-        log_prefix: {
-            type: DataTypes.TEXT,
-            defaultValue: ""
-        }
-    }, {
-        timestamps: true,
-        createdAt: "created_at",
-        updatedAt: "updated_at",
-        deletedAt: "deleted_at",
-        paranoid: true,
-        getterMethods: {
-            user_arguments: function() {
-                return JSON.parse(this.script_args).arguments;
-            }
-        },
-        setterMethods: {
-            user_arguments: function(value) {
-                this.setDataValue("script_args", JSON.stringify({arguments: value}));
-            }
-        }
-    });
-
-    TaskDefinition.associate = models => {
-        TaskDefinition.belongsTo(models.TaskRepositories, {foreignKey: "task_repository_id"});
-        TaskDefinition.hasMany(models.PipelineStages, {foreignKey: "task_id", as: {singular: "stage", plural: "stages"}});
-
-        TaskRepositories = models.TaskRepositories;
-    };
-
-    TaskDefinition.prototype.getFullScriptPath = async function (resolveRelative: boolean): Promise<string> {
-        let scriptPath = this.script;
-
-        if (this.task_repository_id) {
-            const repo = await TaskRepositories.findByPk(this.task_repository_id);
-
-            scriptPath = path.resolve(path.join(repo.location, scriptPath));
-        } else {
-            if (resolveRelative && !path.isAbsolute(scriptPath)) {
-                scriptPath = path.join(process.cwd(), scriptPath);
-            }
-        }
-
-        ServiceOptions.driveMapping.map(d => {
-            if (scriptPath.startsWith(d.remote)) {
-                scriptPath = d.local + scriptPath.slice(d.remote.length);
-            }
-        });
-
-        return scriptPath;
-    };
-
-    return TaskDefinition;
-}
-*/

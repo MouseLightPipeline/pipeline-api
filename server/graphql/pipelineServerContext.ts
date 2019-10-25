@@ -3,11 +3,10 @@ import * as fs from "fs";
 
 const debug = require("debug")("pipeline:coordinator-api:server-context");
 
-import {TaskDefinition, ITaskDefinitionInput} from "../data-model/sequelize/taskDefinition";
-import {TaskRepository, ITaskRepositoryInput} from "../data-model/sequelize/taskRepository";
+import {TaskDefinition} from "../data-model/sequelize/taskDefinition";
 import {PipelineWorker, IPipelineWorkerInput} from "../data-model/sequelize/pipelineWorker";
 import {Project} from "../data-model/sequelize/project";
-import {PipelineStage, IPipelineStageInput} from "../data-model/sequelize/pipelineStage";
+import {PipelineStage} from "../data-model/sequelize/pipelineStage";
 import {IClientUpdateWorkerOutput, PipelineWorkerClient} from "./client/pipelineWorkerClient";
 import {IPipelineStageTileCounts, PipelineTile} from "../data-access/sequelize/stageTableConnector";
 import {connectorForProject, connectorForStage} from "../data-access/sequelize/projectDatabaseConnector";
@@ -46,36 +45,6 @@ export class SchedulerHealth {
 
 export interface IWorkerMutationOutput {
     worker: PipelineWorker;
-    error: string;
-}
-
-export interface IPipelineStageMutationOutput {
-    pipelineStage: PipelineStage;
-    error: string;
-}
-
-export interface IPipelineStageDeleteOutput {
-    id: string;
-    error: string;
-}
-
-export interface ITaskRepositoryMutationOutput {
-    taskRepository: TaskRepository;
-    error: string;
-}
-
-export interface ITaskRepositoryDeleteOutput {
-    id: string;
-    error: string;
-}
-
-export interface ITaskDefinitionMutationOutput {
-    taskDefinition: TaskDefinition;
-    error: string;
-}
-
-export interface ITaskDefinitionDeleteOutput {
-    id: string;
     error: string;
 }
 
@@ -145,119 +114,6 @@ export class PipelineServerContext {
 
     // endregion
 
-    public getTaskRepository(id: string): Promise<TaskRepository> {
-        return TaskRepository.findByPk(id);
-    }
-
-    public getTaskRepositories(): Promise<TaskRepository[]> {
-        return TaskRepository.findAll({});
-    }
-
-    public async getRepositoryTasks(id: string): Promise<TaskDefinition[]> {
-        return TaskDefinition.findAll({where: {task_repository_id: id}});
-    }
-
-    public async createTaskRepository(taskRepository: ITaskRepositoryInput): Promise<ITaskRepositoryMutationOutput> {
-        try {
-            const result = await TaskRepository.create(taskRepository);
-
-            return {taskRepository: result, error: null};
-
-        } catch (err) {
-            return {taskRepository: null, error: err.message}
-        }
-    }
-
-    public async updateTaskRepository(taskRepository: ITaskRepositoryInput): Promise<ITaskRepositoryMutationOutput> {
-        try {
-            let row = await TaskRepository.findByPk(taskRepository.id);
-
-            await row.update(taskRepository);
-
-            row = await TaskRepository.findByPk(taskRepository.id);
-
-            return {taskRepository: row, error: null};
-        } catch (err) {
-            return {taskRepository: null, error: err.message}
-        }
-    }
-
-    public async archiveTaskRepository(id: string): Promise<ITaskRepositoryDeleteOutput> {
-        try {
-            const affectedRowCount = await TaskRepository.destroy({where: {id}});
-
-            if (affectedRowCount > 0) {
-                return {id, error: null};
-            } else {
-                return {id: null, error: "Could not delete repository (no error message)"};
-            }
-        } catch (err) {
-            return {id: null, error: err.message}
-        }
-    }
-
-    public async getTaskDefinition(id: string): Promise<TaskDefinition> {
-        return TaskDefinition.findByPk(id);
-    }
-
-    public async getTaskDefinitions(): Promise<TaskDefinition[]> {
-        return TaskDefinition.findAll({});
-    }
-
-    public async createTaskDefinition(taskDefinition: ITaskDefinitionInput): Promise<ITaskDefinitionMutationOutput> {
-        try {
-            const result = await TaskDefinition.create(taskDefinition);
-
-            return {taskDefinition: result, error: null};
-        } catch (err) {
-            return {taskDefinition: null, error: err.message}
-        }
-    }
-
-    public async updateTaskDefinition(taskDefinition: ITaskDefinitionInput): Promise<ITaskDefinitionMutationOutput> {
-        try {
-            let row = await TaskDefinition.findByPk(taskDefinition.id);
-
-            await row.update(taskDefinition);
-
-            row = await TaskDefinition.findByPk(taskDefinition.id);
-
-            return {taskDefinition: row, error: null};
-        } catch (err) {
-            return {taskDefinition: null, error: err.message}
-        }
-    }
-
-    public async duplicateTask(id: string): Promise<ITaskDefinitionMutationOutput> {
-        try {
-            const input: ITaskDefinitionInput = (await TaskDefinition.findByPk(id)).toJSON();
-
-            input.id = undefined;
-            input.name += " copy";
-
-            const taskDefinition = await TaskDefinition.create(input);
-
-            return {taskDefinition, error: ""};
-        } catch (err) {
-            console.log(err);
-            return {taskDefinition: null, error: err.message}
-        }
-    }
-
-    public async archiveTaskDefinition(id: string): Promise<ITaskDefinitionDeleteOutput> {
-        try {
-            const affectedRowCount = await TaskDefinition.destroy({where: {id}});
-
-            if (affectedRowCount > 0) {
-                return {id, error: null};
-            } else {
-                return {id: null, error: "Could not delete task definition (no error message)"};
-            }
-        } catch (err) {
-            return {id: null, error: err.message}
-        }
-    }
-
     public static async getScriptStatusForTaskDefinition(taskDefinition: TaskDefinition): Promise<boolean> {
         const scriptPath = await taskDefinition.getFullScriptPath(true);
 
@@ -265,7 +121,7 @@ export class PipelineServerContext {
     }
 
     public async getScriptContents(taskDefinitionId: string): Promise<string> {
-        const taskDefinition = await this.getTaskDefinition(taskDefinitionId);
+        const taskDefinition = await TaskDefinition.findByPk(taskDefinitionId);
 
         if (taskDefinition) {
             const haveScript = await PipelineServerContext.getScriptStatusForTaskDefinition(taskDefinition);

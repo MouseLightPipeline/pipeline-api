@@ -18,6 +18,12 @@ export const ClassifierTaskDefinitionId = "1ec76026-4ecc-4d25-9c6e-cdf992a05da3"
 export const DescriptorsTaskDefinitionId = "a9f21399-07c0-425c-86f6-6e4f45bb06b9";
 export const PointMatchTaskDefinitionId = "3ba41d1c-13d0-4def-9b5b-54d940a0fa08";
 
+export const DefaultTaskRepositoryId = "04dbaad7-9e59-4d9e-b7b7-ae3cd1248ef9";
+export const DevelopmentTaskRepositoryId = "f22c6e43-782c-4e0e-b0ca-b34fcec3340a";
+
+export const LineFixTaskDefinitionDefaultId = "ae111b6e-2187-4e07-8ccf-bc7d425d95af";
+export const DescriptorsTaskDefinitionDefaultId = "a9f21399-07c0-425c-86f6-6e4f45bb06b9";
+
 export const DuplicateNameAppendText = " copy";
 export const DuplicatePathAppendText = "-copy";
 

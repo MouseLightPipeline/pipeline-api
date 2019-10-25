@@ -4,7 +4,7 @@ import {
     removeDatabase,
     SampleBrainProjectId,
     SkeletonizationProjectId
-} from "./testUtill";
+} from "./testUtil";
 import {Project} from "../server/data-model/sequelize/project";
 
 test("data-access:projects:getStages", async () => {
