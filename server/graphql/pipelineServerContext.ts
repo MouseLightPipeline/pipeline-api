@@ -1,9 +1,7 @@
 import * as path from "path";
-import * as fs from "fs";
 
 const debug = require("debug")("pipeline:pipeline-api:server-context");
 
-import {TaskDefinition} from "../data-model/sequelize/taskDefinition";
 import {PipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {Project} from "../data-model/sequelize/project";
 import {PipelineStage} from "../data-model/sequelize/pipelineStage";
@@ -12,7 +10,6 @@ import {IPipelineStageTileCounts, PipelineTile} from "../data-access/sequelize/s
 import {connectorForProject, connectorForStage} from "../data-access/sequelize/projectDatabaseConnector";
 import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
 import {ServiceOptions} from "../options/serverOptions";
-import {SchedulerServiceOptions} from "../options/coreServicesOptions";
 import {TaskExecution} from "../data-model/taskExecution";
 
 interface IPipelineTileExt extends PipelineTile {
@@ -49,28 +46,6 @@ export interface ISimplePage<T> {
 export type ITilePage = ISimplePage<PipelineTile>;
 
 export class PipelineServerContext {
-    public static async getScriptStatusForTaskDefinition(taskDefinition: TaskDefinition): Promise<boolean> {
-        const scriptPath = await taskDefinition.getFullScriptPath(true);
-
-        return fs.existsSync(scriptPath);
-    }
-
-    public async getScriptContents(taskDefinitionId: string): Promise<string> {
-        const taskDefinition = await TaskDefinition.findByPk(taskDefinitionId);
-
-        if (taskDefinition) {
-            const haveScript = await PipelineServerContext.getScriptStatusForTaskDefinition(taskDefinition);
-
-            if (haveScript) {
-                const scriptPath = await taskDefinition.getFullScriptPath(true);
-
-                return fs.readFileSync(scriptPath, "utf8");
-            }
-        }
-
-        return null;
-    }
-
     public static async getProjectPlaneTileStatus(project_id: string, plane: number): Promise<ITileMap> {
         try {
             if (plane == null) {

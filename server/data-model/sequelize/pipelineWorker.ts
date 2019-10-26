@@ -4,7 +4,7 @@ const debug = require("debug")("pipeline:pipeline-api:server-context");
 
 import {IWorkerHeartbeatData, IWorkerUpdateData} from "../../message-queue/messageQueue";
 import {IClientUpdateWorkerOutput, PipelineWorkerClient} from "../../graphql/client/pipelineWorkerClient";
-import {MutationOutput} from "../../graphql/pipelineServerResolvers";
+import {MutationOutput} from "../mutationTypes";
 
 export enum QueueType {
     Local = 0,

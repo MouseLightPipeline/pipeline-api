@@ -11,6 +11,7 @@ import {IPipelineStageTileCounts, PipelineTile} from "../data-access/sequelize/s
 import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
 import {TaskExecution} from "../data-model/taskExecution";
 import {SchedulerHealth, SchedulerHealthService} from "../services/schedulerHealthService";
+import {ArchiveMutationOutput, MutationOutput} from "../data-model/mutationTypes";
 
 interface IIdOnlyArgument {
     id: string;
@@ -20,13 +21,8 @@ interface IUpdateWorkerArguments {
     worker: IPipelineWorkerInput;
 }
 
-interface ITaskDefinitionIdArguments {
-    task_definition_id: string;
-}
-
 interface ICreateProjectArguments {
     project: IProjectInput;
-
 }
 
 interface IUpdateProjectArguments {
@@ -47,6 +43,10 @@ interface IMutateRepositoryArguments {
 
 interface IMutateTaskDefinitionArguments {
     taskDefinition: ITaskDefinitionInput;
+}
+
+interface ITaskDefinitionIdArguments {
+    task_definition_id: string;
 }
 
 interface IPipelinePlaneStatusArguments {
@@ -76,16 +76,6 @@ interface IConvertTileStatusArgs {
 interface IStopTaskExecutionArguments {
     pipelineStageId: string;
     taskExecutionId: string;
-}
-
-export type MutationOutput<T> = {
-    source: T;
-    error: string | null;
-}
-
-export type ArchiveMutationOutput = {
-    id: string;
-    error: string | null;
 }
 
 export const resolvers = {
@@ -118,6 +108,9 @@ export const resolvers = {
         taskDefinitions(_, __, context: PipelineServerContext): Promise<TaskDefinition[]> {
             return TaskDefinition.getAll();
         },
+        scriptContents(_, args: ITaskDefinitionIdArguments, context: PipelineServerContext): Promise<string> {
+            return TaskDefinition.getScriptContents(args.task_definition_id);
+        },
         // Workers
         pipelineWorker(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<PipelineWorker> {
             return PipelineWorker.findByPk(args.id);
@@ -135,9 +128,6 @@ export const resolvers = {
         },
         tilesForStage(_, args: ITileStatusArguments, context: PipelineServerContext): Promise<ITilePage> {
             return context.tilesForStage(args.pipelineStageId, args.status, args.offset, args.limit);
-        },
-        scriptContents(_, args: ITaskDefinitionIdArguments, context: PipelineServerContext): Promise<string> {
-            return context.getScriptContents(args.task_definition_id);
         },
         pipelineVolume(): string {
             return process.env.PIPELINE_VOLUME || "";
@@ -243,8 +233,8 @@ export const resolvers = {
         pipeline_stages(taskDefinition: TaskDefinition, _, context: PipelineServerContext): Promise<PipelineStage[]> {
             return taskDefinition.getStages();
         },
-        script_status(taskDefinition: TaskDefinition, _, context: PipelineServerContext): any {
-            return PipelineServerContext.getScriptStatusForTaskDefinition(taskDefinition);
+        script_status(taskDefinition: TaskDefinition, _, context: PipelineServerContext): Promise<boolean> {
+            return taskDefinition.script_status();
         }
     },
     TaskExecution: {

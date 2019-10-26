@@ -10,7 +10,7 @@ import {
 
 import {Project} from "./project";
 import {TaskDefinition} from "./taskDefinition";
-import {ArchiveMutationOutput, MutationOutput} from "../../graphql/pipelineServerResolvers";
+import {ArchiveMutationOutput, MutationOutput} from "../mutationTypes";
 
 export enum PipelineStageMethod {
     DashboardProjectRefresh = 1,

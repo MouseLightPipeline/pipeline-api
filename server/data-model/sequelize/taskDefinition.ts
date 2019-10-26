@@ -4,7 +4,8 @@ import {Sequelize, Model, DataTypes, HasManyGetAssociationsMixin, BelongsToGetAs
 import {ServiceOptions} from "../../options/serverOptions";
 import {TaskRepository} from "./taskRepository";
 import {PipelineStage} from "./pipelineStage";
-import {ArchiveMutationOutput, MutationOutput} from "../../graphql/pipelineServerResolvers";
+import {ArchiveMutationOutput, MutationOutput} from "../mutationTypes";
+import * as fs from "fs";
 
 export enum TaskArgumentType {
     Literal = 0,
@@ -52,6 +53,22 @@ export class TaskDefinition extends Model {
 
     public getStages!: HasManyGetAssociationsMixin<PipelineStage>;
     public getTaskRepository!: BelongsToGetAssociationMixin<TaskRepository>;
+
+    public async script_status(): Promise<boolean> {
+        const scriptPath = await this.getFullScriptPath(true);
+
+        return fs.existsSync(scriptPath);
+    }
+
+    public async script_contents(): Promise<string> {
+        const haveScript = await this.script_status();
+
+        if (haveScript) {
+            const scriptPath = await this.getFullScriptPath(true);
+
+            return fs.readFileSync(scriptPath, "utf8");
+        }
+    }
 
     public async getFullScriptPath(resolveRelative: boolean): Promise<string> {
         let scriptPath = this.script;
@@ -136,6 +153,16 @@ export class TaskDefinition extends Model {
         } catch (err) {
             return {id: null, error: err.message}
         }
+    }
+
+    public static async getScriptContents(id: string): Promise<string> {
+        const taskDefinition = await TaskDefinition.findByPk(id);
+
+        if (taskDefinition) {
+            return taskDefinition.script_contents();
+        }
+
+        return null;
     }
 }
 

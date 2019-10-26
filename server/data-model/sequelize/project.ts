@@ -1,7 +1,7 @@
 import {Sequelize, Model, DataTypes, HasManyGetAssociationsMixin, Transaction} from "sequelize";
 
 import {PipelineStage} from "./pipelineStage";
-import {ArchiveMutationOutput, MutationOutput} from "../../graphql/pipelineServerResolvers";
+import {ArchiveMutationOutput, MutationOutput} from "../mutationTypes";
 
 export const NO_BOUND: number = null;
 export const NO_SAMPLE: number = -1;

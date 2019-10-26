@@ -1,6 +1,6 @@
 import {Sequelize, Model, DataTypes, HasManyGetAssociationsMixin} from "sequelize";
 
-import {ArchiveMutationOutput, MutationOutput} from "../../graphql/pipelineServerResolvers";
+import {ArchiveMutationOutput, MutationOutput} from "../mutationTypes";
 import {TaskDefinition} from "./taskDefinition";
 
 export interface ITaskRepositoryInput {
