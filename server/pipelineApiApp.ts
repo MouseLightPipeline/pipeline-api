@@ -13,6 +13,7 @@ import {resolvers} from "./graphql/pipelineServerResolvers";
 import {PipelineServerContext} from "./graphql/pipelineServerContext";
 import {MessageQueueClient} from "./message-queue/messageQueueClient";
 import {RemoteDatabaseClient} from "./data-access/sequelize/databaseConnector";
+import {SchedulerHealthService} from "./services/schedulerHealthService";
 
 start().then().catch((err) => debug(err));
 
@@ -20,6 +21,8 @@ async function start() {
     await RemoteDatabaseClient.Start();
 
     await MessageQueueClient.Start();
+
+    SchedulerHealthService.Instance.start();
 
     const app = express();
 

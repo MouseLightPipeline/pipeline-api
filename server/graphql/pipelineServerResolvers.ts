@@ -1,7 +1,7 @@
 import {GraphQLScalarType} from "graphql";
 import {Kind} from "graphql/language";
 
-import {ITilePage, PipelineServerContext, SchedulerHealth} from "./pipelineServerContext";
+import {ITilePage, PipelineServerContext} from "./pipelineServerContext";
 import {TaskRepository, ITaskRepositoryInput} from "../data-model/sequelize/taskRepository";
 import {TaskDefinition, ITaskDefinitionInput} from "../data-model/sequelize/taskDefinition";
 import {PipelineWorker, IPipelineWorkerInput} from "../data-model/sequelize/pipelineWorker";
@@ -10,6 +10,7 @@ import {PipelineStage, PipelineStageCreateInput, PipelineStageUpdateInput} from 
 import {IPipelineStageTileCounts, PipelineTile} from "../data-access/sequelize/stageTableConnector";
 import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
 import {TaskExecution} from "../data-model/taskExecution";
+import {SchedulerHealth, SchedulerHealthService} from "../services/schedulerHealthService";
 
 interface IIdOnlyArgument {
     id: string;
@@ -89,12 +90,6 @@ export type ArchiveMutationOutput = {
 
 export const resolvers = {
     Query: {
-        schedulerHealth(_, __, context: PipelineServerContext): SchedulerHealth {
-            return PipelineServerContext.getSchedulerHealth();
-        },
-        pipelineWorkers(_, __, context: PipelineServerContext): Promise<PipelineWorker[]> {
-            return PipelineWorker.findAll({});
-        },
         // Projects
         projects(_, __, context: PipelineServerContext): Promise<Project[]> {
             return Project.findAll({order: [["sample_number", "ASC"], ["name", "ASC"]]});
@@ -126,6 +121,13 @@ export const resolvers = {
         // Workers
         pipelineWorker(_, args: IIdOnlyArgument, context: PipelineServerContext): Promise<PipelineWorker> {
             return PipelineWorker.findByPk(args.id);
+        },
+        pipelineWorkers(_, __, context: PipelineServerContext): Promise<PipelineWorker[]> {
+            return PipelineWorker.findAll({});
+        },
+        // Scheduler
+        schedulerHealth(_, __, context: PipelineServerContext): SchedulerHealth {
+            return SchedulerHealthService.Instance.CurrentHealth;
         },
         // General
         projectPlaneTileStatus(_, args: IPipelinePlaneStatusArguments, context: PipelineServerContext): Promise<any> {

@@ -38,16 +38,6 @@ const kEmptyTileMap: ITileMap = {
     tiles: []
 };
 
-export class SchedulerHealth {
-    lastResponse: number;
-    lastSeen: Date;
-}
-
-export interface IWorkerMutationOutput {
-    worker: PipelineWorker;
-    error: string;
-}
-
 export interface ISimplePage<T> {
     offset: number;
     limit: number;
@@ -59,10 +49,6 @@ export interface ISimplePage<T> {
 export type ITilePage = ISimplePage<PipelineTile>;
 
 export class PipelineServerContext {
-    public static getSchedulerHealth(): SchedulerHealth {
-        return schedulerHealth;
-    }
-
     public static async getScriptStatusForTaskDefinition(taskDefinition: TaskDefinition): Promise<boolean> {
         const scriptPath = await taskDefinition.getFullScriptPath(true);
 
@@ -452,29 +438,5 @@ const PipelineStageStatusUnavailable: IPipelineStageTileCounts = {
     failed: 0,
     canceled: 0
 };
-
-const schedulerHealth: SchedulerHealth = {
-    lastResponse: 404,
-    lastSeen: null
-};
-
-setInterval(async () => {
-    try {
-        const response = await fetch(`http://${SchedulerServiceOptions.host}:${SchedulerServiceOptions.port}/healthcheck`, {
-            headers: {
-                "Access-Control-Allow-Origin": "*",
-            },
-            method: "GET"
-        });
-
-        schedulerHealth.lastResponse = response.status;
-
-        if (schedulerHealth.lastResponse === 200) {
-            schedulerHealth.lastSeen = new Date();
-        }
-    } catch {
-        schedulerHealth.lastResponse = 404;
-    }
-}, 10000);
 
 const stageWarn = new Map<string, boolean>();
