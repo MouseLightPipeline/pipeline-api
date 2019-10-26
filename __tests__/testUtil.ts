@@ -24,6 +24,9 @@ export const DevelopmentTaskRepositoryId = "f22c6e43-782c-4e0e-b0ca-b34fcec3340a
 export const LineFixTaskDefinitionDefaultId = "ae111b6e-2187-4e07-8ccf-bc7d425d95af";
 export const DescriptorsTaskDefinitionDefaultId = "a9f21399-07c0-425c-86f6-6e4f45bb06b9";
 
+export const DefaultPipelineWorkerId = "19c63c69-af5e-4ebd-8125-6074df7bef37";
+export const DefaultPipelineWorkerRemoteId = "2bcc812d-97ce-4b14-ad48-5c3c9b9b416e";
+
 export const DuplicateNameAppendText = " copy";
 export const DuplicatePathAppendText = "-copy";
 

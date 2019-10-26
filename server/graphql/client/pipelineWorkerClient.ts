@@ -4,7 +4,7 @@ import {HttpLink} from "apollo-link-http";
 import gql from "graphql-tag";
 import "isomorphic-fetch";
 
-const debug = require("debug")("pipeline:coordinator-api:pipeline-worker-client");
+const debug = require("debug")("pipeline:pipeline-api:pipeline-worker-client");
 
 import {IPipelineWorkerInput, PipelineWorker, PipelineWorkerStatus} from "../../data-model/sequelize/pipelineWorker";
 import {PipelineServerContext} from "../pipelineServerContext";
@@ -33,7 +33,7 @@ export class PipelineWorkerClient {
 
     private _idClientMap = new Map<string, ApolloClient<any>>();
 
-    private getClient(worker: PipelineWorker | IPipelineWorkerInput): ApolloClient<any> {
+    private getClient(worker: PipelineWorker): ApolloClient<any> {
         if (worker === null) {
             return null;
         }
@@ -65,14 +65,12 @@ export class PipelineWorkerClient {
     }
 
     private static async markWorkerUnavailable(worker: IPipelineWorkerInput): Promise<void> {
-        let serverContext = new PipelineServerContext();
-
-        const row = await serverContext.getPipelineWorker(worker.id);
+        const row = await PipelineWorker.findByPk(worker.id);
 
         row.status = PipelineWorkerStatus.Unavailable;
     }
 
-    public async updateWorker(worker: IPipelineWorkerInput): Promise<IClientUpdateWorkerOutput> {
+    public async updateWorker(worker: PipelineWorker): Promise<IClientUpdateWorkerOutput> {
         const client = this.getClient(worker);
 
         if (client === null) {

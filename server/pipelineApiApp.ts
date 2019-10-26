@@ -4,7 +4,7 @@ import * as bodyParser from "body-parser";
 import * as cors from "cors";
 import {ApolloServer, gql} from "apollo-server-express";
 
-const debug = require("debug")("pipeline:coordinator-api:server");
+const debug = require("debug")("pipeline:pipeline-api:server");
 
 import {typeDefinitions} from "./graphql/pipelineTypeDefinitions";
 import {ServiceOptions} from "./options/serverOptions";

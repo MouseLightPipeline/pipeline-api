@@ -2,7 +2,7 @@ import * as path from "path";
 const fs = require("fs");
 import {Sequelize, Options} from "sequelize";
 
-const debug = require("debug")("pipeline:coordinator-api:database-connector");
+const debug = require("debug")("pipeline:pipeline-api:database-connector");
 
 import { SequelizeOptions} from "../../options/coreServicesOptions";
 

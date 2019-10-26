@@ -382,7 +382,6 @@ type Mutation {
   duplicateTaskDefinition(id: String): MutateTaskDefinitionOutput
   archiveTaskDefinition(id: String!): DeleteTaskDefinitionOutput
 
-  setWorkerAvailability(id: String!, shouldBeInSchedulerPool: Boolean!): PipelineWorker
   updateWorker(worker: PipelineWorkerInput): MutatePipelineWorkerOutput
 
   setTileStatus(pipelineStageId: String, tileIds: [String], status: Int): [Tile]

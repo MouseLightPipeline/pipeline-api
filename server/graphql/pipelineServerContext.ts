@@ -1,13 +1,13 @@
 import * as path from "path";
 import * as fs from "fs";
 
-const debug = require("debug")("pipeline:coordinator-api:server-context");
+const debug = require("debug")("pipeline:pipeline-api:server-context");
 
 import {TaskDefinition} from "../data-model/sequelize/taskDefinition";
-import {PipelineWorker, IPipelineWorkerInput} from "../data-model/sequelize/pipelineWorker";
+import {PipelineWorker} from "../data-model/sequelize/pipelineWorker";
 import {Project} from "../data-model/sequelize/project";
 import {PipelineStage} from "../data-model/sequelize/pipelineStage";
-import {IClientUpdateWorkerOutput, PipelineWorkerClient} from "./client/pipelineWorkerClient";
+import {PipelineWorkerClient} from "./client/pipelineWorkerClient";
 import {IPipelineStageTileCounts, PipelineTile} from "../data-access/sequelize/stageTableConnector";
 import {connectorForProject, connectorForStage} from "../data-access/sequelize/projectDatabaseConnector";
 import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
@@ -62,57 +62,6 @@ export class PipelineServerContext {
     public static getSchedulerHealth(): SchedulerHealth {
         return schedulerHealth;
     }
-
-    //region Workers
-    public async getPipelineWorker(id: string): Promise<PipelineWorker> {
-        return PipelineWorker.findByPk(id);
-    }
-
-    public async getPipelineWorkers(): Promise<PipelineWorker[]> {
-        return PipelineWorker.findAll({});
-    }
-
-    public async updateWorker(workerInput: IPipelineWorkerInput): Promise<IWorkerMutationOutput> {
-        try {
-            const row: PipelineWorker = await PipelineWorker.findByPk(workerInput.id);
-
-            let output: IClientUpdateWorkerOutput = await PipelineWorkerClient.Instance().updateWorker(Object.assign({
-                address: row.address,
-                port: row.port
-            }, {
-                id: workerInput.id,
-                local_work_capacity: workerInput.local_work_capacity,
-                cluster_work_capacity: workerInput.cluster_work_capacity
-            }));
-
-            if (output.error !== null) {
-                return {worker: null, error: output.error};
-            }
-
-            const attr: IPipelineWorkerInput = {
-                local_work_capacity: output.worker.local_work_capacity,
-                cluster_work_capacity: output.worker.cluster_work_capacity
-            };
-
-            await row.update(attr);
-
-            const row2 = await PipelineWorker.findByPk(workerInput.id);
-
-            return {worker: row2, error: ""};
-        } catch (err) {
-            return {worker: null, error: err.message}
-        }
-    }
-
-    public async setWorkerAvailability(id: string, shouldBeInSchedulerPool: boolean): Promise<PipelineWorker> {
-        const worker = await PipelineWorker.findByPk(id);
-
-        await worker.update({is_in_scheduler_pool: shouldBeInSchedulerPool});
-
-        return PipelineWorker.findByPk(id);
-    }
-
-    // endregion
 
     public static async getScriptStatusForTaskDefinition(taskDefinition: TaskDefinition): Promise<boolean> {
         const scriptPath = await taskDefinition.getFullScriptPath(true);

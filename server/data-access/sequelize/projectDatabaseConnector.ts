@@ -2,7 +2,7 @@ const sequelize = require("sequelize");
 const asyncUtils = require("async");
 import {Sequelize} from "sequelize";
 
-const debug = require("debug")("pipeline:coordinator-api:project-database-connector");
+const debug = require("debug")("pipeline:pipeline-api:project-database-connector");
 
 import {Project} from "../../data-model/sequelize/project";
 import {PipelineStage, PipelineStageMethod} from "../../data-model/sequelize/pipelineStage";
