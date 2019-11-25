@@ -222,12 +222,12 @@ export const resolvers = {
         }
     },
     TaskRepository: {
-        task_definitions(repository: TaskRepository, _, context: PipelineServerContext): any {
+        task_definitions(repository: TaskRepository, _, context: PipelineServerContext): Promise<TaskDefinition[]> {
             return repository.getTasks();
         }
     },
     TaskDefinition: {
-        task_repository(taskDefinition: TaskDefinition, _, context: PipelineServerContext): any {
+        task_repository(taskDefinition: TaskDefinition, _, context: PipelineServerContext): Promise<TaskRepository> {
             return taskDefinition.getTaskRepository();
         },
         pipeline_stages(taskDefinition: TaskDefinition, _, context: PipelineServerContext): Promise<PipelineStage[]> {

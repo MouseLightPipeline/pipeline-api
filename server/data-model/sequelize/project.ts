@@ -66,6 +66,7 @@ export class Project extends Model {
     public input_source_state: ProjectInputSourceState;
     public last_seen_input_source: Date;
     public last_checked_input_source: Date;
+
     public readonly created_at: Date;
     public readonly updated_at: Date;
     public readonly deleted_at: Date;
