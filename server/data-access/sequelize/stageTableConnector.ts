@@ -32,7 +32,7 @@ export interface IPipelineStageTileCounts {
     canceled: number;
 }
 
-export interface PipelineTile extends Model {
+export class PipelineTile extends Model {
     relative_path?: string;
     index?: number;
     tile_name?: string;
@@ -53,7 +53,7 @@ export type PipelineTileStatic = typeof Model & {
     new(values?: object, options?: BuildOptions): PipelineTile;
 }
 
-export interface InProcessTile extends Model {
+export class InProcessTile extends Model {
     relative_path: string;
     worker_id?: string;
     worker_last_seen?: Date;
@@ -67,7 +67,7 @@ export type InProcessTileStatic = typeof Model & {
     new(values?: object, options?: BuildOptions): InProcessTile;
 }
 
-export interface ToProcessTile extends Model {
+export class ToProcessTile extends Model {
     relative_path: string;
     created_at?: Date;
     updated_at?: Date;

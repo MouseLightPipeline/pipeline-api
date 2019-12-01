@@ -245,7 +245,7 @@ type DeletePipelineStageOutput {
 }
 
 type MutateTaskRepositoryOutput {
-    taskRepository: TaskRepository
+    source: TaskRepository
     error: String
 }
 
@@ -255,7 +255,7 @@ type DeleteTaskRepositoryOutput {
 }
 
 type MutateTaskDefinitionOutput {
-    taskDefinition: TaskDefinition
+    source: TaskDefinition
     error: String
 }
 
@@ -265,7 +265,7 @@ type DeleteTaskDefinitionOutput {
 }
 
 type MutatePipelineWorkerOutput {
-    worker: PipelineWorker
+    source: PipelineWorker
     error: String
 }
 
