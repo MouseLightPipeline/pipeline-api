@@ -334,6 +334,7 @@ input PipelineWorkerInput {
   id: String
   local_work_capacity: Float
   cluster_work_capacity: Float
+  is_in_scheduler_pool: Boolean
 }
 
 type Query {
