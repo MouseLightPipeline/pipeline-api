@@ -1,6 +1,6 @@
 import {IMessageQueueClient, IWorkerHeartbeatData, IWorkerUpdateData} from "./messageQueue";
 import {RabbitMQMessageQueueClient} from "./rabbitmq/rabbitMQMessageQueueClient";
-import {PipelineWorker} from "../data-model/sequelize/pipelineWorker";
+import {PipelineWorker} from "../data-model/system/pipelineWorker";
 
 export class MessageQueueClient {
     public static async Start() {

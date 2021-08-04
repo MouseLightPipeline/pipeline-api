@@ -1,14 +1,14 @@
+import {ApiStageTableConnector} from "./apiStageTableConnector";
+
 const sequelize = require("sequelize");
 const asyncUtils = require("async");
 import {Sequelize} from "sequelize";
 
 const debug = require("debug")("pipeline:pipeline-api:project-database-connector");
 
-import {Project} from "../../data-model/sequelize/project";
-import {PipelineStage, PipelineStageMethod} from "../../data-model/sequelize/pipelineStage";
-import {StageTableConnector} from "./stageTableConnector";
+import {Project} from "../../data-model/system/project";
+import {PipelineStage} from "../../data-model/system/pipelineStage";
 import {SequelizeOptions} from "../../options/coreServicesOptions";
-import {AdjacentTileStageConnector} from "./adjacentTileStageConnector";
 
 interface IAccessQueueToken {
     project: Project;
@@ -35,7 +35,7 @@ export class ProjectDatabaseConnector {
     private _project: Project;
     private _databaseName: string;
 
-    private _stageConnectors = new Map<string, StageTableConnector>();
+    private _stageConnectors = new Map<string, ApiStageTableConnector>();
     private _stageConnectorQueueAccess = asyncUtils.queue(accessStageQueue, 1);
     private _projectConnectorQueueAccess = asyncUtils.queue(accessProjectQueue, 1);
 
@@ -60,13 +60,13 @@ export class ProjectDatabaseConnector {
         return this._project;
     }
 
-    public async connectorForStage(stage: PipelineStage): Promise<StageTableConnector> {
+    public async connectorForStage(stage: PipelineStage): Promise<ApiStageTableConnector> {
         if (this._stageConnectors.has(stage.id)) {
             return this._stageConnectors.get(stage.id);
         }
 
         // Serialize access to queue for a non-existent connector so only one is created.
-        return new Promise<StageTableConnector>((resolve, reject) => {
+        return new Promise<ApiStageTableConnector>((resolve, reject) => {
             this._stageConnectorQueueAccess.push({
                 projectConnector: this,
                 stage,
@@ -79,23 +79,9 @@ export class ProjectDatabaseConnector {
     public async internalConnectorForStage(stage: PipelineStage) {
         // This method can only be called serially despite async due to async queue.  Could arrive to find
         if (!this._stageConnectors.has(stage.id)) {
+            const connector = new ApiStageTableConnector(this._connection, stage.id, stage.previous_stage_id ?? stage.project_id);
 
-            // The API does not create stage tables, only the scheduler does.
-            // let haveTables = (await this._connection.query(`SELECT to_regclass('public.${stage.id}');`, {type: sequelize.QueryTypes.SELECT})).some(r => r.to_regclass !== null);
-
-            const test = await this._connection.query<any>(`SELECT to_regclass('public.${stage.id}');`, {type: sequelize.QueryTypes.SELECT});
-
-            const haveTables = (await this._connection.query<any>(`SELECT to_regclass('public.${stage.id}');`, {type: sequelize.QueryTypes.SELECT})).some(r => r.to_regclass !== null);
-
-            if (!haveTables) {
-                return null;
-            }
-
-            const method: PipelineStageMethod = stage.function_type;
-
-            const connector = method === PipelineStageMethod.MapTile ? new StageTableConnector(this._connection, stage.id) : new AdjacentTileStageConnector(this._connection, stage.id);
-
-            await connector.initialize();
+            await connector.initialize(true);
 
             this._stageConnectors.set(stage.id, connector);
         }
@@ -103,13 +89,13 @@ export class ProjectDatabaseConnector {
         return this._stageConnectors.get(stage.id);
     }
 
-    public async connectorForProject(): Promise<StageTableConnector> {
+    public async connectorForProject(): Promise<ApiStageTableConnector> {
         if (this._stageConnectors.has(this._project.id)) {
             return this._stageConnectors.get(this._project.id);
         }
 
         // Serialize access to queue for a non-existent connector so only one is created.
-        return new Promise<StageTableConnector>((resolve, reject) => {
+        return new Promise<ApiStageTableConnector>((resolve, reject) => {
             this._projectConnectorQueueAccess.push({
                 projectConnector: this,
                 resolve,
@@ -118,21 +104,16 @@ export class ProjectDatabaseConnector {
         });
     }
 
-    public async internalConnectorForProject(): Promise<StageTableConnector> {
-        if (!this._stageConnectors.has(this._project.id)) {
-            // The API does not create stage tables, only the scheduler does.aa
-            if (!this._connection.isDefined(this._project.id)) {
-                return null;
-            }
+    public async internalConnectorForProject(): Promise<ApiStageTableConnector> {
+        if (!this._stageConnectors.has(this._databaseName)) {
+            const connector = new ApiStageTableConnector(this._connection, this._databaseName, null);
 
-            const connector = new StageTableConnector(this._connection, this._project.id);
+            await connector.initialize(true);
 
-            await connector.initialize();
-
-            this._stageConnectors.set(this._project.id, connector);
+            this._stageConnectors.set(this._databaseName, connector);
         }
 
-        return this._stageConnectors.get(this._project.id);
+        return this._stageConnectors.get(this._databaseName);
     }
 
     private async ensureDatabase() {
@@ -154,7 +135,7 @@ const connectionMap = new Map<string, ProjectDatabaseConnector>();
 
 const connectorQueueAccess = asyncUtils.queue(accessQueueWorker, 1);
 
-export async function connectorForStage(pipelineStage: PipelineStage): Promise<StageTableConnector> {
+export async function connectorForStage(pipelineStage: PipelineStage): Promise<ApiStageTableConnector> {
     const project = await Project.findByPk(pipelineStage.project_id);
 
     const connector = await connectorForProject(project);

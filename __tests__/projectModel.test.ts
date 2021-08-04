@@ -5,7 +5,7 @@ import {
     SampleBrainProjectId,
     SkeletonizationProjectId
 } from "./testUtil";
-import {Project} from "../server/data-model/sequelize/project";
+import {Project} from "../server/data-model/system/project";
 
 test("data-access:projects:getStages", async () => {
     let project = await Project.findByPk(SampleBrainProjectId);

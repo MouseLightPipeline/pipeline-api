@@ -1,6 +1,6 @@
 import {copyDatabase, DefaultPipelineWorkerId, DefaultPipelineWorkerRemoteId, removeDatabase} from "./testUtil";
 
-import {PipelineWorker, PipelineWorkerStatus} from "../server/data-model/sequelize/pipelineWorker";
+import {PipelineWorker, PipelineWorkerStatus} from "../server/data-model/system/pipelineWorker";
 import {IWorkerHeartbeatData} from "../server/message-queue/messageQueue";
 
 test("data-access:pipeline-worker:update", async () => {

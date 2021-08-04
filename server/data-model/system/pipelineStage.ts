@@ -257,8 +257,8 @@ export const modelAssociate = () => {
 };
 
 /*
-export function sequelizeImport(sequelize, DataTypes) {
-    const PipelineStage = sequelize.define(TableName, {
+export function sequelizeImport(system, DataTypes) {
+    const PipelineStage = system.define(TableName, {
         id: {
             primaryKey: true,
             type: DataTypes.UUID,

@@ -2,16 +2,16 @@ import {GraphQLScalarType} from "graphql";
 import {Kind} from "graphql/language";
 
 import {ITilePage, PipelineServerContext} from "./pipelineServerContext";
-import {TaskRepository, ITaskRepositoryInput} from "../data-model/sequelize/taskRepository";
-import {TaskDefinition, ITaskDefinitionInput} from "../data-model/sequelize/taskDefinition";
-import {PipelineWorker, IPipelineWorkerInput} from "../data-model/sequelize/pipelineWorker";
-import {Project, IProjectInput} from "../data-model/sequelize/project";
-import {PipelineStage, PipelineStageCreateInput, PipelineStageUpdateInput} from "../data-model/sequelize/pipelineStage";
-import {IPipelineStageTileCounts, PipelineTile} from "../data-access/sequelize/stageTableConnector";
-import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
-import {TaskExecution} from "../data-model/taskExecution";
+import {TaskRepository, ITaskRepositoryInput} from "../data-model/system/taskRepository";
+import {TaskDefinition, ITaskDefinitionInput} from "../data-model/system/taskDefinition";
+import {PipelineWorker, IPipelineWorkerInput} from "../data-model/system/pipelineWorker";
+import {Project, IProjectInput} from "../data-model/system/project";
+import {PipelineStage, PipelineStageCreateInput, PipelineStageUpdateInput} from "../data-model/system/pipelineStage";
+import {TilePipelineStatus} from "../data-model/activity/TilePipelineStatus";
+import {TaskExecution} from "../data-model/activity/taskExecution";
 import {SchedulerHealth, SchedulerHealthService} from "../services/schedulerHealthService";
 import {ArchiveMutationOutput, MutationOutput} from "../data-model/mutationTypes";
+import {IPipelineStageTileCounts, PipelineTile} from "../data-model/activity/pipelineTile";
 
 interface IIdOnlyArgument {
     id: string;

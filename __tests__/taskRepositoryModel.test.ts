@@ -4,7 +4,7 @@ import {
     DefaultTaskRepositoryId
 } from "./testUtil";
 
-import {TaskRepository} from "../server/data-model/sequelize/taskRepository";
+import {TaskRepository} from "../server/data-model/system/taskRepository";
 
 test("data-access:task-repository:get-tasks", async () => {
     let repo = await TaskRepository.findByPk(DefaultTaskRepositoryId);

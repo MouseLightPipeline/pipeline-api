@@ -3,7 +3,7 @@ import * as path from "path";
 import uuid = require("uuid");
 import {Dialect} from "sequelize";
 
-import {RemoteDatabaseClient} from "../server/data-access/sequelize/databaseConnector";
+import {RemoteDatabaseClient} from "../server/data-access/system/databaseConnector";
 
 export const SampleBrainProjectId = "44e49773-1c19-494b-b283-54466b94b70f";
 export const SkeletonizationProjectId = "74f684fb-9e9f-4b2e-b853-4c43a3b92f38";

@@ -91,7 +91,8 @@ type TaskExecution {
   worker_id: String
   task_definition_id: String
   task_definition: TaskDefinition
-  pipeline_stage_id: String
+  stage_id: String
+  relative_path: String
   pipeline_stage: PipelineStage
   work_units: Float
   cluster_work_units: Float
@@ -183,12 +184,12 @@ type PipelineStage {
 }
 
 type Tile {
+  stage_id: String
   relative_path: String
   lat_x: Int
   lat_y: Int
   lat_z: Int
-  prev_stage_status: Int
-  this_stage_status: Int
+  stage_status: Int
   task_executions: [TaskExecution]
   created_at: Date
   updated_at: Date

@@ -7,7 +7,7 @@ import {
     DevelopmentTaskRepositoryId
 } from "./testUtil";
 
-import {TaskDefinition} from "../server/data-model/sequelize/taskDefinition";
+import {TaskDefinition} from "../server/data-model/system/taskDefinition";
 
 test("data-access:task-definition:get-repo", async () => {
     let task = await TaskDefinition.findByPk(LineFixTaskDefinitionDefaultId);

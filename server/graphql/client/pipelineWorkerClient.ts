@@ -6,7 +6,7 @@ import "isomorphic-fetch";
 
 const debug = require("debug")("pipeline:pipeline-api:pipeline-worker-client");
 
-import {IPipelineWorkerInput, PipelineWorker, PipelineWorkerStatus} from "../../data-model/sequelize/pipelineWorker";
+import {IPipelineWorkerInput, PipelineWorker, PipelineWorkerStatus} from "../../data-model/system/pipelineWorker";
 import {PipelineServerContext} from "../pipelineServerContext";
 
 export interface IClientWorker {

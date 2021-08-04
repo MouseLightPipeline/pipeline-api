@@ -12,7 +12,7 @@ import {thumbnailParamQueryMiddleware} from "./middleware/thumbnailQueryMiddlewa
 import {resolvers} from "./graphql/pipelineServerResolvers";
 import {PipelineServerContext} from "./graphql/pipelineServerContext";
 import {MessageQueueClient} from "./message-queue/messageQueueClient";
-import {RemoteDatabaseClient} from "./data-access/sequelize/databaseConnector";
+import {RemoteDatabaseClient} from "./data-access/system/databaseConnector";
 import {SchedulerHealthService} from "./services/schedulerHealthService";
 
 start().then().catch((err) => debug(err));

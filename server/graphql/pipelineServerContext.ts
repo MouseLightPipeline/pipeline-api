@@ -2,15 +2,15 @@ import * as path from "path";
 
 const debug = require("debug")("pipeline:pipeline-api:server-context");
 
-import {PipelineWorker} from "../data-model/sequelize/pipelineWorker";
-import {Project} from "../data-model/sequelize/project";
-import {PipelineStage} from "../data-model/sequelize/pipelineStage";
+import {PipelineWorker} from "../data-model/system/pipelineWorker";
+import {Project} from "../data-model/system/project";
+import {PipelineStage} from "../data-model/system/pipelineStage";
 import {PipelineWorkerClient} from "./client/pipelineWorkerClient";
-import {IPipelineStageTileCounts, PipelineTile} from "../data-access/sequelize/stageTableConnector";
-import {connectorForProject, connectorForStage} from "../data-access/sequelize/projectDatabaseConnector";
-import {TilePipelineStatus} from "../data-model/TilePipelineStatus";
+import {IPipelineStageTileCounts, PipelineTile} from "../data-model/activity/pipelineTile";
+import {connectorForProject, connectorForStage} from "../data-access/activity/projectDatabaseConnector";
+import {TilePipelineStatus} from "../data-model/activity/TilePipelineStatus";
 import {ServiceOptions} from "../options/serverOptions";
-import {TaskExecution} from "../data-model/taskExecution";
+import {TaskExecution} from "../data-model/activity/taskExecution";
 
 interface IPipelineTileExt extends PipelineTile {
     stage_id: string;
@@ -142,15 +142,15 @@ export class PipelineServerContext {
                         relative_path: tile.relative_path,
                         stage_id: tile.stage_id,
                         depth: tile.depth,
-                        status: tile.this_stage_status
+                        status: tile.stage_status
                     });
-                } else if (tile.this_stage_status > existing.status) {
+                } else if (tile.stage_status > existing.status) {
                     existing.relative_path = tile.relative_path;
                     existing.stage_id = tile.stage_id;
                     existing.depth = tile.depth;
                     // This is not strictly correct as failed enum > complete and complete is probably what you want
                     // to know.
-                    existing.status = tile.this_stage_status;
+                    existing.status = tile.stage_status;
                 }
             });
 
@@ -180,7 +180,7 @@ export class PipelineServerContext {
     public static async thumbnailPath(id: string, x, y, z): Promise<string> {
         try {
             let isProject = false;
-            let project: Project = null;
+            let project: Project;
 
             const stage: PipelineStage = await PipelineStage.findByPk(id);
 
@@ -272,15 +272,14 @@ export class PipelineServerContext {
 
         const totalCount = await stageConnector.countTiles({
             where: {
-                prev_stage_status: TilePipelineStatus.Complete,
-                this_stage_status: status
+                stage_id: pipelineStageId,
+                stage_status: status
             }
         });
 
-        const items = await stageConnector.loadTiles({
+        const items = await stageConnector.loadTilesWithFindOptions({
             where: {
-                prev_stage_status: TilePipelineStatus.Complete,
-                this_stage_status: status
+                stage_status: status
             },
             order: ["relative_path"],
             offset,

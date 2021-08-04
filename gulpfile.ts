@@ -47,7 +47,7 @@ function moveTask() {
             gulp.src("docker-entry.sh").pipe(gulp.dest("dist")),
             gulp.src("migrate.sh").pipe(gulp.dest("dist")),
             gulp.src("seed.sh").pipe(gulp.dest("dist")),
-            gulp.src("sequelize-migrations/*.js", {base: "./"}).pipe(gulp.dest("dist"))
+            gulp.src("system-migrations/*.js", {base: "./"}).pipe(gulp.dest("dist"))
         ]
     );
 }

@@ -13,8 +13,8 @@ import {
     PipelineStage,
     PipelineStageCreateInput,
     PipelineStageMethod
-} from "../server/data-model/sequelize/pipelineStage";
-import {Project} from "../server/data-model/sequelize/project";
+} from "../server/data-model/system/pipelineStage";
+import {Project} from "../server/data-model/system/project";
 
 test("data-access:pipeline-stage:get-project", async () => {
     let stage = await PipelineStage.findByPk(LineFixStageSampleBrainProjectId);
