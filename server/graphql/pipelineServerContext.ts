@@ -272,7 +272,6 @@ export class PipelineServerContext {
 
         const totalCount = await stageConnector.countTiles({
             where: {
-                stage_id: pipelineStageId,
                 stage_status: status
             }
         });
@@ -287,7 +286,7 @@ export class PipelineServerContext {
         });
 
         await Promise.all(items.map(async (item) => {
-            item.task_executions = await stageConnector.taskExecutionsForTile(item.relative_path);
+            item.task_executions = await stageConnector.taskExecutionsForTile(item);
         }));
 
         return {
@@ -319,11 +318,11 @@ export class PipelineServerContext {
      * Set specific tiles (by id) to a specific status.
      *
      * @param {string} pipelineStageId
-     * @param {string[]} tileIds
+     * @param {string[]} relativePaths
      * @param {TilePipelineStatus} status
      * @returns {Promise<PipelineTile[]>}
      */
-    public async setTileStatus(pipelineStageId: string, tileIds: string[], status: TilePipelineStatus): Promise<PipelineTile[]> {
+    public async setTileStatus(pipelineStageId: string, ids: string[], status: TilePipelineStatus): Promise<PipelineTile[]> {
         const pipelineStage = await PipelineStage.findByPk(pipelineStageId);
 
         if (!pipelineStage) {
@@ -332,7 +331,7 @@ export class PipelineServerContext {
 
         const stageConnector = await connectorForStage(pipelineStage);
 
-        return stageConnector ? await stageConnector.setTileStatus(tileIds, status) : null;
+        return stageConnector ? await stageConnector.setTileStatus(ids, status) : null;
     }
 
     /***

@@ -9,6 +9,7 @@ function generatePipelineStageInProcessTableName() {
 export interface IInProcessTile {
     id?: string;
     stage_id: string;
+    tile_id: string;
     relative_path: string;
     worker_id: string;
     worker_last_seen: Date;
@@ -19,6 +20,7 @@ export interface IInProcessTile {
 export class InProcessTile extends Model implements IInProcessTile {
     public id: string;
     public stage_id: string;
+    public tile_id: string;
     public relative_path: string;
     public worker_id: string;
     public worker_last_seen: Date;
@@ -33,7 +35,7 @@ export type InProcessTileStatic = typeof Model & {
     new(values?: object, options?: BuildOptions): InProcessTile;
 }
 
-export function defineInProcessTable(sequelize: Sequelize): InProcessTileStatic {
+export const modelInit = (sequelize: Sequelize): InProcessTileStatic => {
     return <InProcessTileStatic>sequelize.define(generatePipelineStageInProcessTableName(), {
         id: {
             primaryKey: true,
@@ -42,6 +44,9 @@ export function defineInProcessTable(sequelize: Sequelize): InProcessTileStatic 
             defaultValue: DataTypes.UUIDV4
         },
         stage_id: {
+            type: DataTypes.UUID
+        },
+        tile_id: {
             type: DataTypes.UUID
         },
         relative_path: {

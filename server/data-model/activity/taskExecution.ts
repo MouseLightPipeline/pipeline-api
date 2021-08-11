@@ -1,5 +1,4 @@
-import {Sequelize, Model, DataTypes, BuildOptions} from "sequelize";
-import {PipelineTile} from "./pipelineTile";
+import {BuildOptions, Model, Sequelize, DataTypes} from "sequelize";
 
 export enum ExecutionStatus {
     Undefined = 0,
@@ -19,18 +18,10 @@ export enum CompletionResult {
     Resubmitted = 5
 }
 
-export enum SyncStatus {
-    Never = 0,
-    InProgress = 1,
-    Complete = 2,
-    Expired = 3
-}
-
 export interface ITaskExecution {
     id: string;
+    tile_id: string;
     task_definition_id: string;
-    stage_id: string;
-    relative_path: string;
     resolved_output_path: string;
     resolved_script: string;
     resolved_interpreter: string;
@@ -55,14 +46,12 @@ export interface ITaskExecution {
     submitted_at: Date;
     started_at: Date;
     completed_at: Date;
-    sync_status: SyncStatus;
 }
 
 export class TaskExecution extends Model implements ITaskExecution {
     public id: string;
+    public tile_id: string;
     public task_definition_id: string;
-    public stage_id: string;
-    public relative_path: string;
     public resolved_output_path: string;
     public resolved_script: string;
     public resolved_interpreter: string;
@@ -87,7 +76,6 @@ export class TaskExecution extends Model implements ITaskExecution {
     public submitted_at: Date;
     public started_at: Date;
     public completed_at: Date;
-    public sync_status: SyncStatus;
 
     readonly created_at: Date;
     readonly updated_at: Date;
@@ -102,21 +90,24 @@ function generatePipelineStageTaskExecutionTableName() {
     return "TaskExecution";
 }
 
-export const defineTaskExecutionTable = (sequelize: Sequelize): TaskExecutionStatic => {
+export const modelInit = (sequelize: Sequelize): TaskExecutionStatic => {
     return <TaskExecutionStatic>sequelize.define(generatePipelineStageTaskExecutionTableName(), {
         id: {
             primaryKey: true,
             type: DataTypes.UUID,
             defaultValue: DataTypes.UUIDV4
         },
-        task_definition_id: {
+        stage_id: {
             type: DataTypes.UUID
         },
-        stage_id: {
+        tile_id: {
             type: DataTypes.UUID
         },
         relative_path: {
             type: DataTypes.TEXT
+        },
+        task_definition_id: {
+            type: DataTypes.UUID
         },
         resolved_output_path: {
             type: DataTypes.TEXT,

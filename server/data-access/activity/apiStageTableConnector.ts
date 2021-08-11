@@ -1,7 +1,7 @@
 import {CountOptions, Sequelize, FindOptions, Op} from "sequelize";
 
 import {StageTableConnector} from "./stageTableConnector";
-import {IPipelineStageTileCounts, PipelineTile} from "../../data-model/activity/pipelineTile";
+import {IPipelineStageTileCounts, IPipelineTile, PipelineTile} from "../../data-model/activity/pipelineTile";
 import {TilePipelineStatus} from "../../data-model/activity/TilePipelineStatus";
 import {TaskExecution} from "../../data-model/activity/taskExecution";
 
@@ -11,13 +11,23 @@ export class ApiStageTableConnector extends StageTableConnector {
         super(connection, stage_id, prev_stage_id);
     }
 
+    public async loadTiles(): Promise<IPipelineTile[]> {
+        return this._tileTable.findAll({where: {stage_id: this._stage_id}});
+    }
+
     public async loadTilesWithFindOptions(options: FindOptions = {}): Promise<PipelineTile[]> {
         options["where"]["stage_id"] = this._stage_id;
 
         return this._tileTable.findAll(options);
     }
 
+    public async taskExecutionForId(id: string): Promise<TaskExecution> {
+        return this._taskExecutionTable.findByPk(id);
+    }
+
     public async countTiles(options: CountOptions): Promise<number> {
+        options["where"]["stage_id"] = this._stage_id;
+
         return options ? this._tileTable.count(options) : this._tileTable.count();
     }
 
@@ -77,9 +87,12 @@ export class ApiStageTableConnector extends StageTableConnector {
         }
     }
 
-    public async setTileStatus(tileIds: string[], status: TilePipelineStatus): Promise<PipelineTile[]> {
+    public async setTileStatus(ids: string[], status: TilePipelineStatus): Promise<PipelineTile[]> {
         const [, affectedRows] = await this._tileTable.update({stage_status: status}, {
-            where: {relative_path: {[Op.in]: tileIds}},
+            where: {
+                stage_id: this._stage_id,
+                id: {[Op.in]: ids}
+            },
             returning: true
         });
 
@@ -88,15 +101,23 @@ export class ApiStageTableConnector extends StageTableConnector {
 
     public async convertTileStatus(currentStatus: TilePipelineStatus, desiredStatus: TilePipelineStatus): Promise<PipelineTile[]> {
         const [, affectedRows] = await this._tileTable.update({stage_status: desiredStatus}, {
-            where: {stage_status: currentStatus},
+            where: {
+                stage_id: this._stage_id,
+                stage_status: currentStatus
+            },
             returning: true
         });
 
         return affectedRows;
     }
 
-    public async taskExecutionsForTile(id: string): Promise<TaskExecution[]> {
-        return this._taskExecutionTable.findAll({where: {tile_id: id}, order: ["created_at"]});
+    public async taskExecutionsForTile(tile: IPipelineTile): Promise<TaskExecution[]> {
+        return this._taskExecutionTable.findAll({
+            where: {
+                tile_id: tile.id
+            },
+            order: ["created_at"]
+        });
     }
 
     public async removeTaskExecution(id: string): Promise<boolean> {

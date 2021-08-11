@@ -54,7 +54,7 @@ export type PipelineTileStatic = typeof Model & {
     new(values?: object, options?: BuildOptions): PipelineTile;
 }
 
-export function defineTileTable(sequelize: Sequelize): PipelineTileStatic {
+export const modelInit = (sequelize: Sequelize): PipelineTileStatic => {
     return <PipelineTileStatic>sequelize.define(generatePipelineStageTileTableName(), {
         id: {
             primaryKey: true,

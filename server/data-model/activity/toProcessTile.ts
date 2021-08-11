@@ -9,6 +9,7 @@ function generatePipelineStageToProcessTableName() {
 export interface IToProcessTile {
     id?: string;
     stage_id: string;
+    tile_id: string;
     relative_path: string;
     lat_x: number;
     lat_y: number;
@@ -18,6 +19,7 @@ export interface IToProcessTile {
 export class ToProcessTile extends Model implements IToProcessTile {
     public id: string;
     public stage_id: string;
+    public tile_id: string;
     public relative_path: string;
     public lat_x: number;
     public lat_y: number;
@@ -31,7 +33,7 @@ export type ToProcessTileStatic = typeof Model & {
     new(values?: object, options?: BuildOptions): ToProcessTile;
 }
 
-export function defineToProcessTable(sequelize: Sequelize): ToProcessTileStatic {
+export const modelInit = (sequelize: Sequelize): ToProcessTileStatic => {
     return <ToProcessTileStatic>sequelize.define(generatePipelineStageToProcessTableName(), {
         id: {
             primaryKey: true,
@@ -40,6 +42,9 @@ export function defineToProcessTable(sequelize: Sequelize): ToProcessTileStatic 
             defaultValue: DataTypes.UUIDV4
         },
         stage_id: {
+            type: DataTypes.UUID
+        },
+        tile_id: {
             type: DataTypes.UUID
         },
         relative_path: {
